@@ -1,0 +1,533 @@
+
+generator client {
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "windows"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Authentication and User Management
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(GUEST)
+  tenantId      String?   // null for super admin, set for tenant users
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  
+  // Guest-specific relations
+  guestProfile  GuestProfile?
+  bookings      Booking[]
+  serviceOrders ServiceOrder[]
+  
+  // Staff-specific relations
+  staffProfile  StaffProfile?
+  assignedTasks HousekeepingTask[]
+  reportedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceReporter")
+  assignedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceAssignee")
+  
+  @@index([tenantId])
+  @@index([email])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Multi-tenant Core
+model Tenant {
+  id          String      @id @default(cuid())
+  name        String
+  subdomain   String      @unique
+  domain      String?     @unique
+  description String?
+  logo        String?
+  theme       Json?       // Custom branding configuration
+  settings    Json?       // Tenant-specific settings
+  plan        String      @default("basic")
+  commissionRate Float    @default(0.04)
+  isVerifiedDirect Boolean @default(false)
+  amaldivesSlug String?   @unique
+  status      TenantStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  users       User[]
+  properties  Property[]
+  bookings    Booking[]
+  rooms       Room[]
+  services    Service[]
+  staff       StaffProfile[]
+  inventory   InventoryItem[]
+  reports     Report[]
+  
+  @@index([subdomain])
+  @@index([status])
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  address     String
+  city        String
+  state       String
+  country     String
+  zipCode     String
+  phone       String
+  email       String
+  website     String?
+  checkInTime String   @default("15:00")
+  checkOutTime String  @default("11:00")
+  currency    String   @default("USD")
+  timezone    String   @default("UTC")
+  images      String[]
+  amenities   String[]
+  policies    Json?
+  settings    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rooms       Room[]
+  bookings    Booking[]
+  
+  @@index([tenantId])
+}
+
+// Room Management
+model Room {
+  id          String     @id @default(cuid())
+  tenantId    String
+  propertyId  String
+  number      String
+  name        String
+  type        RoomType
+  description String?
+  capacity    Int
+  basePrice   Float
+  images      String[]
+  amenities   String[]
+  size        Int?       // Square footage
+  bedType     String?
+  status      RoomStatus @default(AVAILABLE)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property    Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  housekeepingTasks HousekeepingTask[]
+  maintenanceRequests MaintenanceRequest[]
+  
+  @@unique([tenantId, propertyId, number])
+  @@index([tenantId])
+  @@index([propertyId])
+  @@index([status])
+}
+
+// Booking System
+model Booking {
+  id            String        @id @default(cuid())
+  tenantId      String
+  propertyId    String
+  roomId        String
+  guestId       String
+  confirmationNumber String   @unique
+  checkInDate   DateTime
+  checkOutDate  DateTime
+  adults        Int
+  children      Int           @default(0)
+  totalAmount   Float
+  platformFee   Float         @default(0)
+  paidAmount    Float         @default(0)
+  status        BookingStatus @default(PENDING)
+  source        String?       // "direct", "booking.com", etc.
+  notes         String?
+  specialRequests String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property      Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  room          Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  guest         User          @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  
+  payments      Payment[]
+  serviceOrders ServiceOrder[]
+  
+  @@index([tenantId])
+  @@index([confirmationNumber])
+  @@index([checkInDate])
+  @@index([checkOutDate])
+  @@index([status])
+}
+
+// Guest Management
+model GuestProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  firstName   String
+  lastName    String
+  phone       String?
+  dateOfBirth DateTime?
+  nationality String?
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  zipCode     String?
+  preferences Json?     // Dietary, room preferences, etc.
+  loyaltyTier String?   @default("STANDARD")
+  totalStays  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// Staff Management
+model StaffProfile {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  tenantId    String
+  employeeId  String?
+  department  String
+  position    String
+  permissions String[]   // Role-specific permissions
+  salary      Float?
+  hireDate    DateTime
+  isActive    Boolean    @default(true)
+  schedule    Json?      // Work schedule configuration
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([userId])
+}
+
+// Housekeeping Management
+model HousekeepingTask {
+  id          String     @id @default(cuid())
+  tenantId    String
+  roomId      String
+  assignedTo  String?
+  taskType    TaskType
+  priority    Priority   @default(MEDIUM)
+  description String?
+  checklist   Json?      // Task checklist items
+  status      TaskStatus @default(PENDING)
+  scheduledDate DateTime
+  completedAt DateTime?
+  estimatedDuration Int? // in minutes
+  actualDuration Int?   // in minutes
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  room        Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  assignedUser User?     @relation(fields: [assignedTo], references: [id])
+  
+  @@index([tenantId])
+  @@index([roomId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+// Maintenance Management
+model MaintenanceRequest {
+  id          String            @id @default(cuid())
+  tenantId    String
+  roomId      String?
+  reportedBy  String
+  title       String
+  description String
+  priority    Priority          @default(MEDIUM)
+  category    String
+  status      MaintenanceStatus @default(REPORTED)
+  assignedTo  String?
+  scheduledDate DateTime?
+  completedAt DateTime?
+  cost        Float?
+  notes       String?
+  images      String[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  room        Room?             @relation(fields: [roomId], references: [id])
+  reporter    User              @relation("MaintenanceReporter", fields: [reportedBy], references: [id])
+  assignedUser User?            @relation("MaintenanceAssignee", fields: [assignedTo], references: [id])
+  
+  @@index([tenantId])
+  @@index([roomId])
+  @@index([status])
+  @@index([priority])
+}
+
+// Service Management
+model Service {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  category    String
+  price       Float
+  duration    Int?      // in minutes
+  isActive    Boolean   @default(true)
+  images      String[]
+  availability Json?    // Service availability schedule
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceOrders ServiceOrder[]
+  
+  @@index([tenantId])
+  @@index([category])
+}
+
+model ServiceOrder {
+  id          String           @id @default(cuid())
+  tenantId    String
+  bookingId   String?
+  serviceId   String
+  guestId     String
+  quantity    Int              @default(1)
+  totalAmount Float
+  status      ServiceOrderStatus @default(PENDING)
+  scheduledDate DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  booking     Booking?         @relation(fields: [bookingId], references: [id])
+  service     Service          @relation(fields: [serviceId], references: [id])
+  guest       User             @relation(fields: [guestId], references: [id])
+  
+  @@index([tenantId])
+  @@index([bookingId])
+  @@index([status])
+}
+
+// Inventory Management
+model InventoryItem {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  category    String
+  description String?
+  sku         String?
+  currentStock Int
+  minStock    Int
+  maxStock    Int
+  unit        String    // "pieces", "liters", etc.
+  unitCost    Float
+  supplier    String?
+  lastRestocked DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([category])
+  @@index([currentStock])
+}
+
+// Financial Management
+model Payment {
+  id          String        @id @default(cuid())
+  tenantId    String
+  bookingId   String
+  amount      Float
+  currency    String        @default("USD")
+  method      PaymentMethod
+  status      PaymentStatus @default(PENDING)
+  transactionId String?
+  gatewayResponse Json?
+  processedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([bookingId])
+  @@index([status])
+}
+
+// Reporting
+model Report {
+  id          String     @id @default(cuid())
+  tenantId    String
+  title       String
+  type        ReportType
+  parameters  Json?
+  data        Json
+  generatedBy String
+  createdAt   DateTime   @default(now())
+
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Enums
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  MANAGER
+  FRONT_DESK
+  HOUSEKEEPING
+  MAINTENANCE
+  GUEST
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  CANCELLED
+}
+
+enum RoomType {
+  STANDARD
+  DELUXE
+  SUITE
+  FAMILY
+  DORMITORY
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+  OUT_OF_ORDER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum TaskType {
+  CLEANING
+  MAINTENANCE
+  INSPECTION
+  SETUP
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  REPORTED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceOrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  DIGITAL_WALLET
+  CRYPTO
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ReportType {
+  OCCUPANCY
+  REVENUE
+  GUEST_SATISFACTION
+  STAFF_PERFORMANCE
+  MAINTENANCE
+  INVENTORY
+}
