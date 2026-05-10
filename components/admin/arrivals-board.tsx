@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,6 +72,8 @@ interface Staff {
 interface ArrivalsBoardProps {
   arrivals: ArrivalRecord[];
   staff: Staff[];
+  defaultTransportType?: string;
+  defaultJettyTransport?: string;
 }
 
 // ─── Pipeline columns ─────────────────────────────────────────────────────────
@@ -443,7 +445,7 @@ function UnplannedPanel({
 
 // ─── Main Board ───────────────────────────────────────────────────────────────
 
-export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
+export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJettyTransport }: ArrivalsBoardProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [preselectedBookingId, setPreselectedBookingId] = useState<string | undefined>();
@@ -490,8 +492,80 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
     return toYMD(new Date(d)) === todayYmd;
   });
 
+  // Sidebar: next 30 days with arrival counts
+  const sidebarDates = useMemo(() => {
+    return Array.from({ length: 30 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const ymd = toYMD(d);
+      const count = arrivals.filter((a) => {
+        const dep = a.scheduledArrival ?? a.booking.checkInDate;
+        return dep ? toYMD(new Date(dep)) === ymd : false;
+      }).length;
+      return {
+        ymd,
+        label: ymd === todayYmd ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }),
+        day: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+        count,
+      };
+    });
+  }, [arrivals, todayYmd]);
+
+  function selectDate(ymd: string) {
+    setSelectedDate(ymd);
+    setStripAnchor(new Date(ymd + 'T12:00:00'));
+  }
+
   return (
-    <div className="p-6 space-y-5">
+    <div className="flex min-h-screen bg-gray-50">
+
+      {/* ── Sidebar date list ──────────────────────────────────────────────── */}
+      <aside className="w-44 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+        <p className="px-3 pt-4 pb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          Arrivals
+        </p>
+        <button
+          onClick={() => setSelectedDate('all')}
+          className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+            selectedDate === 'all'
+              ? 'bg-cyan-50 border-r-2 border-cyan-500 text-cyan-700 font-semibold'
+              : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <span>All dates</span>
+          <span className="text-[10px] text-gray-400">{arrivals.length}</span>
+        </button>
+        {sidebarDates.map(({ ymd, label, day, count }) => (
+          <button
+            key={ymd}
+            onClick={() => selectDate(ymd)}
+            className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
+              selectedDate === ymd
+                ? 'bg-cyan-50 border-r-2 border-cyan-500 text-cyan-700 font-semibold'
+                : count > 0
+                  ? 'text-gray-700 hover:bg-cyan-50'
+                  : 'text-gray-400 hover:bg-gray-50'
+            }`}
+          >
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide leading-none mb-0.5">
+                {label}
+              </p>
+              <p className="text-sm font-medium leading-none">{day}</p>
+            </div>
+            {count > 0 && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                selectedDate === ymd ? 'bg-cyan-200 text-cyan-800' : 'bg-cyan-100 text-cyan-700'
+              }`}>
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
+      </aside>
+
+      {/* ── Main content ──────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -526,7 +600,7 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
               return (
                 <button
                   key={ymd}
-                  onClick={() => setSelectedDate(ymd)}
+                  onClick={() => selectDate(ymd)}
                   className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all text-center min-w-[64px] ${
                     isSelected
                       ? 'border-cyan-500 bg-cyan-600 text-white shadow-sm'
@@ -558,11 +632,10 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
             <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
             <input
               type="date"
-              value={selectedDate}
+              value={selectedDate !== 'all' ? selectedDate : ''}
               onChange={(e) => {
                 if (e.target.value) {
-                  setSelectedDate(e.target.value);
-                  setStripAnchor(new Date(e.target.value));
+                  selectDate(e.target.value);
                 }
               }}
               className="text-xs border-0 p-0 outline-none bg-transparent w-[100px] cursor-pointer"
@@ -633,6 +706,8 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
         staff={staff}
         preselectedBookingId={preselectedBookingId}
         defaultDate={selectedDate !== 'all' ? selectedDate : undefined}
+        defaultTransportType={defaultTransportType}
+        defaultJettyTransport={defaultJettyTransport}
         onCreated={() => router.refresh()}
       />
 
@@ -644,6 +719,7 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
         editRecord={editRecord}
         onCreated={() => { setEditRecord(null); router.refresh(); }}
       />
+      </div>
     </div>
   );
 }

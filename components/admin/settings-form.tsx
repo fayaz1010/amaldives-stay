@@ -75,6 +75,15 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
   const [savingFpos, setSavingFpos] = useState(false);
   const [fposSaved, setFposSaved] = useState(false);
 
+  // Default transport plan settings
+  const defaultPlans = tenant.settings?.defaultPlans ?? {};
+  const [defaultArrivalTransport, setDefaultArrivalTransport] = useState<string>(defaultPlans.arrivalTransportType ?? '');
+  const [defaultDepartureTransport, setDefaultDepartureTransport] = useState<string>(defaultPlans.departureTransportType ?? '');
+  const [defaultArrivalJetty, setDefaultArrivalJetty] = useState<string>(defaultPlans.arrivalJettyTransport ?? '');
+  const [defaultDepartureJetty, setDefaultDepartureJetty] = useState<string>(defaultPlans.departureJettyTransport ?? '');
+  const [savingDefaults, setSavingDefaults] = useState(false);
+  const [defaultsSaved, setDefaultsSaved] = useState(false);
+
   const webhookUrl = `https://${tenant.subdomain}.stay.amaldives.com/api/webhooks/fpos`;
 
   async function onSubmit(e: React.FormEvent) {
@@ -121,6 +130,35 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
       alert('Failed to save FPOS settings');
     } finally {
       setSavingFpos(false);
+    }
+  }
+
+  async function saveDefaults() {
+    setSavingDefaults(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            ...tenant.settings,
+            defaultPlans: {
+              arrivalTransportType: defaultArrivalTransport || null,
+              departureTransportType: defaultDepartureTransport || null,
+              arrivalJettyTransport: defaultArrivalJetty || null,
+              departureJettyTransport: defaultDepartureJetty || null,
+            },
+          },
+        }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setDefaultsSaved(true);
+      setTimeout(() => setDefaultsSaved(false), 2000);
+      router.refresh();
+    } catch {
+      alert('Failed to save default plan settings');
+    } finally {
+      setSavingDefaults(false);
     }
   }
 
@@ -404,6 +442,113 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
               <Button type="button" onClick={saveFpos} disabled={savingFpos}
                 className="bg-teal-600 hover:bg-teal-700">
                 {savingFpos ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save FPOS Settings'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Default Transport Plans ────────────────────────────────────────────── */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Default Transport Plans</CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              Pre-set transport types for arrival and departure plans. When a plan is created these defaults will be pre-selected, saving time for your team.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Arrival defaults */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-cyan-700 flex items-center gap-1.5">
+                  ✈️ Default Arrival Transport
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultArrivalTransport">Inbound Transport Type</Label>
+                  <select
+                    id="defaultArrivalTransport"
+                    value={defaultArrivalTransport}
+                    onChange={(e) => setDefaultArrivalTransport(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">— No default —</option>
+                    <option value="DOMESTIC_FLIGHT">✈️ Domestic Flight</option>
+                    <option value="SEAPLANE">🛩️ Seaplane</option>
+                    <option value="FERRY">🚢 Ferry</option>
+                    <option value="SPEEDBOAT">🚤 Speedboat</option>
+                    <option value="CHARTER_BOAT">⛵ Charter Boat</option>
+                    <option value="SELF_ARRANGED">👤 Self Arranged</option>
+                    <option value="OTHER">📦 Other</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultArrivalJetty">Default Jetty Transfer</Label>
+                  <select
+                    id="defaultArrivalJetty"
+                    value={defaultArrivalJetty}
+                    onChange={(e) => setDefaultArrivalJetty(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">— No default —</option>
+                    <option value="SPEEDBOAT">🚤 Speedboat</option>
+                    <option value="DHONI">🛶 Dhoni</option>
+                    <option value="FERRY">🚢 Ferry</option>
+                    <option value="NONE">🚶 Walk / No transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Departure defaults */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-teal-700 flex items-center gap-1.5">
+                  🛫 Default Departure Transport
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultDepartureTransport">Outbound Transport Type</Label>
+                  <select
+                    id="defaultDepartureTransport"
+                    value={defaultDepartureTransport}
+                    onChange={(e) => setDefaultDepartureTransport(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">— No default —</option>
+                    <option value="DOMESTIC_FLIGHT">✈️ Domestic Flight</option>
+                    <option value="SEAPLANE">🛩️ Seaplane</option>
+                    <option value="FERRY">🚢 Ferry</option>
+                    <option value="SPEEDBOAT">🚤 Speedboat</option>
+                    <option value="CHARTER_BOAT">⛵ Charter Boat</option>
+                    <option value="SELF_ARRANGED">👤 Self Arranged</option>
+                    <option value="OTHER">📦 Other</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultDepartureJetty">Default Jetty Transfer</Label>
+                  <select
+                    id="defaultDepartureJetty"
+                    value={defaultDepartureJetty}
+                    onChange={(e) => setDefaultDepartureJetty(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">— No default —</option>
+                    <option value="SPEEDBOAT">🚤 Speedboat</option>
+                    <option value="DHONI">🛶 Dhoni</option>
+                    <option value="FERRY">🚢 Ferry</option>
+                    <option value="NONE">🚶 Walk / No transfer</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t">
+              {defaultsSaved && (
+                <span className="text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4" /> Saved
+                </span>
+              )}
+              <Button type="button" onClick={saveDefaults} disabled={savingDefaults}
+                className="bg-teal-600 hover:bg-teal-700">
+                {savingDefaults ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Default Plans'}
               </Button>
             </div>
           </CardContent>

@@ -69,6 +69,13 @@ export default async function ArrivalsPage() {
     orderBy: { name: 'asc' },
   });
 
+  // Tenant settings (for default transport plans)
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { settings: true },
+  });
+  const defaultPlans = (tenant?.settings as any)?.defaultPlans ?? {};
+
   const serialisedArrivals = arrivals.map((a) => ({
     ...a,
     scheduledArrival: a.scheduledArrival?.toISOString() ?? null,
@@ -108,6 +115,7 @@ export default async function ArrivalsPage() {
       arrivals={serialisedArrivals}
       departureRecords={serialisedDepartures}
       staff={staff}
+      defaultPlans={defaultPlans}
     />
   );
 }

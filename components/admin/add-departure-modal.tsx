@@ -54,10 +54,13 @@ interface AddDepartureModalProps {
   preselectedBookingId?: string;
   defaultDate?: string;
   editRecord?: DepartureRecord | null;
+  defaultTransportType?: string;
+  defaultJettyTransport?: string;
 }
 
 export function AddDepartureModal({
   open, onOpenChange, onCreated, preselectedBookingId, defaultDate, editRecord,
+  defaultTransportType, defaultJettyTransport,
 }: AddDepartureModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -72,7 +75,7 @@ export function AddDepartureModal({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // Form fields
-  const [transportType, setTransportType] = useState('SPEEDBOAT');
+  const [transportType, setTransportType] = useState(defaultTransportType || 'SPEEDBOAT');
   const [transportRef, setTransportRef] = useState('');
   const [transportOptionId, setTransportOptionId] = useState('');
   const [transportCost, setTransportCost] = useState('');
@@ -81,7 +84,7 @@ export function AddDepartureModal({
   const [seatNumbers, setSeatNumbers] = useState('');
   const [scheduledDeparture, setScheduledDeparture] = useState('');
   const [luggageCount, setLuggageCount] = useState('');
-  const [jettyTransport, setJettyTransport] = useState('');
+  const [jettyTransport, setJettyTransport] = useState(defaultJettyTransport || '');
   const [jettyTransportSeats, setJettyTransportSeats] = useState('');
   const [jettyTransportCapacity, setJettyTransportCapacity] = useState('');
   const [jettyTransportOptionId, setJettyTransportOptionId] = useState('');
@@ -99,11 +102,11 @@ export function AddDepartureModal({
     if (!open) {
       setQuery(''); setListBookings([]); setSelectedBooking(null);
       setPickerOpen(false); setListOffset(0);
-      setTransportType('SPEEDBOAT'); setTransportRef(''); setTransportOptionId('');
+      setTransportType(defaultTransportType || 'SPEEDBOAT'); setTransportRef(''); setTransportOptionId('');
       setTransportCost(''); setCostPaid(false);
       setTicketsPurchased(false); setSeatNumbers('');
       setScheduledDeparture(''); setLuggageCount('');
-      setJettyTransport(''); setJettyTransportSeats(''); setJettyTransportCapacity('');
+      setJettyTransport(defaultJettyTransport || ''); setJettyTransportSeats(''); setJettyTransportCapacity('');
       setJettyTransportOptionId(''); setSpecialNotes('');
     } else {
       fetch('/api/admin/transport-options')

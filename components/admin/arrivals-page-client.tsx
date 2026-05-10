@@ -9,9 +9,15 @@ interface Props {
   arrivals: any[];
   departureRecords: any[];
   staff: any[];
+  defaultPlans?: {
+    arrivalTransportType?: string | null;
+    departureTransportType?: string | null;
+    arrivalJettyTransport?: string | null;
+    departureJettyTransport?: string | null;
+  };
 }
 
-export function ArrivalsPageClient({ arrivals, departureRecords, staff }: Props) {
+export function ArrivalsPageClient({ arrivals, departureRecords, staff, defaultPlans = {} }: Props) {
   const [tab, setTab] = useState<'arrivals' | 'departures'>('arrivals');
 
   const todayStr = new Date().toDateString();
@@ -65,9 +71,9 @@ export function ArrivalsPageClient({ arrivals, departureRecords, staff }: Props)
       </div>
 
       {tab === 'arrivals' ? (
-        <ArrivalsBoard arrivals={arrivals} staff={staff} />
+        <ArrivalsBoard arrivals={arrivals} staff={staff} defaultTransportType={defaultPlans.arrivalTransportType ?? undefined} defaultJettyTransport={defaultPlans.arrivalJettyTransport ?? undefined} />
       ) : (
-        <DeparturesBoard records={departureRecords} />
+        <DeparturesBoard records={departureRecords} defaultTransportType={defaultPlans.departureTransportType ?? undefined} defaultJettyTransport={defaultPlans.departureJettyTransport ?? undefined} />
       )}
     </div>
   );

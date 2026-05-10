@@ -66,6 +66,10 @@ interface AddArrivalModalProps {
   defaultDate?: string;
   /** When set the modal is in edit mode — pre-fills and PATCHes */
   editRecord?: ArrivalRecord | null;
+  /** Default transport type from property settings */
+  defaultTransportType?: string;
+  /** Default jetty transport from property settings */
+  defaultJettyTransport?: string;
 }
 
 export const TRANSPORT_TYPES = [
@@ -80,6 +84,7 @@ export const TRANSPORT_TYPES = [
 
 export function AddArrivalModal({
   open, onOpenChange, staff, onCreated, preselectedBookingId, defaultDate, editRecord,
+  defaultTransportType, defaultJettyTransport,
 }: AddArrivalModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -94,7 +99,7 @@ export function AddArrivalModal({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // Form state
-  const [transportType, setTransportType] = useState('SPEEDBOAT');
+  const [transportType, setTransportType] = useState(defaultTransportType || 'SPEEDBOAT');
   const [transportRef, setTransportRef] = useState('');
   const [transportCost, setTransportCost] = useState('');
   const [costPaid, setCostPaid] = useState(false);
@@ -103,7 +108,7 @@ export function AddArrivalModal({
   const [pickupVendor, setPickupVendor] = useState('');
   const [scheduledArrival, setScheduledArrival] = useState('');
   const [luggageCount, setLuggageCount] = useState('');
-  const [jettyTransport, setJettyTransport] = useState('');
+  const [jettyTransport, setJettyTransport] = useState(defaultJettyTransport || '');
   const [jettyTransportSeats, setJettyTransportSeats] = useState('');
   const [jettyTransportCapacity, setJettyTransportCapacity] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
@@ -125,10 +130,10 @@ export function AddArrivalModal({
     if (!open) {
       setQuery(''); setListBookings([]); setSelectedBooking(null);
       setPickerOpen(false); setListOffset(0);
-      setTransportType('SPEEDBOAT'); setTransportRef(''); setTransportCost('');
+      setTransportType(defaultTransportType || 'SPEEDBOAT'); setTransportRef(''); setTransportCost('');
       setCostPaid(false); setPickupBy('STAFF'); setPickupStaffId('');
       setPickupVendor(''); setScheduledArrival(''); setLuggageCount('');
-      setJettyTransport(''); setJettyTransportSeats(''); setJettyTransportCapacity('');
+      setJettyTransport(defaultJettyTransport || ''); setJettyTransportSeats(''); setJettyTransportCapacity('');
       setSpecialNotes(''); setTicketsPurchased(false); setSeatNumbers(''); setAirportPickupConfirmed(false);
       setTransportOptionId(''); setJettyTransportOptionId('');
     } else {

@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Loader2, LogOut, DollarSign, Luggage, Anchor, Clock,
-  CheckCircle2, ChevronLeft, ChevronRight, Pencil, CalendarDays,
+  CheckCircle2, ChevronLeft, ChevronRight as ChevronR, Pencil, CalendarDays,
 } from 'lucide-react';
 import { AddDepartureModal } from './add-departure-modal';
 
@@ -60,6 +60,8 @@ interface UnplannedBooking {
 
 interface DeparturesBoardProps {
   records: DepartureRecord[];
+  defaultTransportType?: string;
+  defaultJettyTransport?: string;
 }
 
 // ─── Kanban Columns ───────────────────────────────────────────────────────────
@@ -90,17 +92,20 @@ function fmt(d: string | Date | null | undefined) {
   return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function buildDateStrip(anchor: Date) {
-  const days: { date: Date; ymd: string; label: string; short: string }[] = [];
-  for (let i = 0; i < 7; i++) {
+function buildDateStrip(anchor: Date): Array<{ date: Date; ymd: string; label: string; day: string }> {
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(anchor);
-    d.setDate(anchor.getDate() + i);
+    d.setDate(anchor.getDate() + i - 1); // yesterday, today, +1 … +5
     const ymd = toYMD(d);
-    const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-    const short = i === 0 ? 'Today' : i === 1 ? 'Tmrw' : d.toLocaleDateString([], { weekday: 'short', day: 'numeric' });
-    days.push({ date: d, ymd, label, short });
-  }
-  return days;
+    const todayYmd = toYMD(new Date());
+    const tomorrowYmd = toYMD(new Date(Date.now() + 86400000));
+    const label =
+      ymd === todayYmd ? 'Today' :
+      ymd === tomorrowYmd ? 'Tomorrow' :
+      d.toLocaleDateString(undefined, { weekday: 'short' });
+    const day = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return { date: d, ymd, label, day };
+  });
 }
 
 // ─── Unplanned Panel ──────────────────────────────────────────────────────────
@@ -323,7 +328,7 @@ function DepartureCard({
 
 // ─── Main Board ───────────────────────────────────────────────────────────────
 
-export function DeparturesBoard({ records }: DeparturesBoardProps) {
+export function DeparturesBoard({ records, defaultTransportType, defaultJettyTransport }: DeparturesBoardProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [preselectedBookingId, setPreselectedBookingId] = useState<string | undefined>();
@@ -334,6 +339,26 @@ export function DeparturesBoard({ records }: DeparturesBoardProps) {
   const [stripAnchor, setStripAnchor] = useState<Date>(new Date());
   const dateStrip = buildDateStrip(stripAnchor);
 
+  // Sidebar: next 30 days with departure counts
+  const sidebarDates = useMemo(() => {
+    return Array.from({ length: 30 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const ymd = toYMD(d);
+      const count = records.filter((r) => {
+        const dep = r.scheduledDeparture ?? r.booking.checkOutDate;
+        return dep ? toYMD(new Date(dep)) === ymd : false;
+      }).length;
+      const isToday = ymd === todayYmd;
+      return {
+        ymd,
+        label: isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }),
+        day: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+        count,
+      };
+    });
+  }, [records, todayYmd]);
+
   // Date-filtered records
   const filtered = selectedDate === 'all'
     ? records
@@ -342,12 +367,16 @@ export function DeparturesBoard({ records }: DeparturesBoardProps) {
         return d ? toYMD(new Date(d)) === selectedDate : false;
       });
 
-  // Per-date counts for strip badges
   function countForDate(ymd: string) {
     return records.filter((r) => {
       const d = r.scheduledDeparture ?? r.booking.checkOutDate;
       return d ? toYMD(new Date(d)) === ymd : false;
     }).length;
+  }
+
+  function selectDate(ymd: string) {
+    setSelectedDate(ymd);
+    setStripAnchor(new Date(ymd + 'T12:00:00'));
   }
 
   async function updateRecord(id: string, data: any) {
@@ -363,100 +392,180 @@ export function DeparturesBoard({ records }: DeparturesBoardProps) {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Departures</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Plan and track guest check-outs and return transport
-          </p>
-        </div>
-        <Button onClick={() => { setPreselectedBookingId(undefined); setAddOpen(true); }}
-          className="bg-teal-600 hover:bg-teal-700 gap-2">
-          <Plus className="h-4 w-4" /> Plan Departure
-        </Button>
-      </div>
+    <div className="flex min-h-screen bg-gray-50">
 
-      {/* Date strip */}
-      <div className="flex items-center gap-1 px-6 pb-4 overflow-x-auto">
-        <button onClick={() => setStripAnchor((a) => { const d = new Date(a); d.setDate(d.getDate() - 7); return d; })}
-          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 shrink-0">
-          <ChevronLeft className="h-4 w-4" />
+      {/* ── Sidebar date list ──────────────────────────────────────────────── */}
+      <aside className="w-44 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+        <p className="px-3 pt-4 pb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          Departures
+        </p>
+        <button
+          onClick={() => setSelectedDate('all')}
+          className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+            selectedDate === 'all'
+              ? 'bg-teal-50 border-r-2 border-teal-500 text-teal-700 font-semibold'
+              : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <span>All dates</span>
+          <span className="text-[10px] text-gray-400">{records.length}</span>
         </button>
-
-        <button onClick={() => setSelectedDate('all')}
-          className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 ${selectedDate === 'all' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          All
-        </button>
-
-        {dateStrip.map(({ ymd, short }) => {
-          const count = countForDate(ymd);
-          const isToday = ymd === todayYmd;
-          const isActive = selectedDate === ymd;
-          return (
-            <button key={ymd} onClick={() => setSelectedDate(ymd)}
-              className={`flex flex-col items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors shrink-0 ${
-                isActive ? 'bg-teal-600 text-white' : isToday ? 'bg-teal-50 text-teal-700 border border-teal-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+        {sidebarDates.map(({ ymd, label, day, count }) => (
+          <button
+            key={ymd}
+            onClick={() => selectDate(ymd)}
+            className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
+              selectedDate === ymd
+                ? 'bg-teal-50 border-r-2 border-teal-500 text-teal-700 font-semibold'
+                : count > 0
+                  ? 'text-gray-700 hover:bg-teal-50'
+                  : 'text-gray-400 hover:bg-gray-50'
+            }`}
+          >
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide leading-none mb-0.5">
+                {label}
+              </p>
+              <p className="text-sm font-medium leading-none">{day}</p>
+            </div>
+            {count > 0 && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                selectedDate === ymd ? 'bg-teal-200 text-teal-800' : 'bg-teal-100 text-teal-700'
               }`}>
-              <span>{short}</span>
-              {count > 0 && <span className={`text-[10px] font-bold ${isActive ? 'text-teal-200' : 'text-teal-600'}`}>{count}</span>}
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
+      </aside>
+
+      {/* ── Main content ──────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Departures</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Plan and track guest check-outs and return transport
+            </p>
+          </div>
+          <Button onClick={() => { setPreselectedBookingId(undefined); setAddOpen(true); }}
+            className="bg-teal-600 hover:bg-teal-700 gap-2">
+            <Plus className="h-4 w-4" /> Plan Departure
+          </Button>
+        </div>
+
+        {/* ── Date strip ──────────────────────────────────────────────────── */}
+        <div className="bg-white border-b mx-6 mb-4 rounded-xl p-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            {/* Prev week */}
+            <button
+              onClick={() => setStripAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
+              className="p-1.5 rounded-lg border hover:bg-gray-50 text-gray-500">
+              <ChevronLeft className="h-4 w-4" />
             </button>
-          );
-        })}
 
-        <button onClick={() => setStripAnchor((a) => { const d = new Date(a); d.setDate(d.getDate() + 7); return d; })}
-          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 shrink-0">
-          <ChevronRight className="h-4 w-4" />
-        </button>
-
-        <label className="flex items-center gap-1.5 ml-2 shrink-0">
-          <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-          <input type="date" value={selectedDate !== 'all' ? selectedDate : ''}
-            onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }}
-            className="text-xs border rounded px-2 py-1 text-gray-600 h-7" />
-        </label>
-      </div>
-
-      {/* Unplanned panel */}
-      {selectedDate !== 'all' && (
-        <UnplannedPanel selectedDate={selectedDate}
-          onPlan={(id) => { setPreselectedBookingId(id); setAddOpen(true); }} />
-      )}
-
-      {/* Kanban */}
-      <div className="px-6 pb-6">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <LogOut className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="font-medium text-gray-500">No departures planned for this day</p>
-            <p className="text-sm mt-1">Click "Plan Departure" to add one.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {COLUMNS.map((col) => {
-              const colRecords = filtered.filter((r) => r.status === col.key);
-              return (
-                <div key={col.key} className={`rounded-xl border ${col.color} p-3`}>
-                  <div className={`flex items-center gap-2 mb-3 ${col.header}`}>
-                    <span className={`h-2 w-2 rounded-full ${col.dot}`} />
-                    <span className="text-xs font-bold uppercase tracking-wide">{col.label}</span>
-                    <span className="ml-auto text-xs font-bold">{colRecords.length}</span>
-                  </div>
-                  <div className="space-y-3">
-                    {colRecords.map((r) => (
-                      <DepartureCard key={r.id} record={r} onUpdate={updateRecord}
-                        onEdit={(rec) => setEditRecord(rec)} />
-                    ))}
-                    {colRecords.length === 0 && (
-                      <p className="text-[11px] text-gray-400 text-center py-4">—</p>
+            {/* Day buttons */}
+            <div className="flex gap-1.5 flex-1 overflow-x-auto">
+              {dateStrip.map(({ ymd, label, day }) => {
+                const isSelected = selectedDate === ymd;
+                const count = countForDate(ymd);
+                return (
+                  <button
+                    key={ymd}
+                    onClick={() => selectDate(ymd)}
+                    className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all text-center min-w-[64px] ${
+                      isSelected
+                        ? 'border-teal-500 bg-teal-600 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight">{label}</span>
+                    <span className="text-sm font-bold leading-tight">{day}</span>
+                    {count > 0 && (
+                      <span className={`text-[10px] font-bold px-1.5 rounded-full mt-0.5 ${
+                        isSelected ? 'bg-white/30 text-white' : 'bg-teal-100 text-teal-700'
+                      }`}>
+                        {count}
+                      </span>
                     )}
-                  </div>
-                </div>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next week */}
+            <button
+              onClick={() => setStripAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
+              className="p-1.5 rounded-lg border hover:bg-gray-50 text-gray-500">
+              <ChevronR className="h-4 w-4" />
+            </button>
+
+            {/* Date picker */}
+            <div className="flex items-center gap-1 border rounded-lg px-2 py-1 text-xs text-gray-500 hover:border-teal-400 transition-colors">
+              <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
+              <input
+                type="date"
+                value={selectedDate !== 'all' ? selectedDate : ''}
+                onChange={(e) => { if (e.target.value) selectDate(e.target.value); }}
+                className="text-xs border-0 p-0 outline-none bg-transparent w-[100px] cursor-pointer"
+              />
+            </div>
+
+            {/* All button */}
+            <button
+              onClick={() => setSelectedDate('all')}
+              className={`text-xs px-3 py-1.5 rounded-lg border-2 transition-colors shrink-0 ${
+                selectedDate === 'all'
+                  ? 'border-gray-500 bg-gray-700 text-white'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-400'
+              }`}
+            >
+              All
+            </button>
           </div>
+        </div>
+
+        {/* Unplanned panel */}
+        {selectedDate !== 'all' && (
+          <UnplannedPanel selectedDate={selectedDate}
+            onPlan={(id) => { setPreselectedBookingId(id); setAddOpen(true); }} />
         )}
+
+        {/* Kanban */}
+        <div className="px-6 pb-6">
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <LogOut className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="font-medium text-gray-500">No departures planned for this day</p>
+              <p className="text-sm mt-1">Click "Plan Departure" to add one.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {COLUMNS.map((col) => {
+                const colRecords = filtered.filter((r) => r.status === col.key);
+                return (
+                  <div key={col.key} className={`rounded-xl border ${col.color} p-3`}>
+                    <div className={`flex items-center gap-2 mb-3 ${col.header}`}>
+                      <span className={`h-2 w-2 rounded-full ${col.dot}`} />
+                      <span className="text-xs font-bold uppercase tracking-wide">{col.label}</span>
+                      <span className="ml-auto text-xs font-bold">{colRecords.length}</span>
+                    </div>
+                    <div className="space-y-3">
+                      {colRecords.map((r) => (
+                        <DepartureCard key={r.id} record={r} onUpdate={updateRecord}
+                          onEdit={(rec) => setEditRecord(rec)} />
+                      ))}
+                      {colRecords.length === 0 && (
+                        <p className="text-[11px] text-gray-400 text-center py-4">—</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modals */}
@@ -465,6 +574,8 @@ export function DeparturesBoard({ records }: DeparturesBoardProps) {
         onOpenChange={(o) => { setAddOpen(o); if (!o) setPreselectedBookingId(undefined); }}
         preselectedBookingId={preselectedBookingId}
         defaultDate={selectedDate !== 'all' ? selectedDate : undefined}
+        defaultTransportType={defaultTransportType}
+        defaultJettyTransport={defaultJettyTransport}
         onCreated={() => router.refresh()}
       />
       <AddDepartureModal
