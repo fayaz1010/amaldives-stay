@@ -36,7 +36,6 @@ export async function GET(
           orderBy: { createdAt: 'asc' },
         },
         payments: {
-          where: { status: 'COMPLETED' },
           orderBy: { createdAt: 'asc' },
         },
       },

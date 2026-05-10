@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Printer, Share2, CheckCircle2,
-  Check, Plus, Wallet,
-  Building2, RotateCcw,
+  Check, Plus, RotateCcw,
 } from 'lucide-react';
 import { MV_PAYMENT_METHODS } from './quick-pay-modal';
 
@@ -56,22 +55,6 @@ interface CheckoutModalProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const METHODS = [
-  { value: 'CASH', label: 'Cash', icon: Banknote, color: 'text-green-600' },
-  { value: 'CARD', label: 'Card / FPOS', icon: CreditCard, color: 'text-blue-600' },
-  { value: 'BANK_TRANSFER', label: 'Bank Transfer', icon: Building2, color: 'text-purple-600' },
-  { value: 'DIGITAL_WALLET', label: 'Digital Wallet', icon: Wallet, color: 'text-orange-600' },
-  { value: 'CRYPTO', label: 'Crypto', icon: Bitcoin, color: 'text-yellow-600' },
-];
-
-const METHOD_ICONS: Record<string, any> = {
-  CASH: ({ className }: any) => <span className={className}>💵</span>,
-  CARD: ({ className }: any) => <span className={className}>💳</span>,
-  BANK_TRANSFER: ({ className }: any) => <span className={className}>🏦</span>,
-  DIGITAL_WALLET: ({ className }: any) => <span className={className}>📱</span>,
-  CRYPTO: ({ className }: any) => <span className={className}>₿</span>,
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function nights(from: string, to: string) {
@@ -93,6 +76,14 @@ function parseServiceNotes(notes: string | null | undefined): string {
   return m ? m[1] : notes;
 }
 
+/** Real grand total = room charges + all service orders + platform fee */
+function computeGrandTotal(b: BillBooking): number {
+  const n = nights(b.checkInDate, b.checkOutDate);
+  const roomCharge = b.room.basePrice * n;
+  const svcTotal = b.serviceOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  return roomCharge + svcTotal + (b.platformFee || 0);
+}
+
 // ─── Receipt for printing ─────────────────────────────────────────────────────
 
 function Receipt({ b }: { b: BillBooking }) {
@@ -100,7 +91,10 @@ function Receipt({ b }: { b: BillBooking }) {
   const currency = b.room.property.currency || 'USD';
   const fmt$ = (v: number) => `${currency} ${v.toFixed(2)}`;
   const confirmedPayments = b.payments.filter(p => p.status === 'COMPLETED');
-  const balance = b.totalAmount - b.paidAmount;
+  const grandTotal = computeGrandTotal(b);
+  const balance = grandTotal - b.paidAmount;
+  const roomCharge = b.room.basePrice * n;
+  const svcTotal = b.serviceOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   return (
     <div className="font-mono text-sm text-gray-800 space-y-0">
@@ -142,15 +136,28 @@ function Receipt({ b }: { b: BillBooking }) {
           <tr>
             <td className="py-0.5 pr-2 text-gray-600">Room {b.room.number} × {n} night{n !== 1 ? 's' : ''}</td>
             <td className="text-right text-[10px] text-gray-400">{fmt$(b.room.basePrice)}/night</td>
-            <td className="text-right font-medium pl-2">{fmt$(b.room.basePrice * n)}</td>
+            <td className="text-right font-medium pl-2">{fmt$(roomCharge)}</td>
           </tr>
-          {b.serviceOrders.map((o) => (
-            <tr key={o.id}>
-              <td className="py-0.5 pr-2 text-gray-600">{parseServiceNotes(o.notes) || o.service.name}</td>
-              <td className="text-right text-[10px] text-gray-400">{new Date(o.createdAt).toLocaleDateString()}</td>
-              <td className="text-right font-medium pl-2">{fmt$(o.totalAmount)}</td>
-            </tr>
-          ))}
+          {b.serviceOrders.length > 0 && (
+            <>
+              <tr>
+                <td colSpan={3} className="pt-1.5 pb-0.5">
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Room Services &amp; Extras</p>
+                </td>
+              </tr>
+              {b.serviceOrders.map((o) => (
+                <tr key={o.id}>
+                  <td className="py-0.5 pr-2 text-gray-600 pl-2">{parseServiceNotes(o.notes) || o.service.name}</td>
+                  <td className="text-right text-[10px] text-gray-400">{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td className="text-right font-medium pl-2">{fmt$(o.totalAmount)}</td>
+                </tr>
+              ))}
+              <tr className="border-t border-dashed border-gray-200">
+                <td className="py-0.5 pr-2 text-gray-500 text-[11px]" colSpan={2}>Services subtotal</td>
+                <td className="text-right text-[11px] font-medium pl-2 text-gray-600">{fmt$(svcTotal)}</td>
+              </tr>
+            </>
+          )}
           {b.platformFee > 0 && (
             <tr className="text-gray-400 text-[11px]">
               <td className="py-0.5 pr-2" colSpan={2}>Platform fee</td>
@@ -163,7 +170,7 @@ function Receipt({ b }: { b: BillBooking }) {
       {/* Totals */}
       <div className="border-t border-gray-200 pt-2 space-y-1 mb-3 text-sm">
         <div className="flex justify-between font-bold">
-          <span>Total</span><span>{fmt$(b.totalAmount)}</span>
+          <span>Total</span><span>{fmt$(grandTotal)}</span>
         </div>
         <div className="flex justify-between text-green-600">
           <span>Paid</span><span>– {fmt$(b.paidAmount)}</span>
@@ -213,7 +220,8 @@ function RecordPaymentForm({
   booking: BillBooking;
   onRecorded: (newPaid: number) => void;
 }) {
-  const balance = booking.totalAmount - booking.paidAmount;
+  const grandTotal = computeGrandTotal(booking);
+  const balance = grandTotal - booking.paidAmount;
   const [selectedId, setSelectedId] = useState('BML_CARD');
   const [amount, setAmount] = useState(balance > 0 ? balance.toFixed(2) : '');
   const [transactionId, setTransactionId] = useState('');
@@ -461,7 +469,7 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const balance = booking ? booking.totalAmount - booking.paidAmount : 0;
+  const balance = booking ? computeGrandTotal(booking) - booking.paidAmount : 0;
   const confirmedPayments = booking?.payments.filter(p => p.status === 'COMPLETED') ?? [];
 
   return (
@@ -622,6 +630,9 @@ function buildPlainTextBill(b: BillBooking): string {
   const n = nights(b.checkInDate, b.checkOutDate);
   const c = b.room.property.currency || 'USD';
   const f = (v: number) => `${c} ${v.toFixed(2)}`;
+  const roomCharge = b.room.basePrice * n;
+  const svcTotal = b.serviceOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const grandTotal = roomCharge + svcTotal + (b.platformFee || 0);
   const lines = [
     `=== ${b.room.property.name.toUpperCase()} ===`,
     `${b.room.property.address}, ${b.room.property.city}`,
@@ -637,13 +648,18 @@ function buildPlainTextBill(b: BillBooking): string {
     `Guests:    ${b.adults} adults${b.children > 0 ? ` + ${b.children} children` : ''}`,
     '',
     '--- CHARGES ---',
-    `Room ${b.room.number} × ${n} nights @ ${f(b.room.basePrice)}   ${f(b.room.basePrice * n)}`,
-    ...b.serviceOrders.map(o => `${parseServiceNotes(o.notes) || o.service.name}   ${f(o.totalAmount)}`),
+    `Room ${b.room.number} × ${n} nights @ ${f(b.room.basePrice)}   ${f(roomCharge)}`,
+    ...(b.serviceOrders.length > 0 ? [
+      '',
+      '--- ROOM SERVICES & EXTRAS ---',
+      ...b.serviceOrders.map(o => `${parseServiceNotes(o.notes) || o.service.name}   ${f(o.totalAmount)}`),
+      `Services subtotal   ${f(svcTotal)}`,
+    ] : []),
     ...(b.platformFee > 0 ? [`Platform fee   ${f(b.platformFee)}`] : []),
     '',
-    `TOTAL:    ${f(b.totalAmount)}`,
+    `TOTAL:    ${f(grandTotal)}`,
     `PAID:     ${f(b.paidAmount)}`,
-    `BALANCE:  ${f(b.totalAmount - b.paidAmount)}`,
+    `BALANCE:  ${f(grandTotal - b.paidAmount)}`,
     '',
     '--- PAYMENTS ---',
     ...b.payments.filter(p => p.status === 'COMPLETED').map(

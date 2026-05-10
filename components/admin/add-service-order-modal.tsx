@@ -313,6 +313,12 @@ export function AddServiceOrderModal({
             </div>
           )}
 
+          {cart.length > 0 && roomId && (
+            <div className="flex items-center gap-2 bg-cyan-50 border border-cyan-200 rounded-lg px-3 py-2 text-xs text-cyan-800">
+              <span className="text-base">🧾</span>
+              <span>This order will be <strong>added to the bill</strong> for Room {rooms.find(r => r.id === roomId)?.number} and collected at checkout (or paid separately).</span>
+            </div>
+          )}
           {/* Special requests */}
           <div className="space-y-1.5">
             <Label htmlFor="rs-special">Special Requests / Notes</Label>
@@ -345,8 +351,9 @@ export function AddServiceOrderModal({
             ) : (
               <>
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                Place Order
-                {cart.length > 0 && ` · $${total.toFixed(2)}`}
+                {roomId
+                  ? `Charge to Room ${rooms.find(r => r.id === roomId)?.number ?? ''}${cart.length > 0 ? ` · $${total.toFixed(2)}` : ''}`
+                  : `Place Order${cart.length > 0 ? ` · $${total.toFixed(2)}` : ''}`}
               </>
             )}
           </Button>

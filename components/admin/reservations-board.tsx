@@ -92,7 +92,15 @@ interface Booking {
   source?: string | null;
   notes?: string | null;
   guest?: { name: string | null; email: string } | null;
-  room?: { number: string; name: string | null; type: string } | null;
+  room?: { number: string; name: string | null; type: string; basePrice: number; property?: { currency?: string } | null } | null;
+  serviceOrders?: Array<{ id: string; totalAmount: number }> | null;
+}
+
+function grandTotal(b: Booking): number {
+  const n = nights(b.checkInDate, b.checkOutDate);
+  const roomCharge = (b.room?.basePrice ?? 0) * n;
+  const svcTotal = (b.serviceOrders ?? []).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  return roomCharge + svcTotal + (b.platformFee || 0);
 }
 
 export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
@@ -188,7 +196,8 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                 ) : (
                   colBookings.map((b) => {
                     const n = nights(b.checkInDate, b.checkOutDate);
-                    const balance = b.totalAmount - b.paidAmount;
+                    const total = grandTotal(b);
+                    const balance = total - b.paidAmount;
                     const busy = busyId === b.id;
 
                     return (
@@ -231,7 +240,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 text-[11px]">
                               <DollarSign className="h-3 w-3 text-cyan-600" />
-                              <span className="font-bold text-cyan-700">${b.totalAmount.toFixed(0)}</span>
+                              <span className="font-bold text-cyan-700">${total.toFixed(0)}</span>
                               {b.platformFee > 0 && (
                                 <span className="text-gray-400">(fee ${b.platformFee.toFixed(0)})</span>
                               )}
@@ -240,7 +249,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                               <span className="flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
                                 <AlertCircle className="h-3 w-3" /> ${balance.toFixed(0)} due
                               </span>
-                            ) : b.status !== 'CHECKED_OUT' && b.totalAmount > 0 ? (
+                            ) : b.status !== 'CHECKED_OUT' && total > 0 ? (
                               <span className="text-[10px] text-green-600 font-medium">Paid ✓</span>
                             ) : null}
                           </div>
@@ -276,17 +285,15 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                 >
                                   <Receipt className="h-3 w-3" />
                                 </Button>
-                                {balance > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100"
-                                    onClick={() => setQuickPayBooking(b)}
-                                    title="Quick payment"
-                                  >
-                                    💳
-                                  </Button>
-                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className={`h-7 text-xs gap-1 ${balance > 0 ? 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}`}
+                                  onClick={() => setQuickPayBooking(b)}
+                                  title="Record payment"
+                                >
+                                  💳 {balance > 0 ? `Pay $${balance.toFixed(0)}` : 'Payment'}
+                                </Button>
                                 <Button size="sm"
                                   className="h-7 text-xs flex-1 bg-teal-600 hover:bg-teal-700"
                                   onClick={() => setCheckoutId(b.id)}>
@@ -331,8 +338,8 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
           guestName={quickPayBooking.guest?.name || '—'}
           roomNumber={quickPayBooking.room?.number || '—'}
           confirmationNumber={quickPayBooking.confirmationNumber}
-          balanceDue={quickPayBooking.totalAmount - quickPayBooking.paidAmount}
-          currency="USD"
+          balanceDue={grandTotal(quickPayBooking) - quickPayBooking.paidAmount}
+          currency={quickPayBooking.room?.property?.currency || 'USD'}
           onClose={() => setQuickPayBooking(null)}
           onPaid={() => { setQuickPayBooking(null); router.refresh(); }}
         />

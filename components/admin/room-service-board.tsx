@@ -21,6 +21,7 @@ interface ServiceOrder {
   id: string;
   status: string;
   quantity: number;
+  totalAmount: number;
   notes?: string | null;
   scheduledDate?: string | Date | null;
   completedAt?: string | Date | null;
@@ -206,17 +207,29 @@ export function RoomServiceBoard({ orders, rooms }: RoomServiceBoardProps) {
                       <Card key={order.id} className="hover:shadow-md transition-shadow">
                         <CardContent className="p-3 space-y-2">
                           {/* Room + order time */}
-                          <div className="flex items-center gap-1 text-[11px] text-gray-400">
-                            <Clock className="h-3 w-3 shrink-0" />
-                            <span>
-                              {roomNumber ? `Room ${roomNumber} · ` : ''}
-                              {order.scheduledDate
-                                ? `Req: ${new Date(order.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                                : new Date(order.createdAt).toLocaleString([], {
-                                    dateStyle: 'short',
-                                    timeStyle: 'short',
-                                  })}
-                            </span>
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="flex items-center gap-1 text-[11px] text-gray-400">
+                              <Clock className="h-3 w-3 shrink-0" />
+                              <span>
+                                {roomNumber ? `Room ${roomNumber} · ` : ''}
+                                {order.scheduledDate
+                                  ? `Req: ${new Date(order.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                  : new Date(order.createdAt).toLocaleString([], {
+                                      dateStyle: 'short',
+                                      timeStyle: 'short',
+                                    })}
+                              </span>
+                            </div>
+                            {/* Billing badge */}
+                            {order.booking ? (
+                              <span className="text-[9px] font-semibold bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                                🧾 On Bill
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                                ⚠ Not on Bill
+                              </span>
+                            )}
                           </div>
 
                           {/* Items */}
