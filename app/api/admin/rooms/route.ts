@@ -54,8 +54,15 @@ export async function POST(request: NextRequest) {
     const room = await tenantDb.createRoom(data);
 
     return NextResponse.json({ room }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create room API error:', error);
+    // Unique constraint: room number already exists for this property
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Room number already exists for this property. Please use a different room number.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
