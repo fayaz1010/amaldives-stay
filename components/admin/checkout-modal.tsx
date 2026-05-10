@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Loader2, Printer, Share2, CheckCircle2,
-  Check, Plus, CreditCard, Banknote, Wallet,
-  Building2, Bitcoin, RotateCcw, ChevronDown, ChevronUp,
+  Check, Plus, Wallet,
+  Building2, RotateCcw,
 } from 'lucide-react';
+import { MV_PAYMENT_METHODS } from './quick-pay-modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,8 +65,11 @@ const METHODS = [
 ];
 
 const METHOD_ICONS: Record<string, any> = {
-  CASH: Banknote, CARD: CreditCard, BANK_TRANSFER: Building2,
-  DIGITAL_WALLET: Wallet, CRYPTO: Bitcoin,
+  CASH: ({ className }: any) => <span className={className}>💵</span>,
+  CARD: ({ className }: any) => <span className={className}>💳</span>,
+  BANK_TRANSFER: ({ className }: any) => <span className={className}>🏦</span>,
+  DIGITAL_WALLET: ({ className }: any) => <span className={className}>📱</span>,
+  CRYPTO: ({ className }: any) => <span className={className}>₿</span>,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -210,12 +214,14 @@ function RecordPaymentForm({
   onRecorded: (newPaid: number) => void;
 }) {
   const balance = booking.totalAmount - booking.paidAmount;
+  const [selectedId, setSelectedId] = useState('BML_CARD');
   const [amount, setAmount] = useState(balance > 0 ? balance.toFixed(2) : '');
-  const [method, setMethod] = useState('CASH');
   const [transactionId, setTransactionId] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const selected = MV_PAYMENT_METHODS.find((m) => m.id === selectedId)!;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -228,9 +234,9 @@ function RecordPaymentForm({
         body: JSON.stringify({
           bookingId: booking.id,
           amount: Number(amount),
-          method,
+          method: selected.method,
           transactionId: transactionId || null,
-          notes: notes || null,
+          notes: notes || selected.notes || selected.label,
           currency: booking.room.property.currency || 'USD',
         }),
       });
@@ -248,62 +254,49 @@ function RecordPaymentForm({
     <form onSubmit={submit} className="border border-dashed border-cyan-300 rounded-lg p-3 bg-cyan-50 space-y-3">
       <p className="text-xs font-semibold text-cyan-800 uppercase tracking-wide">Record Payment</p>
 
-      {/* Method selector */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {METHODS.map((m) => {
-          const Icon = m.icon;
-          return (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => setMethod(m.value)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg border py-2 text-[10px] font-medium transition-colors ${
-                method === m.value
-                  ? 'border-cyan-500 bg-white shadow-sm text-cyan-700'
-                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-              }`}
-            >
-              <Icon className={`h-4 w-4 ${method === m.value ? m.color : ''}`} />
-              {m.label.split(' ')[0]}
-            </button>
-          );
-        })}
+      {/* Maldives-first payment method grid */}
+      <div className="grid grid-cols-4 gap-1.5">
+        {MV_PAYMENT_METHODS.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => setSelectedId(m.id)}
+            className={`rounded-lg border-2 p-1.5 text-center transition-all ${
+              selectedId === m.id ? m.activeColor : m.color
+            }`}
+          >
+            <div className="text-base leading-tight">{m.emoji}</div>
+            <div className="text-[9px] font-bold leading-tight mt-0.5">{m.label}</div>
+          </button>
+        ))}
       </div>
+      {selected && (
+        <p className="text-[11px] text-gray-500 text-center -mt-1">{selected.sublabel}</p>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label className="text-xs">Amount ({booking.room.property.currency || 'USD'}) *</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="h-8 text-sm"
-            required
-          />
+          <Input type="number" step="0.01" min="0.01" value={amount}
+            onChange={(e) => setAmount(e.target.value)} className="h-8 text-sm" required />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">
-            {method === 'CARD' ? 'POS Terminal Ref / FPOS ID' : 'Transaction / Reference'}
+            {['BML_CARD', 'MIB_CARD'].includes(selectedId) ? 'FPOS Slip No.' :
+             selectedId === 'MFAISAA' ? 'mFaisaa Ref.' :
+             selectedId === 'BML_TRANSFER' ? 'Transfer Ref.' :
+             selectedId === 'BML_CONNECT' ? 'IPG Ref.' : 'Ref. (optional)'}
           </Label>
-          <Input
-            value={transactionId}
-            onChange={(e) => setTransactionId(e.target.value)}
-            placeholder={method === 'CARD' ? 'FPOS txn ref…' : 'Optional ref…'}
-            className="h-8 text-sm"
-          />
+          <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)}
+            placeholder={['BML_CARD', 'MIB_CARD'].includes(selectedId) ? 'Slip no…' : 'optional'}
+            className="h-8 text-sm" />
         </div>
       </div>
 
       <div className="space-y-1">
         <Label className="text-xs">Notes (optional)</Label>
-        <Input
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. partial payment, deposit…"
-          className="h-8 text-sm"
-        />
+        <Input value={notes} onChange={(e) => setNotes(e.target.value)}
+          placeholder="partial payment, deposit…" className="h-8 text-sm" />
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
@@ -346,48 +339,48 @@ function PaymentHistory({
   }
 
   if (payments.length === 0) {
-    return (
-      <p className="text-xs text-gray-400 text-center py-2">No payments recorded yet.</p>
-    );
+    return <p className="text-xs text-gray-400 text-center py-2">No payments recorded yet.</p>;
   }
 
   const fmt$ = (v: number) => `${currency} ${v.toFixed(2)}`;
+  const methodEmoji = (m: string, notes: string | null | undefined) => {
+    if (notes?.includes('BML FPOS') || notes?.includes('BML Card')) return '🏦';
+    if (notes?.includes('MIB')) return '🕌';
+    if (notes?.includes('mFaisaa')) return '📱';
+    if (notes?.includes('BML Connect') || notes?.includes('IPG')) return '🌐';
+    if (notes?.includes('MVR')) return '🪙';
+    if (m === 'CASH') return '💵';
+    if (m === 'CARD') return '💳';
+    if (m === 'BANK_TRANSFER') return '🏦';
+    if (m === 'DIGITAL_WALLET') return '📱';
+    if (m === 'CRYPTO') return '₿';
+    return '💳';
+  };
 
   return (
     <div className="space-y-1.5">
       {payments.map((p) => {
-        const Icon = METHOD_ICONS[p.method] ?? CreditCard;
         const isRefunded = p.status === 'REFUNDED';
         return (
           <div key={p.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
             isRefunded ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'
           }`}>
-            <Icon className="h-3.5 w-3.5 text-gray-500 shrink-0" />
+            <span className="text-base shrink-0">{methodEmoji(p.method, p.notes)}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{fmt$(p.amount)}</span>
-                <span className="text-gray-400">{p.method.replace('_', ' ')}</span>
-                {isRefunded && (
-                  <span className="text-red-500 font-medium">REFUNDED</span>
-                )}
+                <span className="text-gray-500">{p.notes || p.method.replace('_', ' ')}</span>
+                {isRefunded && <span className="text-red-500 font-medium">REFUNDED</span>}
               </div>
               <div className="text-gray-400 truncate">
                 {fmtTime(p.createdAt)}
                 {p.transactionId && <> · <span className="font-mono">{p.transactionId}</span></>}
-                {p.notes && <> · {p.notes}</>}
               </div>
             </div>
             {!isRefunded && (
-              <button
-                onClick={() => refund(p.id)}
-                disabled={refundingId === p.id}
-                className="text-gray-300 hover:text-red-500 transition-colors"
-                title="Refund this payment"
-              >
-                {refundingId === p.id
-                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : <RotateCcw className="h-3 w-3" />
-                }
+              <button onClick={() => refund(p.id)} disabled={refundingId === p.id}
+                className="text-gray-300 hover:text-red-500 transition-colors" title="Refund">
+                {refundingId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
               </button>
             )}
           </div>

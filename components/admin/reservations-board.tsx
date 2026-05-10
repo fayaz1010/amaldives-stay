@@ -9,6 +9,7 @@ import {
   Receipt, LogIn, LogOut, AlertCircle, User,
 } from 'lucide-react';
 import { CheckoutModal } from './checkout-modal';
+import { QuickPayModal } from './quick-pay-modal';
 
 type DateRange = 'today' | 'week' | 'month' | 'all';
 
@@ -99,6 +100,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [billId, setBillId] = useState<string | null>(null);
+  const [quickPayBooking, setQuickPayBooking] = useState<Booking | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('all');
 
   // For Checked Out column, apply date filter on checkOutDate
@@ -274,6 +276,17 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                 >
                                   <Receipt className="h-3 w-3" />
                                 </Button>
+                                {balance > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100"
+                                    onClick={() => setQuickPayBooking(b)}
+                                    title="Quick payment"
+                                  >
+                                    💳
+                                  </Button>
+                                )}
                                 <Button size="sm"
                                   className="h-7 text-xs flex-1 bg-teal-600 hover:bg-teal-700"
                                   onClick={() => setCheckoutId(b.id)}>
@@ -311,6 +324,19 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
         mode="bill"
         onClose={() => setBillId(null)}
       />
+      {/* Quick Pay modal */}
+      {quickPayBooking && (
+        <QuickPayModal
+          bookingId={quickPayBooking.id}
+          guestName={quickPayBooking.guest?.name || '—'}
+          roomNumber={quickPayBooking.room?.number || '—'}
+          confirmationNumber={quickPayBooking.confirmationNumber}
+          balanceDue={quickPayBooking.totalAmount - quickPayBooking.paidAmount}
+          currency="USD"
+          onClose={() => setQuickPayBooking(null)}
+          onPaid={() => { setQuickPayBooking(null); router.refresh(); }}
+        />
+      )}
     </div>
   );
 }

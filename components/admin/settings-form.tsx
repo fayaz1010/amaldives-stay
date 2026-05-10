@@ -301,17 +301,89 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
                   </p>
                 </div>
 
-                {/* Popular FPOS integrations */}
+                {/* Maldives-specific integrations */}
+                <div className="space-y-3 border-t pt-4">
+                  <Label className="text-sm font-semibold">🇲🇻 Maldives Bank Integration</Label>
+
+                  {/* BML Physical FPOS */}
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🏦</span>
+                      <span className="font-semibold text-sm text-blue-800">Bank of Maldives (BML) Physical FPOS</span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      BML's physical card terminals do <strong>not</strong> support automatic webhooks.
+                      The fastest workflow: after a guest pays on the BML terminal, tap the <strong>💳 Quick Pay button</strong> on their reservation card, select "BML Card", enter the slip number, and confirm in 5 seconds.
+                    </p>
+                    <div className="bg-white rounded p-2 text-[11px] text-gray-600 space-y-0.5">
+                      <p className="font-semibold text-gray-700">Steps for staff:</p>
+                      <p>1. Guest pays on BML FPOS machine → get slip</p>
+                      <p>2. Click 💳 on the reservation card in the system</p>
+                      <p>3. Select "BML Card", enter slip number</p>
+                      <p>4. Hit Confirm — done in under 10 seconds</p>
+                    </div>
+                  </div>
+
+                  {/* MIB Physical FPOS */}
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🕌</span>
+                      <span className="font-semibold text-sm text-emerald-800">Maldives Islamic Bank (MIB) FPOS</span>
+                    </div>
+                    <p className="text-xs text-emerald-700">
+                      Same as BML — use <strong>Quick Pay → MIB Card</strong> after the terminal transaction and enter the MIB slip reference number.
+                    </p>
+                  </div>
+
+                  {/* BML Connect IPG */}
+                  <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🌐</span>
+                      <span className="font-semibold text-sm text-sky-800">BML Connect (Internet Payment Gateway)</span>
+                      <span className="text-[10px] bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-medium border border-sky-300">Auto-post</span>
+                    </div>
+                    <p className="text-xs text-sky-700">
+                      BML Connect <strong>does</strong> support webhooks. Payments made via BML Connect online gateway auto-post to the guest folio. Set this webhook URL in your <a href="https://connect.bankofmaldives.mv" target="_blank" rel="noreferrer" className="underline font-medium">BML Connect merchant portal</a>:
+                    </p>
+                    <div className="flex items-center gap-2 bg-white border rounded px-2 py-1.5">
+                      <code className="text-xs text-sky-700 flex-1 break-all">
+                        {`https://stay.amaldives.com/api/webhooks/bml-connect/${tenant.subdomain}`}
+                      </code>
+                      <CopyButton text={`https://stay.amaldives.com/api/webhooks/bml-connect/${tenant.subdomain}`} />
+                    </div>
+                    <div className="text-[11px] text-sky-600 space-y-0.5">
+                      <p>In BML Connect portal: <strong>Settings → Webhook URL</strong> → paste the URL above</p>
+                      <p>Set <strong>localId</strong> = booking confirmation number when initiating payment</p>
+                      <p>Supports USD and MVR transactions</p>
+                    </div>
+                  </div>
+
+                  {/* mFaisaa */}
+                  <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📱</span>
+                      <span className="font-semibold text-sm text-cyan-800">mFaisaa (BML Mobile Pay)</span>
+                    </div>
+                    <p className="text-xs text-cyan-700">
+                      After receiving an mFaisaa payment notification, use <strong>Quick Pay → mFaisaa</strong> and enter the mFaisaa transaction reference number from the BML merchant app.
+                    </p>
+                    <p className="text-[11px] text-cyan-600">
+                      For automatic posting, enable BML Connect and request mFaisaa webhook support from BML merchant services.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Other integrations */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Compatible POS Systems</Label>
+                  <Label className="text-sm">Other Compatible Systems (generic webhook)</Label>
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                     {[
-                      ['Stripe Terminal', 'Use Stripe webhook → forward to this URL'],
-                      ['Square POS', 'Square Webhooks → payment.completed event'],
+                      ['Stripe Terminal', 'Stripe Webhook → payment_intent.succeeded'],
+                      ['Square POS', 'Square Webhooks → payment.completed'],
                       ['SumUp', 'SumUp Transaction Webhook'],
                       ['Toast POS', 'Toast API Webhooks'],
                       ['Lightspeed', 'Lightspeed Payment notifications'],
-                      ['Custom / Any', 'Any POS that supports HTTP webhooks'],
+                      ['Custom / Any', 'Any POS that supports HTTP POST webhooks'],
                     ].map(([name, note]) => (
                       <div key={name} className="border rounded p-2 bg-gray-50">
                         <p className="font-medium">{name}</p>
