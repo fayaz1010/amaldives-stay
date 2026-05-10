@@ -5,23 +5,25 @@ import { ArrivalsBoard } from '@/components/admin/arrivals-board';
 import { DeparturesBoard } from '@/components/admin/departures-board';
 import { Plane, LogOut } from 'lucide-react';
 
-interface ArrivalsBoardProps {
+interface Props {
   arrivals: any[];
-  departures: any[];
+  departureRecords: any[];
   staff: any[];
 }
 
-export function ArrivalsPageClient({ arrivals, departures, staff }: ArrivalsBoardProps) {
+export function ArrivalsPageClient({ arrivals, departureRecords, staff }: Props) {
   const [tab, setTab] = useState<'arrivals' | 'departures'>('arrivals');
+
+  const todayStr = new Date().toDateString();
 
   const todayArrivals = arrivals.filter((a) => {
     const d = a.scheduledArrival ?? a.booking.checkInDate;
-    if (!d) return false;
-    return new Date(d).toDateString() === new Date().toDateString();
+    return d ? new Date(d).toDateString() === todayStr : false;
   });
 
-  const todayDepartures = departures.filter((b) => {
-    return new Date(b.checkOutDate).toDateString() === new Date().toDateString();
+  const todayDepartures = departureRecords.filter((r) => {
+    const d = r.scheduledDeparture ?? r.booking.checkOutDate;
+    return d ? new Date(d).toDateString() === todayStr : false;
   });
 
   return (
@@ -65,15 +67,7 @@ export function ArrivalsPageClient({ arrivals, departures, staff }: ArrivalsBoar
       {tab === 'arrivals' ? (
         <ArrivalsBoard arrivals={arrivals} staff={staff} />
       ) : (
-        <div className="p-6">
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Departures</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {todayDepartures.length} departing today · {departures.length} total upcoming
-            </p>
-          </div>
-          <DeparturesBoard bookings={departures} />
-        </div>
+        <DeparturesBoard records={departureRecords} />
       )}
     </div>
   );

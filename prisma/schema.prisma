@@ -106,6 +106,7 @@ model Tenant {
   reports     Report[]
   arrivals    ArrivalRecord[]
   transportOptions TransportOption[]
+  departures  DepartureRecord[]
   
   @@index([subdomain])
   @@index([status])
@@ -205,6 +206,7 @@ model Booking {
   payments      Payment[]
   serviceOrders ServiceOrder[]
   arrival       ArrivalRecord?
+  departure     DepartureRecord?
   
   @@index([tenantId])
   @@index([confirmationNumber])
@@ -618,6 +620,8 @@ model TransportOption {
   tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   inboundArrivals  ArrivalRecord[] @relation("InboundTransport")
   jettyArrivals    ArrivalRecord[] @relation("JettyTransport")
+  departureInbound DepartureRecord[] @relation("DepartureInboundTransport")
+  departureJetty   DepartureRecord[] @relation("DepartureJettyTransport")
 
   @@index([tenantId])
   @@index([type])
@@ -645,4 +649,60 @@ enum ArrivalStatus {
   AT_JETTY
   AT_PROPERTY
   CHECKED_IN
+}
+
+enum DepartureStatus {
+  SCHEDULED
+  PREPARING
+  AT_JETTY
+  DEPARTED
+}
+
+model DepartureRecord {
+  id                  String          @id @default(cuid())
+  tenantId            String
+  bookingId           String          @unique
+
+  // Outbound transport
+  transportType       TransportType   @default(SPEEDBOAT)
+  transportRef        String?
+  transportOptionId   String?
+  transportCost       Float?
+  costPaid            Boolean         @default(false)
+
+  // Ticket confirmation
+  ticketsPurchased    Boolean         @default(false)
+  seatNumbers         String?
+
+  // Jetty / property → port leg
+  jettyTransport      String?
+  jettyTransportSeats Int?
+  jettyTransportCapacity Int?
+  jettyTransportOptionId String?
+
+  // Timeline milestones
+  scheduledDeparture  DateTime?       // when guest should leave property
+  billSettledAt       DateTime?       // bill settled
+  luggageReadyAt      DateTime?       // luggage collected/ready at lobby
+  leftPropertyAt      DateTime?       // guest left the property
+  arrivedJettyAt      DateTime?       // arrived at departure jetty/port
+  boardedAt           DateTime?       // confirmed boarded onward transport
+
+  // Extra
+  luggageCount        Int?
+  specialNotes        String?
+
+  // Status
+  status              DepartureStatus @default(SCHEDULED)
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  tenant              Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking             Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  transportOption     TransportOption? @relation("DepartureInboundTransport", fields: [transportOptionId], references: [id])
+  jettyTransportOption TransportOption? @relation("DepartureJettyTransport", fields: [jettyTransportOptionId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
 }

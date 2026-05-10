@@ -12,16 +12,24 @@ export default async function ArrivalsPage() {
 
   const tenantId = session.user.tenantId;
 
-  // All active arrival records (not yet checked in + recently checked in within 24h)
+  const DEPARTURE_INCLUDE = {
+    booking: {
+      include: {
+        guest: { select: { id: true, name: true, email: true } },
+        room: { select: { id: true, number: true, name: true } },
+      },
+    },
+    transportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, schedule: true } },
+    jettyTransportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, capacity: true } },
+  } as const;
+
+  // All active arrival records
   const arrivals = await prisma.arrivalRecord.findMany({
     where: {
       tenantId,
       OR: [
         { status: { not: 'CHECKED_IN' } },
-        {
-          status: 'CHECKED_IN',
-          checkedInAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        },
+        { status: 'CHECKED_IN', checkedInAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
       ],
     },
     include: {
@@ -32,38 +40,26 @@ export default async function ArrivalsPage() {
         },
       },
       pickupStaff: { select: { id: true, name: true } },
+      transportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, schedule: true } },
+      jettyTransportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, capacity: true } },
     },
     orderBy: { scheduledArrival: 'asc' },
   });
 
-  // Upcoming departures — checked-in or confirmed, checking out within next 7 days
-  const checkoutCutoff = new Date();
-  checkoutCutoff.setDate(checkoutCutoff.getDate() + 7);
-
-  const departures = await prisma.booking.findMany({
+  // All departure records (active + recently departed within 24h)
+  const departureRecords = await prisma.departureRecord.findMany({
     where: {
       tenantId,
-      status: { in: ['CONFIRMED', 'CHECKED_IN'] },
-      checkOutDate: {
-        gte: new Date(new Date().toDateString()), // from start of today
-        lte: checkoutCutoff,
-      },
+      OR: [
+        { status: { not: 'DEPARTED' } },
+        { status: 'DEPARTED', boardedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      ],
     },
-    include: {
-      guest: { select: { id: true, name: true, email: true } },
-      room: { select: { id: true, number: true, name: true } },
-      arrival: {
-        select: {
-          transportType: true,
-          transportRef: true,
-          scheduledArrival: true,
-        },
-      },
-    },
-    orderBy: { checkOutDate: 'asc' },
+    include: DEPARTURE_INCLUDE,
+    orderBy: { scheduledDeparture: 'asc' },
   });
 
-  // Staff for pickup assignment
+  // Staff
   const staff = await prisma.user.findMany({
     where: {
       tenantId,
@@ -81,31 +77,36 @@ export default async function ArrivalsPage() {
     arrivedJettyAt: a.arrivedJettyAt?.toISOString() ?? null,
     arrivedPropertyAt: a.arrivedPropertyAt?.toISOString() ?? null,
     checkedInAt: a.checkedInAt?.toISOString() ?? null,
-    createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
-    updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+    createdAt: a.createdAt.toISOString(),
+    updatedAt: a.updatedAt.toISOString(),
     booking: {
       ...a.booking,
-      checkInDate: a.booking.checkInDate instanceof Date ? a.booking.checkInDate.toISOString() : a.booking.checkInDate,
-      checkOutDate: a.booking.checkOutDate instanceof Date ? a.booking.checkOutDate.toISOString() : a.booking.checkOutDate,
+      checkInDate: a.booking.checkInDate.toISOString(),
+      checkOutDate: a.booking.checkOutDate.toISOString(),
     },
   }));
 
-  const serialisedDepartures = departures.map((b) => ({
-    ...b,
-    checkInDate: b.checkInDate instanceof Date ? b.checkInDate.toISOString() : b.checkInDate,
-    checkOutDate: b.checkOutDate instanceof Date ? b.checkOutDate.toISOString() : b.checkOutDate,
-    createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : b.createdAt,
-    updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : b.updatedAt,
-    arrival: b.arrival ? {
-      ...b.arrival,
-      scheduledArrival: b.arrival.scheduledArrival instanceof Date ? b.arrival.scheduledArrival.toISOString() : b.arrival.scheduledArrival,
-    } : null,
+  const serialisedDepartures = departureRecords.map((d) => ({
+    ...d,
+    scheduledDeparture: d.scheduledDeparture?.toISOString() ?? null,
+    billSettledAt: d.billSettledAt?.toISOString() ?? null,
+    luggageReadyAt: d.luggageReadyAt?.toISOString() ?? null,
+    leftPropertyAt: d.leftPropertyAt?.toISOString() ?? null,
+    arrivedJettyAt: d.arrivedJettyAt?.toISOString() ?? null,
+    boardedAt: d.boardedAt?.toISOString() ?? null,
+    createdAt: d.createdAt.toISOString(),
+    updatedAt: d.updatedAt.toISOString(),
+    booking: {
+      ...d.booking,
+      checkInDate: d.booking.checkInDate.toISOString(),
+      checkOutDate: d.booking.checkOutDate.toISOString(),
+    },
   }));
 
   return (
     <ArrivalsPageClient
       arrivals={serialisedArrivals}
-      departures={serialisedDepartures}
+      departureRecords={serialisedDepartures}
       staff={staff}
     />
   );
