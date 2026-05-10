@@ -65,7 +65,10 @@ export default async function ArrivalsPage() {
 
   // Staff for pickup assignment
   const staff = await prisma.user.findMany({
-    where: { tenantId, role: { in: ['STAFF', 'MANAGER', 'TENANT_ADMIN', 'FRONT_DESK'] } },
+    where: {
+      tenantId,
+      role: { in: ['TENANT_ADMIN', 'MANAGER', 'FRONT_DESK', 'HOUSEKEEPING', 'MAINTENANCE'] },
+    },
     select: { id: true, name: true },
     orderBy: { name: 'asc' },
   });
