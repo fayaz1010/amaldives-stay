@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -44,6 +44,11 @@ import {
   Loader2,
   History,
   RefreshCw,
+  LayoutList,
+  BedDouble,
+  CheckCircle2,
+  AlertCircle,
+  Minus,
 } from 'lucide-react';
 
 export const MINIBAR_CATEGORIES = [
@@ -122,6 +127,7 @@ interface Props {
   items: MinIBarItem[];
   pendingUsages: MinIBarUsage[];
   rooms: RoomLite[];
+  minibarStandard: Array<{ itemId: string; quantity: number }>;
 }
 
 function categoryMeta(value: string) {
@@ -472,12 +478,36 @@ function ChargeDialog({
 }
 
 // =====================================================
+// Room stock types
+// =====================================================
+
+interface StockItem {
+  itemId: string;
+  itemName: string;
+  itemCategory: string;
+  isFree: boolean;
+  standardQty: number;
+  consumedQty: number;
+  needsRestock: boolean;
+  lastRestockedAt: string | null;
+  usageIds: string[];
+}
+
+interface RoomStock {
+  room: RoomLite & { type: string };
+  stockItems: StockItem[];
+  needsRestockCount: number;
+  allStocked: boolean;
+  hasStandard: boolean;
+}
+
+// =====================================================
 // Main manager
 // =====================================================
 
-export function MinIBarManager({ items, pendingUsages, rooms }: Props) {
+export function MinIBarManager({ items, pendingUsages, rooms, minibarStandard }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'inventory' | 'charges' | 'history'>(
+  const [activeTab, setActiveTab] = useState<'inventory' | 'charges' | 'history' | 'standard' | 'rooms'>(
     'inventory'
   );
 
@@ -495,6 +525,16 @@ export function MinIBarManager({ items, pendingUsages, rooms }: Props) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyRoom, setHistoryRoom] = useState<string>('all');
   const [historyStatus, setHistoryStatus] = useState<string>('all');
+
+  // Standard tab state
+  const [standard, setStandard] = useState<Array<{ itemId: string; quantity: number }>>(minibarStandard);
+  const [standardSaving, setStandardSaving] = useState(false);
+  const [standardDirty, setStandardDirty] = useState(false);
+
+  // Rooms tab state
+  const [roomStocks, setRoomStocks] = useState<RoomStock[] | null>(null);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [restockingRoomId, setRestockingRoomId] = useState<string | null>(null);
 
   async function loadHistory() {
     setHistoryLoading(true);
@@ -518,6 +558,81 @@ export function MinIBarManager({ items, pendingUsages, rooms }: Props) {
     if (activeTab === 'history') loadHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, historyRoom, historyStatus]);
+
+  // ---------------------------------------------------
+  // Standard handlers
+  // ---------------------------------------------------
+
+  function standardQtyForItem(itemId: string) {
+    return standard.find((s) => s.itemId === itemId)?.quantity ?? 0;
+  }
+
+  function setStandardQty(itemId: string, qty: number) {
+    setStandard((prev) => {
+      const existing = prev.find((s) => s.itemId === itemId);
+      if (qty <= 0) return prev.filter((s) => s.itemId !== itemId);
+      if (existing) return prev.map((s) => s.itemId === itemId ? { ...s, quantity: qty } : s);
+      return [...prev, { itemId, quantity: qty }];
+    });
+    setStandardDirty(true);
+  }
+
+  async function saveStandard() {
+    setStandardSaving(true);
+    try {
+      const res = await fetch('/api/admin/minibar/standard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standard }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setStandardDirty(false);
+      if (activeTab === 'rooms') loadRooms();
+    } catch {
+      alert('Failed to save standard');
+    } finally {
+      setStandardSaving(false);
+    }
+  }
+
+  // ---------------------------------------------------
+  // Rooms handlers
+  // ---------------------------------------------------
+
+  const loadRooms = useCallback(async () => {
+    setRoomsLoading(true);
+    try {
+      const res = await fetch('/api/admin/minibar/rooms');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setRoomStocks(data.rooms);
+    } catch {
+      alert('Failed to load room stock');
+    } finally {
+      setRoomsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'rooms') loadRooms();
+  }, [activeTab, loadRooms]);
+
+  async function restockRoom(roomId: string, itemIds?: string[]) {
+    setRestockingRoomId(roomId);
+    try {
+      const res = await fetch('/api/admin/minibar/rooms/restock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, itemIds }),
+      });
+      if (!res.ok) throw new Error('Restock failed');
+      await loadRooms();
+    } catch {
+      alert('Failed to record restock');
+    } finally {
+      setRestockingRoomId(null);
+    }
+  }
 
   // ---------------------------------------------------
   // Inventory handlers
@@ -598,18 +713,28 @@ export function MinIBarManager({ items, pendingUsages, rooms }: Props) {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {items.length} items in stock · {pendingUsages.length} pending charges ·
-            ${pendingTotal.toFixed(2)} pending revenue
+            ${pendingTotal.toFixed(2)} pending revenue ·{' '}
+            {standard.length} standard items configured
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-5">
           <TabsTrigger value="inventory" className="gap-1.5">
             <Package className="h-4 w-4" /> Inventory
           </TabsTrigger>
+          <TabsTrigger value="standard" className="gap-1.5">
+            <LayoutList className="h-4 w-4" /> Standard
+            {standard.length === 0 && (
+              <Badge className="ml-1 h-5 bg-orange-400 hover:bg-orange-400 text-white">!</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rooms" className="gap-1.5">
+            <BedDouble className="h-4 w-4" /> Rooms
+          </TabsTrigger>
           <TabsTrigger value="charges" className="gap-1.5">
-            <Receipt className="h-4 w-4" /> Pending Charges
+            <Receipt className="h-4 w-4" /> Charges
             {pendingUsages.length > 0 && (
               <Badge className="ml-1 h-5 bg-yellow-500 hover:bg-yellow-500">
                 {pendingUsages.length}
@@ -620,6 +745,250 @@ export function MinIBarManager({ items, pendingUsages, rooms }: Props) {
             <History className="h-4 w-4" /> History
           </TabsTrigger>
         </TabsList>
+
+        {/* ============== STANDARD ============== */}
+        <TabsContent value="standard" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between p-4 border-b">
+                <div>
+                  <h2 className="font-semibold">Mini Bar Standard Setup</h2>
+                  <p className="text-xs text-gray-500">
+                    Define which items and quantities every room should be stocked with.
+                    This template drives the Rooms restocking view.
+                  </p>
+                </div>
+                {standardDirty && (
+                  <Button
+                    onClick={saveStandard}
+                    disabled={standardSaving}
+                    className="bg-cyan-600 hover:bg-cyan-700"
+                  >
+                    {standardSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Save Standard
+                  </Button>
+                )}
+              </div>
+
+              {items.length === 0 ? (
+                <div className="py-12 text-center text-gray-500">
+                  <Package className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                  <p className="text-lg font-medium mb-1">No items yet</p>
+                  <p className="text-sm">Add items in the Inventory tab first.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Group by category */}
+                  {Array.from(new Set(items.map((i) => i.category))).map((cat) => {
+                    const catMeta = categoryMeta(cat);
+                    const catItems = items.filter((i) => i.category === cat);
+                    return (
+                      <div key={cat}>
+                        <div className="px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          {catMeta.emoji} {catMeta.label}
+                        </div>
+                        <Table>
+                          <TableBody>
+                            {catItems.map((item) => {
+                              const qty = standardQtyForItem(item.id);
+                              const inStandard = qty > 0;
+                              return (
+                                <TableRow key={item.id} className={inStandard ? 'bg-cyan-50' : ''}>
+                                  <TableCell className="font-medium">
+                                    {item.name}
+                                    {item.isFree && (
+                                      <Badge className="ml-2 bg-green-100 text-green-800 border-green-200 hover:bg-green-100" variant="outline">
+                                        Free
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-gray-500">
+                                    {item.isFree ? '—' : `$${item.price.toFixed(2)}`}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => setStandardQty(item.id, qty - 1)}
+                                        disabled={qty <= 0}
+                                        className="h-7 w-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-30"
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </button>
+                                      <span className={`w-8 text-center font-semibold ${inStandard ? 'text-cyan-700' : 'text-gray-400'}`}>
+                                        {qty > 0 ? qty : '—'}
+                                      </span>
+                                      <button
+                                        onClick={() => setStandardQty(item.id, qty + 1)}
+                                        className="h-7 w-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </button>
+                                      {inStandard && (
+                                        <span className="text-xs text-cyan-600 font-medium">in standard</span>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  })}
+
+                  {standardDirty && (
+                    <div className="p-4 border-t flex justify-end">
+                      <Button
+                        onClick={saveStandard}
+                        disabled={standardSaving}
+                        className="bg-cyan-600 hover:bg-cyan-700"
+                      >
+                        {standardSaving ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Save Standard ({standard.length} items)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============== ROOMS ============== */}
+        <TabsContent value="rooms" className="mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-semibold text-gray-900">Room Mini Bar Status</h2>
+              <p className="text-xs text-gray-500">
+                Track stocking status per room based on the standard setup.
+                Consumed items show as needing restock.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadRooms} disabled={roomsLoading}>
+              {roomsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {standard.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-gray-500">
+                <LayoutList className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                <p className="text-lg font-medium mb-1">No standard configured</p>
+                <p className="text-sm mb-4">Set up the standard mini bar in the Standard tab first.</p>
+                <Button variant="outline" size="sm" onClick={() => setActiveTab('standard')}>
+                  Go to Standard Setup
+                </Button>
+              </CardContent>
+            </Card>
+          ) : roomsLoading && !roomStocks ? (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading rooms…
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(roomStocks ?? []).map((rs) => {
+                const isRestocking = restockingRoomId === rs.room.id;
+                const needsItems = rs.stockItems.filter((i) => i.needsRestock);
+                const okItems = rs.stockItems.filter((i) => !i.needsRestock);
+
+                return (
+                  <Card key={rs.room.id} className={`border-2 ${
+                    !rs.hasStandard ? 'border-gray-100' :
+                    rs.allStocked ? 'border-green-200' : 'border-orange-200'
+                  }`}>
+                    <CardContent className="p-4">
+                      {/* Room header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <BedDouble className="h-4 w-4 text-gray-500" />
+                          <span className="font-semibold">Room {rs.room.number}</span>
+                          {rs.room.name && (
+                            <span className="text-xs text-gray-500">— {rs.room.name}</span>
+                          )}
+                        </div>
+                        {rs.hasStandard && (
+                          rs.allStocked ? (
+                            <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 gap-1" variant="outline">
+                              <CheckCircle2 className="h-3 w-3" /> Stocked
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100 gap-1" variant="outline">
+                              <AlertCircle className="h-3 w-3" /> {rs.needsRestockCount} need restock
+                            </Badge>
+                          )
+                        )}
+                      </div>
+
+                      {/* Items needing restock */}
+                      {needsItems.length > 0 && (
+                        <div className="space-y-1.5 mb-3">
+                          <p className="text-[10px] font-bold uppercase text-orange-500 tracking-wide">Needs Restock</p>
+                          {needsItems.map((si) => (
+                            <div key={si.itemId} className="flex items-center justify-between text-sm bg-orange-50 rounded-md px-2.5 py-1.5">
+                              <div>
+                                <span className="font-medium">{si.itemName}</span>
+                                <span className="text-xs text-orange-600 ml-1.5">
+                                  {si.consumedQty} consumed
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => restockRoom(rs.room.id, [si.itemId])}
+                                disabled={isRestocking}
+                                className="flex items-center gap-1 text-xs text-green-700 bg-green-100 hover:bg-green-200 rounded px-2 py-1 font-medium disabled:opacity-50"
+                              >
+                                {isRestocking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                Restocked
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Items OK */}
+                      {okItems.length > 0 && (
+                        <div className="space-y-1 mb-3">
+                          <p className="text-[10px] font-bold uppercase text-green-600 tracking-wide">Stocked</p>
+                          {okItems.map((si) => (
+                            <div key={si.itemId} className="flex items-center justify-between text-xs text-gray-600 px-1">
+                              <span>{categoryMeta(si.itemCategory).emoji} {si.itemName}</span>
+                              <span className="font-medium text-green-600">×{si.standardQty} ✓</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Restock All button */}
+                      {rs.needsRestockCount > 0 && (
+                        <Button
+                          size="sm"
+                          className="w-full bg-cyan-600 hover:bg-cyan-700 mt-1"
+                          onClick={() => restockRoom(rs.room.id)}
+                          disabled={isRestocking}
+                        >
+                          {isRestocking ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                          )}
+                          Restock All ({rs.needsRestockCount})
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
 
         {/* ============== INVENTORY ============== */}
         <TabsContent value="inventory" className="mt-4">

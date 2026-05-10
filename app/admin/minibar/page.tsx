@@ -12,7 +12,11 @@ export default async function MinIBarPage() {
 
   const tenantId = session.user.tenantId;
 
-  const [items, pendingUsages, rooms] = await Promise.all([
+  const [tenant, items, pendingUsages, rooms] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    }),
     prisma.minIBarItem.findMany({
       where: { tenantId, isActive: true },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
@@ -37,11 +41,16 @@ export default async function MinIBarPage() {
     }),
   ]);
 
+  const settings = (tenant?.settings as Record<string, any>) ?? {};
+  const minibarStandard: Array<{ itemId: string; quantity: number }> =
+    settings.minibarStandard ?? [];
+
   return (
     <MinIBarManager
       items={items}
       pendingUsages={pendingUsages as any}
       rooms={rooms}
+      minibarStandard={minibarStandard}
     />
   );
 }
