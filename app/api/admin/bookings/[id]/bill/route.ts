@@ -35,6 +35,12 @@ export async function GET(
           include: { service: { select: { name: true, category: true } } },
           orderBy: { createdAt: 'asc' },
         },
+        // Mini bar usages — all non-waived charges
+        minIBarUsages: {
+          where: { status: { not: 'WAIVED' } },
+          include: { item: { select: { name: true, category: true, isFree: true } } },
+          orderBy: { recordedAt: 'asc' },
+        },
         payments: {
           orderBy: { createdAt: 'asc' },
         },
@@ -45,7 +51,36 @@ export async function GET(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ booking });
+    // F&B bills linked to this booking (not voided)
+    const fnbBills = await prisma.fnBBill.findMany({
+      where: {
+        tenantId: session.user.tenantId,
+        bookingId: params.id,
+        status: { not: 'VOIDED' },
+      },
+      include: { outlet: { select: { name: true, outletType: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Extra service orders for the room (room-linked without a booking)
+    const roomExtraOrders = await prisma.serviceOrder.findMany({
+      where: {
+        tenantId: session.user.tenantId,
+        roomId: booking.roomId,
+        bookingId: null,
+        status: { not: 'CANCELLED' },
+      },
+      include: { service: { select: { name: true, category: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const serialize = (obj: any) => JSON.parse(JSON.stringify(obj));
+
+    return NextResponse.json({
+      booking: serialize(booking),
+      fnbBills: serialize(fnbBills),
+      roomExtraOrders: serialize(roomExtraOrders),
+    });
   } catch (error) {
     console.error('Bill GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

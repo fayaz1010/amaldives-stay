@@ -16,6 +16,28 @@ import { MV_PAYMENT_METHODS } from './quick-pay-modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface MinIBarUsage {
+  id: string;
+  quantity: number;
+  amount: number;
+  isFree: boolean;
+  status: 'PENDING' | 'ON_BILL' | 'PAID' | 'WAIVED';
+  notes: string | null;
+  recordedAt: string;
+  item: { name: string; category: string; isFree: boolean };
+}
+
+interface FnBBill {
+  id: string;
+  guestName: string | null;
+  tableNumber: string | null;
+  totalAmount: number;
+  paidAmount: number;
+  status: 'OPEN' | 'CLOSED' | 'PAID' | 'VOIDED';
+  createdAt: string;
+  outlet: { name: string; outletType: string };
+}
+
 interface BillBooking {
   id: string;
   confirmationNumber: string;
@@ -41,6 +63,7 @@ interface BillBooking {
     notes?: string | null; createdAt: string;
     service: { name: string; category: string };
   }>;
+  minIBarUsages: MinIBarUsage[];
   payments: Array<{
     id: string; amount: number; method: string; status: string;
     transactionId?: string | null; notes?: string | null; createdAt: string;
@@ -76,25 +99,39 @@ function parseServiceNotes(notes: string | null | undefined): string {
   return m ? m[1] : notes;
 }
 
-/** Real grand total = room charges + all service orders + platform fee */
-function computeGrandTotal(b: BillBooking): number {
+/** Real grand total = room + service orders + mini bar + F&B bills + platform fee */
+function computeGrandTotal(b: BillBooking, fnbBills: FnBBill[], roomExtras: BillBooking['serviceOrders']): number {
   const n = nights(b.checkInDate, b.checkOutDate);
   const roomCharge = b.room.basePrice * n;
   const svcTotal = b.serviceOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  return roomCharge + svcTotal + (b.platformFee || 0);
+  const roomExtraTotal = roomExtras.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const miniBarTotal = b.minIBarUsages
+    .filter(u => !u.isFree && u.status !== 'WAIVED')
+    .reduce((sum, u) => sum + (u.amount || 0), 0);
+  const fnbTotal = fnbBills
+    .filter(bill => bill.status !== 'VOIDED')
+    .reduce((sum, bill) => sum + (bill.totalAmount || 0), 0);
+  return roomCharge + svcTotal + roomExtraTotal + miniBarTotal + fnbTotal + (b.platformFee || 0);
 }
 
 // ─── Receipt for printing ─────────────────────────────────────────────────────
 
-function Receipt({ b }: { b: BillBooking }) {
+function Receipt({ b, fnbBills, roomExtras }: { b: BillBooking; fnbBills: FnBBill[]; roomExtras: BillBooking['serviceOrders'] }) {
   const n = nights(b.checkInDate, b.checkOutDate);
   const currency = b.room.property.currency || 'USD';
   const fmt$ = (v: number) => `${currency} ${v.toFixed(2)}`;
   const confirmedPayments = b.payments.filter(p => p.status === 'COMPLETED');
-  const grandTotal = computeGrandTotal(b);
+  const grandTotal = computeGrandTotal(b, fnbBills, roomExtras);
   const balance = grandTotal - b.paidAmount;
   const roomCharge = b.room.basePrice * n;
   const svcTotal = b.serviceOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const roomExtraTotal = roomExtras.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const paidMiniBar = b.minIBarUsages.filter(u => !u.isFree && u.status === 'PAID');
+  const billableMiniBar = b.minIBarUsages.filter(u => !u.isFree && u.status !== 'WAIVED' && u.status !== 'PAID');
+  const pendingMiniBar = b.minIBarUsages.filter(u => !u.isFree && u.status === 'PENDING');
+  const miniBarTotal = billableMiniBar.reduce((sum, u) => sum + (u.amount || 0), 0);
+  const activeFnb = fnbBills.filter(bill => bill.status !== 'VOIDED');
+  const fnbTotal = activeFnb.reduce((sum, bill) => sum + (bill.totalAmount || 0), 0);
 
   return (
     <div className="font-mono text-sm text-gray-800 space-y-0">
@@ -133,16 +170,19 @@ function Receipt({ b }: { b: BillBooking }) {
       <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-1.5">Charges</p>
       <table className="w-full text-xs mb-3">
         <tbody>
+          {/* Room charge */}
           <tr>
             <td className="py-0.5 pr-2 text-gray-600">Room {b.room.number} × {n} night{n !== 1 ? 's' : ''}</td>
             <td className="text-right text-[10px] text-gray-400">{fmt$(b.room.basePrice)}/night</td>
             <td className="text-right font-medium pl-2">{fmt$(roomCharge)}</td>
           </tr>
+
+          {/* Room service orders (booking-linked) */}
           {b.serviceOrders.length > 0 && (
             <>
               <tr>
                 <td colSpan={3} className="pt-1.5 pb-0.5">
-                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Room Services &amp; Extras</p>
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Room Services</p>
                 </td>
               </tr>
               {b.serviceOrders.map((o) => (
@@ -158,6 +198,92 @@ function Receipt({ b }: { b: BillBooking }) {
               </tr>
             </>
           )}
+
+          {/* Extra services (room-linked) */}
+          {roomExtras.length > 0 && (
+            <>
+              <tr>
+                <td colSpan={3} className="pt-1.5 pb-0.5">
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Extra Services</p>
+                </td>
+              </tr>
+              {roomExtras.map((o) => (
+                <tr key={o.id}>
+                  <td className="py-0.5 pr-2 text-gray-600 pl-2">{parseServiceNotes(o.notes) || o.service.name}</td>
+                  <td className="text-right text-[10px] text-gray-400">{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td className="text-right font-medium pl-2">{fmt$(o.totalAmount)}</td>
+                </tr>
+              ))}
+              <tr className="border-t border-dashed border-gray-200">
+                <td className="py-0.5 pr-2 text-gray-500 text-[11px]" colSpan={2}>Extras subtotal</td>
+                <td className="text-right text-[11px] font-medium pl-2 text-gray-600">{fmt$(roomExtraTotal)}</td>
+              </tr>
+            </>
+          )}
+
+          {/* Mini Bar */}
+          {(billableMiniBar.length > 0 || paidMiniBar.length > 0) && (
+            <>
+              <tr>
+                <td colSpan={3} className="pt-1.5 pb-0.5">
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest flex items-center gap-1">
+                    Mini Bar
+                    {pendingMiniBar.length > 0 && (
+                      <span className="text-orange-500 font-bold">⚠ {pendingMiniBar.length} pending</span>
+                    )}
+                  </p>
+                </td>
+              </tr>
+              {billableMiniBar.map((u) => (
+                <tr key={u.id}>
+                  <td className="py-0.5 pr-2 text-gray-600 pl-2">
+                    {u.item.name} × {u.quantity}
+                    {u.status === 'PENDING' && <span className="text-orange-500 ml-1 text-[10px]">(pending)</span>}
+                  </td>
+                  <td className="text-right text-[10px] text-gray-400">{new Date(u.recordedAt).toLocaleDateString()}</td>
+                  <td className="text-right font-medium pl-2">{fmt$(u.amount)}</td>
+                </tr>
+              ))}
+              {miniBarTotal > 0 && (
+                <tr className="border-t border-dashed border-gray-200">
+                  <td className="py-0.5 pr-2 text-gray-500 text-[11px]" colSpan={2}>Mini bar subtotal</td>
+                  <td className="text-right text-[11px] font-medium pl-2 text-gray-600">{fmt$(miniBarTotal)}</td>
+                </tr>
+              )}
+            </>
+          )}
+
+          {/* F&B Bills */}
+          {activeFnb.length > 0 && (
+            <>
+              <tr>
+                <td colSpan={3} className="pt-1.5 pb-0.5">
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest">
+                    Food &amp; Beverage
+                    {activeFnb.some(b => b.status === 'OPEN') && (
+                      <span className="text-orange-500 ml-1 font-bold">⚠ open bill(s)</span>
+                    )}
+                  </p>
+                </td>
+              </tr>
+              {activeFnb.map((bill) => (
+                <tr key={bill.id}>
+                  <td className="py-0.5 pr-2 text-gray-600 pl-2">
+                    {bill.outlet.name}
+                    {bill.tableNumber ? ` · Table ${bill.tableNumber}` : ''}
+                    {bill.status === 'OPEN' && <span className="text-orange-500 ml-1 text-[10px]">(open)</span>}
+                  </td>
+                  <td className="text-right text-[10px] text-gray-400">{new Date(bill.createdAt).toLocaleDateString()}</td>
+                  <td className="text-right font-medium pl-2">{fmt$(bill.totalAmount)}</td>
+                </tr>
+              ))}
+              <tr className="border-t border-dashed border-gray-200">
+                <td className="py-0.5 pr-2 text-gray-500 text-[11px]" colSpan={2}>F&amp;B subtotal</td>
+                <td className="text-right text-[11px] font-medium pl-2 text-gray-600">{fmt$(fnbTotal)}</td>
+              </tr>
+            </>
+          )}
+
           {b.platformFee > 0 && (
             <tr className="text-gray-400 text-[11px]">
               <td className="py-0.5 pr-2" colSpan={2}>Platform fee</td>
@@ -215,12 +341,16 @@ function Receipt({ b }: { b: BillBooking }) {
 
 function RecordPaymentForm({
   booking,
+  fnbBills,
+  roomExtras,
   onRecorded,
 }: {
   booking: BillBooking;
+  fnbBills: FnBBill[];
+  roomExtras: BillBooking['serviceOrders'];
   onRecorded: (newPaid: number) => void;
 }) {
-  const grandTotal = computeGrandTotal(booking);
+  const grandTotal = computeGrandTotal(booking, fnbBills, roomExtras);
   const balance = grandTotal - booking.paidAmount;
   const [selectedId, setSelectedId] = useState('BML_CARD');
   const [amount, setAmount] = useState(balance > 0 ? balance.toFixed(2) : '');
@@ -403,6 +533,8 @@ function PaymentHistory({
 export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) {
   const router = useRouter();
   const [booking, setBooking] = useState<BillBooking | null>(null);
+  const [fnbBills, setFnbBills] = useState<FnBBill[]>([]);
+  const [roomExtras, setRoomExtras] = useState<BillBooking['serviceOrders']>([]);
   const [loading, setLoading] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkedOut, setCheckedOut] = useState(false);
@@ -411,15 +543,19 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
   const [activeTab, setActiveTab] = useState<'bill' | 'payments'>('bill');
 
   useEffect(() => {
-    if (!bookingId) { setBooking(null); return; }
+    if (!bookingId) { setBooking(null); setFnbBills([]); setRoomExtras([]); return; }
     setLoading(true);
     setCheckedOut(false);
     setShowPaymentForm(false);
     setActiveTab('bill');
     fetch(`/api/admin/bookings/${bookingId}/bill`)
       .then((r) => r.json())
-      .then((d) => setBooking(d.booking ?? null))
-      .catch(() => setBooking(null))
+      .then((d) => {
+        setBooking(d.booking ?? null);
+        setFnbBills(d.fnbBills ?? []);
+        setRoomExtras(d.roomExtraOrders ?? []);
+      })
+      .catch(() => { setBooking(null); setFnbBills([]); setRoomExtras([]); })
       .finally(() => setLoading(false));
   }, [bookingId]);
 
@@ -439,27 +575,32 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
     finally { setCheckingOut(false); }
   }
 
-  function handlePaymentRecorded(newPaid: number) {
-    if (!booking) return;
-    // Re-fetch fresh bill data
-    fetch(`/api/admin/bookings/${booking.id}/bill`)
+  function refreshBill(bookingId: string) {
+    fetch(`/api/admin/bookings/${bookingId}/bill`)
       .then((r) => r.json())
-      .then((d) => setBooking(d.booking ?? null));
+      .then((d) => {
+        setBooking(d.booking ?? null);
+        setFnbBills(d.fnbBills ?? []);
+        setRoomExtras(d.roomExtraOrders ?? []);
+      });
+  }
+
+  function handlePaymentRecorded(_newPaid: number) {
+    if (!booking) return;
+    refreshBill(booking.id);
     setShowPaymentForm(false);
     router.refresh();
   }
 
   function handleRefund() {
     if (!booking) return;
-    fetch(`/api/admin/bookings/${booking.id}/bill`)
-      .then((r) => r.json())
-      .then((d) => setBooking(d.booking ?? null));
+    refreshBill(booking.id);
     router.refresh();
   }
 
   async function handleShare() {
     if (!booking) return;
-    const text = buildPlainTextBill(booking);
+    const text = buildPlainTextBill(booking, fnbBills, roomExtras);
     if (navigator.share) {
       try { await navigator.share({ title: `Bill – ${booking.confirmationNumber}`, text }); return; }
       catch { /* fallthrough */ }
@@ -469,8 +610,11 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const balance = booking ? computeGrandTotal(booking) - booking.paidAmount : 0;
+  const balance = booking ? computeGrandTotal(booking, fnbBills, roomExtras) - booking.paidAmount : 0;
   const confirmedPayments = booking?.payments.filter(p => p.status === 'COMPLETED') ?? [];
+  const pendingMiniBar = booking?.minIBarUsages.filter(u => !u.isFree && u.status === 'PENDING') ?? [];
+  const openFnb = fnbBills.filter(b => b.status === 'OPEN');
+  const hasWarnings = pendingMiniBar.length > 0 || openFnb.length > 0;
 
   return (
     <>
@@ -483,7 +627,7 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
       `}</style>
 
       <div id="print-receipt-wrapper">
-        {booking && <Receipt b={booking} />}
+        {booking && <Receipt b={booking} fnbBills={fnbBills} roomExtras={roomExtras} />}
       </div>
 
       <Dialog open={!!bookingId} onOpenChange={(o) => !o && onClose()}>
@@ -509,6 +653,7 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
                 }`}
               >
                 Bill / Receipt
+                {hasWarnings && <span className="ml-1.5 text-orange-500">⚠</span>}
               </button>
               <button
                 onClick={() => setActiveTab('payments')}
@@ -540,7 +685,23 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
                     <CheckCircle2 className="h-4 w-4 shrink-0" /> Guest checked out successfully!
                   </div>
                 )}
-                <Receipt b={booking} />
+                {/* Warnings for unsettled items */}
+                {hasWarnings && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5 mb-4 space-y-1">
+                    <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">⚠ Unsettled Items</p>
+                    {pendingMiniBar.length > 0 && (
+                      <p className="text-xs text-orange-600">
+                        · {pendingMiniBar.length} mini bar charge{pendingMiniBar.length > 1 ? 's' : ''} still pending — mark them On Bill in Mini Bar module
+                      </p>
+                    )}
+                    {openFnb.length > 0 && (
+                      <p className="text-xs text-orange-600">
+                        · {openFnb.length} F&amp;B bill{openFnb.length > 1 ? 's' : ''} still open — close them in F&amp;B module
+                      </p>
+                    )}
+                  </div>
+                )}
+                <Receipt b={booking} fnbBills={fnbBills} roomExtras={roomExtras} />
               </>
             ) : (
               /* Payments tab */
@@ -563,6 +724,8 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
                   showPaymentForm ? (
                     <RecordPaymentForm
                       booking={booking}
+                      fnbBills={fnbBills}
+                      roomExtras={roomExtras}
                       onRecorded={handlePaymentRecorded}
                     />
                   ) : (
@@ -607,10 +770,11 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
                   className="ml-auto bg-teal-600 hover:bg-teal-700 gap-1.5"
                   size="sm"
                   onClick={handleCheckout}
-                  disabled={checkingOut}
+                  disabled={checkingOut || hasWarnings}
+                  title={hasWarnings ? 'Resolve unsettled items before checkout' : undefined}
                 >
                   {checkingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Confirm Checkout
+                  {hasWarnings ? '⚠ Unsettled Items' : 'Confirm Checkout'}
                 </Button>
               )}
               {(checkedOut || booking.status === 'CHECKED_OUT') && (
@@ -626,13 +790,18 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
 
 // ─── Plain text for sharing ───────────────────────────────────────────────────
 
-function buildPlainTextBill(b: BillBooking): string {
+function buildPlainTextBill(b: BillBooking, fnbBills: FnBBill[], roomExtras: BillBooking['serviceOrders']): string {
   const n = nights(b.checkInDate, b.checkOutDate);
   const c = b.room.property.currency || 'USD';
   const f = (v: number) => `${c} ${v.toFixed(2)}`;
   const roomCharge = b.room.basePrice * n;
   const svcTotal = b.serviceOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const grandTotal = roomCharge + svcTotal + (b.platformFee || 0);
+  const roomExtraTotal = roomExtras.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const billableMiniBar = b.minIBarUsages.filter(u => !u.isFree && u.status !== 'WAIVED');
+  const miniBarTotal = billableMiniBar.reduce((sum, u) => sum + (u.amount || 0), 0);
+  const activeFnb = fnbBills.filter(bill => bill.status !== 'VOIDED');
+  const fnbTotal = activeFnb.reduce((sum, bill) => sum + (bill.totalAmount || 0), 0);
+  const grandTotal = computeGrandTotal(b, fnbBills, roomExtras);
   const lines = [
     `=== ${b.room.property.name.toUpperCase()} ===`,
     `${b.room.property.address}, ${b.room.property.city}`,
@@ -651,9 +820,27 @@ function buildPlainTextBill(b: BillBooking): string {
     `Room ${b.room.number} × ${n} nights @ ${f(b.room.basePrice)}   ${f(roomCharge)}`,
     ...(b.serviceOrders.length > 0 ? [
       '',
-      '--- ROOM SERVICES & EXTRAS ---',
+      '--- ROOM SERVICES ---',
       ...b.serviceOrders.map(o => `${parseServiceNotes(o.notes) || o.service.name}   ${f(o.totalAmount)}`),
       `Services subtotal   ${f(svcTotal)}`,
+    ] : []),
+    ...(roomExtras.length > 0 ? [
+      '',
+      '--- EXTRA SERVICES ---',
+      ...roomExtras.map(o => `${parseServiceNotes(o.notes) || o.service.name}   ${f(o.totalAmount)}`),
+      `Extras subtotal   ${f(roomExtraTotal)}`,
+    ] : []),
+    ...(billableMiniBar.length > 0 ? [
+      '',
+      '--- MINI BAR ---',
+      ...billableMiniBar.map(u => `${u.item.name} × ${u.quantity}${u.status === 'PENDING' ? ' (pending)' : ''}   ${f(u.amount)}`),
+      `Mini bar subtotal   ${f(miniBarTotal)}`,
+    ] : []),
+    ...(activeFnb.length > 0 ? [
+      '',
+      '--- FOOD & BEVERAGE ---',
+      ...activeFnb.map(bill => `${bill.outlet.name}${bill.tableNumber ? ` Table ${bill.tableNumber}` : ''}${bill.status === 'OPEN' ? ' (open)' : ''}   ${f(bill.totalAmount)}`),
+      `F&B subtotal   ${f(fnbTotal)}`,
     ] : []),
     ...(b.platformFee > 0 ? [`Platform fee   ${f(b.platformFee)}`] : []),
     '',
