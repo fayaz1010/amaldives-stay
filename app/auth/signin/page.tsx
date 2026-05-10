@@ -58,9 +58,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-cyan-600 rounded-full flex items-center justify-center">
-              <Hotel className="h-8 w-8 text-white" />
-            </div>
+            <img src="/images/logo.png" alt="aMaldives" className="h-14 w-auto" />
           </div>
           <CardTitle className="text-2xl font-bold">Welcome to amaldives STAY</CardTitle>
           <CardDescription>

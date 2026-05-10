@@ -23,6 +23,15 @@ async function seedSuperAdmin() {
   return admin;
 }
 
+const OYSTER_ROOMS = [
+  { number: '101', name: 'Garden View Room', type: 'STANDARD' as const, capacity: 2, basePrice: 89, bedType: 'King Bed', size: 28, amenities: ['Air Conditioning', 'Free WiFi', 'En-suite Bathroom', 'Flat Screen TV', 'Minibar'] },
+  { number: '102', name: 'Garden View Room', type: 'STANDARD' as const, capacity: 2, basePrice: 89, bedType: 'Twin Beds', size: 28, amenities: ['Air Conditioning', 'Free WiFi', 'En-suite Bathroom', 'Flat Screen TV', 'Minibar'] },
+  { number: '201', name: 'Beachfront Deluxe Room', type: 'DELUXE' as const, capacity: 2, basePrice: 149, bedType: 'King Bed', size: 38, amenities: ['Air Conditioning', 'Free WiFi', 'Sea View', 'Private Balcony', 'En-suite Bathroom', 'Flat Screen TV', 'Minibar', 'Coffee Machine'] },
+  { number: '202', name: 'Beachfront Deluxe Room', type: 'DELUXE' as const, capacity: 3, basePrice: 159, bedType: 'King + Single Bed', size: 40, amenities: ['Air Conditioning', 'Free WiFi', 'Sea View', 'Private Balcony', 'En-suite Bathroom', 'Flat Screen TV', 'Minibar', 'Coffee Machine'] },
+  { number: '301', name: 'Ocean Suite', type: 'SUITE' as const, capacity: 2, basePrice: 229, bedType: 'King Bed', size: 55, amenities: ['Air Conditioning', 'Free WiFi', 'Panoramic Sea View', 'Private Terrace', 'Jacuzzi', 'Living Area', 'En-suite Bathroom', 'Flat Screen TV', 'Minibar', 'Coffee Machine', 'Room Service'] },
+  { number: '401', name: 'Family Room', type: 'FAMILY' as const, capacity: 4, basePrice: 199, bedType: 'King + 2 Single Beds', size: 52, amenities: ['Air Conditioning', 'Free WiFi', 'En-suite Bathroom', 'Flat Screen TV', 'Minibar', 'Extra Beds Available'] },
+];
+
 async function seedGuesthouses() {
   for (const gh of SAMPLE_GUESTHOUSES) {
     const subdomain = gh.slug;
@@ -52,7 +61,34 @@ async function seedGuesthouses() {
         }
       }
     });
-    const tempPassword = await bcrypt.hash('TempPass@2026', 12);
+
+    // Add rooms for Oyster Residence demo
+    if (subdomain === 'oyster-residence') {
+      const property = await prisma.property.findFirst({ where: { tenantId: tenant.id } });
+      if (property) {
+        for (const r of OYSTER_ROOMS) {
+          await prisma.room.create({
+            data: {
+              tenantId: tenant.id,
+              propertyId: property.id,
+              number: r.number,
+              name: r.name,
+              type: r.type,
+              capacity: r.capacity,
+              basePrice: r.basePrice,
+              bedType: r.bedType,
+              size: r.size,
+              amenities: r.amenities,
+              description: `${r.name} at ${gh.name}, ${gh.island}. Sleeps ${r.capacity}.`,
+              status: 'AVAILABLE',
+            }
+          });
+        }
+        console.log('Added', OYSTER_ROOMS.length, 'rooms to Oyster Residence');
+      }
+    }
+
+    const tempPassword = await bcrypt.hash('OysterDemo@2026', 12);
     await prisma.user.create({
       data: {
         email: ownerEmail,
@@ -65,7 +101,7 @@ async function seedGuesthouses() {
         }
       }
     });
-    console.log('Created:', gh.name, '->', subdomain + '.stay.amaldives.com');
+    console.log('Created:', gh.name, '->', subdomain + '.stay.amaldives.com', '| login:', ownerEmail);
   }
 }
 
