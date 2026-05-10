@@ -7,15 +7,16 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Hotel, 
-  Users, 
-  ClipboardList, 
-  Wrench, 
-  BarChart3, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Calendar,
+  CalendarDays,
+  Hotel,
+  Users,
+  ClipboardList,
+  Wrench,
+  BarChart3,
+  Settings,
   Menu,
   X,
   LogOut,
@@ -36,6 +37,7 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Reservations', href: '/admin/reservations', icon: Calendar },
     { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
+    { name: 'Availability', href: '/admin/availability', icon: CalendarDays },
     { name: 'Guests', href: '/admin/guests', icon: Users },
     { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
     { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
