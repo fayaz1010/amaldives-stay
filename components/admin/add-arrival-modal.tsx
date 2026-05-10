@@ -91,10 +91,10 @@ export function AddArrivalModal({
       }
       // If preselectedBookingId is given, fetch it
       if (preselectedBookingId) {
-        fetch(`/api/admin/arrivals/bookings?q=${preselectedBookingId}`)
+        fetch(`/api/admin/arrivals/bookings?id=${preselectedBookingId}`)
           .then((r) => r.json())
           .then((d) => {
-            const found = (d.bookings ?? []).find((b: Booking) => b.id === preselectedBookingId);
+            const found = (d.bookings ?? [])[0];
             if (found) setSelectedBooking(found);
           })
           .catch(() => {});

@@ -16,8 +16,21 @@ export async function GET(request: NextRequest) {
     }
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q') ?? '';
+    const id = searchParams.get('id'); // fetch single booking by ID
     const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10));
-    const date = searchParams.get('date'); // ISO date string YYYY-MM-DD
+    const date = searchParams.get('date');
+
+    // Single booking lookup by ID (for pre-selection)
+    if (id) {
+      const booking = await prisma.booking.findFirst({
+        where: { id, tenantId: session.user.tenantId },
+        include: {
+          guest: { select: { id: true, name: true, email: true } },
+          room: { select: { id: true, number: true, name: true } },
+        },
+      });
+      return NextResponse.json({ bookings: booking ? [booking] : [], total: booking ? 1 : 0, hasMore: false });
+    }
 
     // Date filter: match bookings whose checkInDate falls on `date`
     let dateFilter: any = undefined;
