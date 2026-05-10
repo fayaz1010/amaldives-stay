@@ -73,10 +73,39 @@ export default async function ArrivalsPage() {
     orderBy: { name: 'asc' },
   });
 
+  const serialisedArrivals = arrivals.map((a) => ({
+    ...a,
+    scheduledArrival: a.scheduledArrival?.toISOString() ?? null,
+    departedAt: a.departedAt?.toISOString() ?? null,
+    eta: a.eta?.toISOString() ?? null,
+    arrivedJettyAt: a.arrivedJettyAt?.toISOString() ?? null,
+    arrivedPropertyAt: a.arrivedPropertyAt?.toISOString() ?? null,
+    checkedInAt: a.checkedInAt?.toISOString() ?? null,
+    createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+    updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+    booking: {
+      ...a.booking,
+      checkInDate: a.booking.checkInDate instanceof Date ? a.booking.checkInDate.toISOString() : a.booking.checkInDate,
+      checkOutDate: a.booking.checkOutDate instanceof Date ? a.booking.checkOutDate.toISOString() : a.booking.checkOutDate,
+    },
+  }));
+
+  const serialisedDepartures = departures.map((b) => ({
+    ...b,
+    checkInDate: b.checkInDate instanceof Date ? b.checkInDate.toISOString() : b.checkInDate,
+    checkOutDate: b.checkOutDate instanceof Date ? b.checkOutDate.toISOString() : b.checkOutDate,
+    createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : b.createdAt,
+    updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : b.updatedAt,
+    arrival: b.arrival ? {
+      ...b.arrival,
+      scheduledArrival: b.arrival.scheduledArrival instanceof Date ? b.arrival.scheduledArrival.toISOString() : b.arrival.scheduledArrival,
+    } : null,
+  }));
+
   return (
     <ArrivalsPageClient
-      arrivals={arrivals}
-      departures={departures}
+      arrivals={serialisedArrivals}
+      departures={serialisedDepartures}
       staff={staff}
     />
   );
