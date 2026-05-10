@@ -78,18 +78,32 @@ export async function POST(request: NextRequest) {
       bookingId = activeBooking?.id;
     }
 
+    // Compute total from itemised cart if provided
+    let totalAmount = 0;
+    let notesPayload = data.notes ?? null;
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      totalAmount = data.items.reduce(
+        (sum: number, item: { price: number; qty: number }) =>
+          sum + (Number(item.price) || 0) * (Number(item.qty) || 1),
+        0
+      );
+      notesPayload = JSON.stringify({
+        items: data.items,
+        special: data.special ?? '',
+      });
+    }
+
     const order = await prisma.serviceOrder.create({
       data: {
         tenantId: session.user.tenantId,
         serviceId,
-        // Use the session user (staff) as guest since this is a staff-raised order
         guestId: session.user.id,
         bookingId: bookingId ?? null,
-        quantity: data.quantity ?? 1,
-        totalAmount: 0,
+        quantity: Array.isArray(data.items) ? data.items.length : (data.quantity ?? 1),
+        totalAmount,
         status: 'PENDING',
         scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
-        notes: data.notes ?? null,
+        notes: notesPayload,
       },
       include: {
         service: { select: { name: true, category: true } },

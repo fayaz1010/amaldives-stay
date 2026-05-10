@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Wrench,
   UtensilsCrossed,
+  BookOpen,
   BarChart3,
   Settings,
   Menu,
@@ -43,6 +44,7 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
     { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
     { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
     { name: 'Room Service', href: '/admin/room-service', icon: UtensilsCrossed },
+    { name: 'Menu', href: '/admin/room-service/menu', icon: BookOpen, indent: true },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -76,7 +78,8 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-100",
+                  "flex items-center py-3 text-sm font-medium transition-colors hover:bg-gray-100",
+                  item.indent ? "pl-10 pr-4" : "px-4",
                   pathname === item.href
                     ? "bg-teal-50 text-teal-700 border-r-2 border-teal-600"
                     : "text-gray-700"
@@ -103,7 +106,8 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-100",
+                  "flex items-center py-3 text-sm font-medium transition-colors hover:bg-gray-100",
+                  item.indent ? "pl-10 pr-4" : "px-4",
                   pathname === item.href
                     ? "bg-teal-50 text-teal-700 border-r-2 border-teal-600"
                     : "text-gray-700"

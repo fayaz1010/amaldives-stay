@@ -81,12 +81,26 @@ function startOf(range: DateRange): Date | null {
   return null;
 }
 
-/** Extract service item label from notes field format "[Item]: notes" */
-function parseOrderItem(order: ServiceOrder): { item: string; detail: string } {
+/** Parse notes field — supports both old "[Item]: detail" and new JSON cart format */
+function parseOrderNotes(order: ServiceOrder): {
+  items: Array<{ name: string; qty: number; price: number }>;
+  special: string;
+  legacy: string;
+  isJson: boolean;
+} {
   const notes = order.notes ?? '';
+  try {
+    const parsed = JSON.parse(notes);
+    if (parsed && Array.isArray(parsed.items)) {
+      return { items: parsed.items, special: parsed.special ?? '', legacy: '', isJson: true };
+    }
+  } catch {
+    /* not JSON */
+  }
+  // Legacy "[Item]: detail" format
   const match = notes.match(/^\[([^\]]+)\](: ?(.*))?$/s);
-  if (match) return { item: match[1], detail: match[3] ?? '' };
-  return { item: order.service?.name ?? 'Room Service', detail: notes };
+  if (match) return { items: [], special: match[3] ?? '', legacy: match[1], isJson: false };
+  return { items: [], special: '', legacy: notes, isJson: false };
 }
 
 export function RoomServiceBoard({ orders, rooms }: RoomServiceBoardProps) {
@@ -185,25 +199,13 @@ export function RoomServiceBoard({ orders, rooms }: RoomServiceBoardProps) {
                   </div>
                 ) : (
                   colOrders.map((order) => {
-                    const { item, detail } = parseOrderItem(order);
+                    const { items, special, legacy, isJson } = parseOrderNotes(order);
                     const roomNumber = order.booking?.room?.number;
 
                     return (
                       <Card key={order.id} className="hover:shadow-md transition-shadow">
                         <CardContent className="p-3 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="font-semibold text-sm leading-tight">{item}</span>
-                            {order.quantity > 1 && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 shrink-0">
-                                ×{order.quantity}
-                              </span>
-                            )}
-                          </div>
-
-                          {detail && (
-                            <p className="text-xs text-gray-600 line-clamp-2">{detail}</p>
-                          )}
-
+                          {/* Room + order time */}
                           <div className="flex items-center gap-1 text-[11px] text-gray-400">
                             <Clock className="h-3 w-3 shrink-0" />
                             <span>
@@ -217,6 +219,35 @@ export function RoomServiceBoard({ orders, rooms }: RoomServiceBoardProps) {
                             </span>
                           </div>
 
+                          {/* Items */}
+                          {isJson ? (
+                            <div className="space-y-0.5">
+                              {items.map((itm, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-700">
+                                    <span className="font-medium">{itm.qty}×</span> {itm.name}
+                                  </span>
+                                  <span className="text-gray-500">${(itm.price * itm.qty).toFixed(2)}</span>
+                                </div>
+                              ))}
+                              {order.totalAmount > 0 && (
+                                <div className="flex items-center justify-between text-xs font-bold border-t pt-0.5 mt-0.5 text-cyan-700">
+                                  <span>Total</span>
+                                  <span>${order.totalAmount.toFixed(2)}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="font-semibold text-sm">{legacy || order.service?.name || 'Room Service'}</p>
+                          )}
+
+                          {/* Special notes */}
+                          {special && (
+                            <p className="text-[11px] text-gray-500 bg-gray-50 rounded px-2 py-1 line-clamp-2">
+                              📝 {special}
+                            </p>
+                          )}
+
                           {order.status === 'COMPLETED' && order.completedAt && (
                             <div className="flex items-center gap-1 text-[11px] text-green-600">
                               <CalendarCheck className="h-3 w-3 shrink-0" />
@@ -228,10 +259,6 @@ export function RoomServiceBoard({ orders, rooms }: RoomServiceBoardProps) {
                                 })}
                               </span>
                             </div>
-                          )}
-
-                          {order.guest?.name && (
-                            <p className="text-[11px] text-gray-500">👤 {order.guest.name}</p>
                           )}
 
                           <div className="pt-1">
