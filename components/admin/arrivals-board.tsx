@@ -31,9 +31,14 @@ interface ArrivalRecord {
   checkedInAt?: string | Date | null;
   luggageCount?: number | null;
   jettyTransport?: string | null;
+  jettyTransportSeats?: number | null;
+  jettyTransportCapacity?: number | null;
   cardIssued: boolean;
   welcomeDrink: boolean;
   specialNotes?: string | null;
+  ticketsPurchased: boolean;
+  seatNumbers?: string | null;
+  airportPickupConfirmed: boolean;
   booking: {
     id: string;
     confirmationNumber: string;
@@ -157,6 +162,44 @@ function ArrivalCard({
             </span>
           )}
         </div>
+
+        {/* Ticket + pickup confirmation badges */}
+        {(record.ticketsPurchased !== undefined || record.airportPickupConfirmed !== undefined) && (
+          <div className="flex flex-wrap gap-1.5">
+            {['DOMESTIC_FLIGHT', 'SEAPLANE', 'FERRY'].includes(record.transportType) && (
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                record.ticketsPurchased
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
+              }`}>
+                🎫 {record.ticketsPurchased ? 'Tickets ✓' : 'No tickets yet'}
+              </span>
+            )}
+            {record.seatNumbers && (
+              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">
+                💺 {record.seatNumbers}
+              </span>
+            )}
+            {['DOMESTIC_FLIGHT', 'SEAPLANE'].includes(record.transportType) && (
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                record.airportPickupConfirmed
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                🛬 {record.airportPickupConfirmed ? 'Pickup ✓' : 'Pickup pending'}
+              </span>
+            )}
+            {record.jettyTransport && record.jettyTransportCapacity != null && (
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                (record.jettyTransportSeats ?? 0) >= record.jettyTransportCapacity
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-teal-100 text-teal-700'
+              }`}>
+                🚤 {record.jettyTransportSeats ?? '?'}/{record.jettyTransportCapacity} seats
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Pickup */}
         <div className="flex items-center gap-1.5 text-[11px] text-gray-600">

@@ -32,8 +32,9 @@ export async function PATCH(
     const scalars = [
       'transportType', 'transportRef', 'transportCost', 'costPaid',
       'pickupBy', 'pickupStaffId', 'pickupVendor',
-      'luggageCount', 'jettyTransport', 'specialNotes',
-      'cardIssued', 'welcomeDrink', 'status',
+      'luggageCount', 'jettyTransport', 'jettyTransportSeats', 'jettyTransportCapacity',
+      'specialNotes', 'cardIssued', 'welcomeDrink', 'status',
+      'ticketsPurchased', 'seatNumbers', 'airportPickupConfirmed',
     ];
     for (const key of scalars) {
       if (data[key] !== undefined) updates[key] = data[key];

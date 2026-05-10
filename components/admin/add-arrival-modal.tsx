@@ -38,13 +38,13 @@ interface AddArrivalModalProps {
 }
 
 export const TRANSPORT_TYPES = [
-  { value: 'SEAPLANE',         label: '🛩️ Seaplane' },
-  { value: 'DOMESTIC_FLIGHT',  label: '✈️ Domestic Flight' },
-  { value: 'SPEEDBOAT',        label: '🚤 Speedboat' },
-  { value: 'CHARTER_BOAT',     label: '⛵ Charter Boat' },
-  { value: 'FERRY',            label: '🚢 Ferry' },
-  { value: 'SELF_ARRANGED',    label: '👤 Self Arranged' },
-  { value: 'OTHER',            label: '📦 Other' },
+  { value: 'SEAPLANE',         label: '🛩️ Seaplane',        needsTicket: true,  needsAirportPickup: true },
+  { value: 'DOMESTIC_FLIGHT',  label: '✈️ Domestic Flight',  needsTicket: true,  needsAirportPickup: true },
+  { value: 'FERRY',            label: '🚢 Ferry',            needsTicket: true,  needsAirportPickup: false },
+  { value: 'CHARTER_BOAT',     label: '⛵ Charter Boat',     needsTicket: false, needsAirportPickup: false },
+  { value: 'SPEEDBOAT',        label: '🚤 Speedboat',        needsTicket: false, needsAirportPickup: false },
+  { value: 'SELF_ARRANGED',    label: '👤 Self Arranged',    needsTicket: false, needsAirportPickup: false },
+  { value: 'OTHER',            label: '📦 Other',            needsTicket: false, needsAirportPickup: false },
 ];
 
 export function AddArrivalModal({
@@ -73,7 +73,12 @@ export function AddArrivalModal({
   const [scheduledArrival, setScheduledArrival] = useState('');
   const [luggageCount, setLuggageCount] = useState('');
   const [jettyTransport, setJettyTransport] = useState('');
+  const [jettyTransportSeats, setJettyTransportSeats] = useState('');
+  const [jettyTransportCapacity, setJettyTransportCapacity] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
+  const [ticketsPurchased, setTicketsPurchased] = useState(false);
+  const [seatNumbers, setSeatNumbers] = useState('');
+  const [airportPickupConfirmed, setAirportPickupConfirmed] = useState(false);
 
   // Reset on open/close
   useEffect(() => {
@@ -83,7 +88,8 @@ export function AddArrivalModal({
       setTransportType('SPEEDBOAT'); setTransportRef(''); setTransportCost('');
       setCostPaid(false); setPickupBy('STAFF'); setPickupStaffId('');
       setPickupVendor(''); setScheduledArrival(''); setLuggageCount('');
-      setJettyTransport(''); setSpecialNotes('');
+      setJettyTransport(''); setJettyTransportSeats(''); setJettyTransportCapacity('');
+      setSpecialNotes(''); setTicketsPurchased(false); setSeatNumbers(''); setAirportPickupConfirmed(false);
     } else {
       // Pre-fill date
       if (defaultDate) {
@@ -105,6 +111,10 @@ export function AddArrivalModal({
       }
     }
   }, [open]);
+
+  const transportMeta = TRANSPORT_TYPES.find((t) => t.value === transportType);
+  const needsTicket = transportMeta?.needsTicket ?? false;
+  const needsAirportPickup = transportMeta?.needsAirportPickup ?? false;
 
   async function loadList(off: number, q: string) {
     setListLoading(true);
@@ -152,7 +162,12 @@ export function AddArrivalModal({
           scheduledArrival: scheduledArrival || null,
           luggageCount: luggageCount ? Number(luggageCount) : null,
           jettyTransport: jettyTransport || null,
+          jettyTransportSeats: jettyTransportSeats ? Number(jettyTransportSeats) : null,
+          jettyTransportCapacity: jettyTransportCapacity ? Number(jettyTransportCapacity) : null,
           specialNotes: specialNotes || null,
+          ticketsPurchased,
+          seatNumbers: seatNumbers || null,
+          airportPickupConfirmed,
         }),
       });
       if (!res.ok) {
@@ -360,6 +375,56 @@ export function AddArrivalModal({
             ) : <div />}
           </div>
 
+          {/* ── Ticket / Transfer confirmation ─────────────────────────── */}
+          {needsTicket && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-3">
+              <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
+                🎫 Transfer Tickets
+              </p>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={ticketsPurchased}
+                    onChange={(e) => setTicketsPurchased(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300" />
+                  <span className="text-sm font-medium text-blue-800">Tickets purchased</span>
+                </label>
+                {ticketsPurchased ? (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ Confirmed</span>
+                ) : (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⚠ Not yet purchased</span>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Seat Numbers <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input value={seatNumbers} onChange={(e) => setSeatNumbers(e.target.value)}
+                  placeholder="e.g. 12A, 12B  or  Row 3 Seats 4–5"
+                  className="h-9 text-sm" />
+              </div>
+            </div>
+          )}
+
+          {/* ── Airport pickup confirmation ─────────────────────────────── */}
+          {needsAirportPickup && (
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
+              <p className="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-2">
+                🛬 Airport Pickup (Velana / Domestic Terminal)
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={airportPickupConfirmed}
+                  onChange={(e) => setAirportPickupConfirmed(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300" />
+                <span className="text-sm text-purple-800">
+                  Airport pickup arranged <span className="text-purple-600 font-normal">(someone meeting at arrivals hall)</span>
+                </span>
+              </label>
+              {!airportPickupConfirmed && (
+                <p className="text-[11px] text-purple-600 mt-1.5">
+                  ℹ Guest needs to be met at the airport before their onward connection.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* ── Schedule ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -373,6 +438,47 @@ export function AddArrivalModal({
                 placeholder="e.g. Dhoni, Walk, Buggy" />
             </div>
           </div>
+
+          {/* Jetty transport seats + capacity */}
+          {jettyTransport && (
+            <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 space-y-2">
+              <p className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
+                🚤 Jetty Transport Seats
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Seats for this party</Label>
+                  <Input type="number" min="1" max="50" value={jettyTransportSeats}
+                    onChange={(e) => setJettyTransportSeats(e.target.value)}
+                    placeholder={String((selectedBooking?.adults ?? 1) + (selectedBooking?.children ?? 0))}
+                    className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vehicle max capacity</Label>
+                  <Input type="number" min="1" max="100" value={jettyTransportCapacity}
+                    onChange={(e) => setJettyTransportCapacity(e.target.value)}
+                    placeholder="e.g. 8 for dhoni"
+                    className="h-9 text-sm" />
+                </div>
+              </div>
+              {jettyTransportSeats && jettyTransportCapacity && (
+                (() => {
+                  const seats = Number(jettyTransportSeats);
+                  const cap = Number(jettyTransportCapacity);
+                  const remaining = cap - seats;
+                  return (
+                    <p className={`text-xs font-medium ${remaining < 0 ? 'text-red-600' : remaining === 0 ? 'text-amber-600' : 'text-teal-700'}`}>
+                      {remaining < 0
+                        ? `⛔ Over capacity by ${Math.abs(remaining)} seat${Math.abs(remaining) !== 1 ? 's' : ''}`
+                        : remaining === 0
+                        ? '⚠ Vehicle fully booked'
+                        : `✓ ${remaining} seat${remaining !== 1 ? 's' : ''} remaining`}
+                    </p>
+                  );
+                })()
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

@@ -565,7 +565,14 @@ model ArrivalRecord {
   // Arrival details
   luggageCount        Int?
   jettyTransport      String?       // e.g. "dhoni", "walk", "buggy"
+  jettyTransportSeats Int?          // seats this party occupies
+  jettyTransportCapacity Int?       // max capacity of the jetty vehicle
   specialNotes        String?
+
+  // Ticket / transfer confirmation
+  ticketsPurchased    Boolean       @default(false)
+  seatNumbers         String?       // e.g. "12A, 12B" for flights/ferries
+  airportPickupConfirmed Boolean    @default(false) // someone at airport to meet guest
 
   // Check-in milestones
   cardIssued          Boolean       @default(false)
