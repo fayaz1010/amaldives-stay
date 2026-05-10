@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, X, ChevronDown } from 'lucide-react';
 
 interface Booking {
   id: string;
@@ -31,25 +31,38 @@ interface AddArrivalModalProps {
   onOpenChange: (open: boolean) => void;
   staff: Staff[];
   onCreated: () => void;
+  /** When set, auto-selects this booking on open */
+  preselectedBookingId?: string;
+  /** Default date to pre-fill scheduledArrival (YYYY-MM-DD) */
+  defaultDate?: string;
 }
 
 export const TRANSPORT_TYPES = [
-  { value: 'SEAPLANE', label: '🛩️ Seaplane' },
-  { value: 'DOMESTIC_FLIGHT', label: '✈️ Domestic Flight' },
-  { value: 'SPEEDBOAT', label: '🚤 Speedboat' },
-  { value: 'CHARTER_BOAT', label: '⛵ Charter Boat' },
-  { value: 'FERRY', label: '🚢 Ferry' },
-  { value: 'SELF_ARRANGED', label: '👤 Self Arranged' },
-  { value: 'OTHER', label: '📦 Other' },
+  { value: 'SEAPLANE',         label: '🛩️ Seaplane' },
+  { value: 'DOMESTIC_FLIGHT',  label: '✈️ Domestic Flight' },
+  { value: 'SPEEDBOAT',        label: '🚤 Speedboat' },
+  { value: 'CHARTER_BOAT',     label: '⛵ Charter Boat' },
+  { value: 'FERRY',            label: '🚢 Ferry' },
+  { value: 'SELF_ARRANGED',    label: '👤 Self Arranged' },
+  { value: 'OTHER',            label: '📦 Other' },
 ];
 
-export function AddArrivalModal({ open, onOpenChange, staff, onCreated }: AddArrivalModalProps) {
+export function AddArrivalModal({
+  open, onOpenChange, staff, onCreated, preselectedBookingId, defaultDate,
+}: AddArrivalModalProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [query, setQuery] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
+  // Booking picker state
+  const [query, setQuery] = useState('');
+  const [listBookings, setListBookings] = useState<Booking[]>([]);
+  const [listTotal, setListTotal] = useState(0);
+  const [listOffset, setListOffset] = useState(0);
+  const [listHasMore, setListHasMore] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Form state
   const [transportType, setTransportType] = useState('SPEEDBOAT');
   const [transportRef, setTransportRef] = useState('');
   const [transportCost, setTransportCost] = useState('');
@@ -62,29 +75,62 @@ export function AddArrivalModal({ open, onOpenChange, staff, onCreated }: AddArr
   const [jettyTransport, setJettyTransport] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
 
+  // Reset on open/close
   useEffect(() => {
     if (!open) {
-      setQuery(''); setBookings([]); setSelectedBooking(null);
+      setQuery(''); setListBookings([]); setSelectedBooking(null);
+      setPickerOpen(false); setListOffset(0);
       setTransportType('SPEEDBOAT'); setTransportRef(''); setTransportCost('');
       setCostPaid(false); setPickupBy('STAFF'); setPickupStaffId('');
       setPickupVendor(''); setScheduledArrival(''); setLuggageCount('');
       setJettyTransport(''); setSpecialNotes('');
+    } else {
+      // Pre-fill date
+      if (defaultDate) {
+        setScheduledArrival(`${defaultDate}T12:00`);
+      }
+      // If preselectedBookingId is given, fetch it
+      if (preselectedBookingId) {
+        fetch(`/api/admin/arrivals/bookings?q=${preselectedBookingId}`)
+          .then((r) => r.json())
+          .then((d) => {
+            const found = (d.bookings ?? []).find((b: Booking) => b.id === preselectedBookingId);
+            if (found) setSelectedBooking(found);
+          })
+          .catch(() => {});
+      } else {
+        // Load default list
+        loadList(0, '');
+        setPickerOpen(true);
+      }
     }
   }, [open]);
 
+  async function loadList(off: number, q: string) {
+    setListLoading(true);
+    try {
+      const params = new URLSearchParams({ offset: String(off) });
+      if (q) params.set('q', q);
+      const res = await fetch(`/api/admin/arrivals/bookings?${params}`);
+      const data = await res.json();
+      if (off === 0) {
+        setListBookings(data.bookings ?? []);
+      } else {
+        setListBookings((prev) => [...prev, ...(data.bookings ?? [])]);
+      }
+      setListTotal(data.total ?? 0);
+      setListOffset(off);
+      setListHasMore(data.hasMore ?? false);
+    } catch { /* ignore */ }
+    finally { setListLoading(false); }
+  }
+
+  // Debounced search
   useEffect(() => {
-    if (!open || selectedBooking) return;
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await fetch(`/api/admin/arrivals/bookings?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        setBookings(data.bookings ?? []);
-      } catch { /* ignore */ }
-      finally { setSearching(false); }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, open, selectedBooking]);
+    if (!open || selectedBooking || !pickerOpen) return;
+    const t = setTimeout(() => loadList(0, query), 280);
+    return () => clearTimeout(t);
+  }, [query, open, selectedBooking, pickerOpen]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -130,13 +176,15 @@ export function AddArrivalModal({ open, onOpenChange, staff, onCreated }: AddArr
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
-          {/* Booking search */}
+
+          {/* ── Booking picker ──────────────────────────────────────────── */}
           <div className="space-y-2">
             <Label>Link to Booking *</Label>
+
             {selectedBooking ? (
               <div className="flex items-center justify-between p-3 border rounded-lg bg-cyan-50 border-cyan-300">
                 <div>
-                  <p className="font-semibold text-sm">{selectedBooking.guest.name}</p>
+                  <p className="font-semibold text-sm">{selectedBooking.guest.name || selectedBooking.guest.email}</p>
                   <p className="text-xs text-gray-600">
                     Room {selectedBooking.room.number} · #{selectedBooking.confirmationNumber} ·{' '}
                     Check-in {new Date(selectedBooking.checkInDate).toLocaleDateString()} ·{' '}
@@ -144,49 +192,109 @@ export function AddArrivalModal({ open, onOpenChange, staff, onCreated }: AddArr
                     {selectedBooking.children > 0 ? ` + ${selectedBooking.children} child` : ''}
                   </p>
                 </div>
-                <button type="button" onClick={() => setSelectedBooking(null)}
-                  className="text-xs text-red-500 hover:text-red-700 underline ml-3">
-                  Change
+                <button type="button"
+                  onClick={() => { setSelectedBooking(null); setPickerOpen(true); setQuery(''); loadList(0, ''); }}
+                  className="text-xs text-red-500 hover:text-red-700 underline ml-3 flex items-center gap-0.5">
+                  <X className="h-3 w-3" /> Change
                 </button>
               </div>
             ) : (
-              <div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    className="pl-9"
-                    placeholder="Search by guest name, room, or confirmation…"
+              <div className="border rounded-lg overflow-hidden shadow-sm">
+                {/* Search bar */}
+                <div className="flex items-center border-b px-3 bg-gray-50">
+                  <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                  <input
+                    autoFocus
+                    className="flex-1 px-2.5 py-2.5 text-sm bg-transparent outline-none placeholder:text-gray-400"
+                    placeholder="Search by name, room, confirmation…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
+                  {query && (
+                    <button type="button" onClick={() => { setQuery(''); loadList(0, ''); }}>
+                      <X className="h-4 w-4 text-gray-400 hover:text-gray-700" />
+                    </button>
+                  )}
                 </div>
-                {(bookings.length > 0 || searching) && (
-                  <div className="mt-1 border rounded-lg max-h-40 overflow-y-auto shadow-sm">
-                    {searching ? (
-                      <div className="p-3 text-center text-gray-400 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> Searching…
-                      </div>
-                    ) : bookings.map((b) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => { setSelectedBooking(b); setBookings([]); }}
-                        className="w-full text-left px-3 py-2.5 hover:bg-gray-50 border-b last:border-0 text-sm"
-                      >
-                        <span className="font-medium">{b.guest.name}</span>
-                        <span className="text-gray-500 ml-2 text-xs">
-                          Room {b.room.number} · #{b.confirmationNumber} ·{' '}
-                          {new Date(b.checkInDate).toLocaleDateString()}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+
+                {/* List */}
+                <div className="max-h-52 overflow-y-auto">
+                  {listLoading && listBookings.length === 0 ? (
+                    <div className="flex items-center justify-center py-6 text-gray-400 text-sm gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                    </div>
+                  ) : listBookings.length === 0 ? (
+                    <p className="text-center text-gray-400 text-sm py-6">
+                      {query ? 'No matches found.' : 'All upcoming guests have arrival plans.'}
+                    </p>
+                  ) : (
+                    <>
+                      {/* Group by date */}
+                      {listBookings.reduce<{ date: string; bookings: Booking[] }[]>((groups, b) => {
+                        const d = new Date(b.checkInDate).toLocaleDateString(undefined, {
+                          weekday: 'short', day: 'numeric', month: 'short',
+                        });
+                        const existing = groups.find((g) => g.date === d);
+                        if (existing) existing.bookings.push(b);
+                        else groups.push({ date: d, bookings: [b] });
+                        return groups;
+                      }, []).map(({ date, bookings: group }) => (
+                        <div key={date}>
+                          <div className="sticky top-0 bg-gray-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b">
+                            {date}
+                          </div>
+                          {group.map((b) => (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onClick={() => { setSelectedBooking(b); setPickerOpen(false); }}
+                              className="w-full text-left px-3 py-2.5 hover:bg-cyan-50 border-b last:border-0 transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-medium text-sm text-gray-800">
+                                  {b.guest.name || b.guest.email}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-mono shrink-0">
+                                  #{b.confirmationNumber.slice(-6)}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-0.5">
+                                Room {b.room.number}
+                                {b.room.name ? ` — ${b.room.name}` : ''} ·{' '}
+                                {b.adults} adult{b.adults > 1 ? 's' : ''}
+                                {b.children > 0 ? ` + ${b.children} child` : ''}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                      {/* Load more */}
+                      {listHasMore && (
+                        <button
+                          type="button"
+                          onClick={() => loadList(listOffset + 20, query)}
+                          disabled={listLoading}
+                          className="w-full py-2 text-xs text-cyan-600 hover:text-cyan-800 hover:bg-cyan-50 border-t flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          {listLoading
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <ChevronDown className="h-3 w-3" />}
+                          Load more ({listTotal - listOffset - listBookings.length} remaining)
+                        </button>
+                      )}
+                      {!listHasMore && listBookings.length > 0 && (
+                        <p className="text-center text-[10px] text-gray-400 py-1.5 border-t">
+                          {listTotal} guest{listTotal !== 1 ? 's' : ''} total
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Transport */}
+          {/* ── Transport ───────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Transport Type *</Label>
@@ -221,7 +329,7 @@ export function AddArrivalModal({ open, onOpenChange, staff, onCreated }: AddArr
             </div>
           </div>
 
-          {/* Pickup */}
+          {/* ── Pickup ──────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Pickup By</Label>
@@ -252,7 +360,7 @@ export function AddArrivalModal({ open, onOpenChange, staff, onCreated }: AddArr
             ) : <div />}
           </div>
 
-          {/* Schedule */}
+          {/* ── Schedule ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Expected Arrival Time</Label>

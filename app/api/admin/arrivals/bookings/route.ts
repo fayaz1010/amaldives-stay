@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+const PAGE_SIZE = 20;
+
 /** Returns upcoming/active bookings that don't yet have an arrival record */
 export async function GET(request: NextRequest) {
   try {
@@ -14,29 +16,54 @@ export async function GET(request: NextRequest) {
     }
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q') ?? '';
+    const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10));
+    const date = searchParams.get('date'); // ISO date string YYYY-MM-DD
 
-    const bookings = await prisma.booking.findMany({
-      where: {
-        tenantId: session.user.tenantId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
-        arrival: null, // no arrival record yet
-        OR: q
-          ? [
-              { confirmationNumber: { contains: q, mode: 'insensitive' } },
-              { guest: { name: { contains: q, mode: 'insensitive' } } },
-              { room: { number: { contains: q, mode: 'insensitive' } } },
-            ]
-          : undefined,
-      },
-      include: {
-        guest: { select: { id: true, name: true, email: true } },
-        room: { select: { id: true, number: true, name: true } },
-      },
-      orderBy: { checkInDate: 'asc' },
-      take: 20,
+    // Date filter: match bookings whose checkInDate falls on `date`
+    let dateFilter: any = undefined;
+    if (date) {
+      const from = new Date(date);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(date);
+      to.setHours(23, 59, 59, 999);
+      dateFilter = { gte: from, lte: to };
+    }
+
+    const where: any = {
+      tenantId: session.user.tenantId,
+      status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
+      arrival: null,
+      ...(dateFilter ? { checkInDate: dateFilter } : {}),
+    };
+
+    if (q) {
+      where.OR = [
+        { confirmationNumber: { contains: q, mode: 'insensitive' } },
+        { guest: { name: { contains: q, mode: 'insensitive' } } },
+        { room: { number: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        include: {
+          guest: { select: { id: true, name: true, email: true } },
+          room: { select: { id: true, number: true, name: true } },
+        },
+        orderBy: { checkInDate: 'asc' },
+        take: PAGE_SIZE,
+        skip: offset,
+      }),
+      prisma.booking.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      bookings,
+      total,
+      offset,
+      hasMore: offset + bookings.length < total,
     });
-
-    return NextResponse.json({ bookings });
   } catch (error) {
     console.error('Bookings search error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
