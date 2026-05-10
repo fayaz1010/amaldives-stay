@@ -84,7 +84,7 @@ export default async function ArrivalsPage() {
       tenantId,
       checkInDate: { lte: horizon },
       status: { in: ['CONFIRMED', 'CHECKED_IN'] },
-      arrivalRecord: null,
+      arrival: { is: null },
     },
     select: { checkInDate: true },
   });
@@ -94,7 +94,7 @@ export default async function ArrivalsPage() {
       tenantId,
       checkOutDate: { lte: horizon },
       status: { in: ['CONFIRMED', 'CHECKED_IN'] },
-      departure: null,
+      departure: { is: null },
     },
     select: { checkOutDate: true },
   });
