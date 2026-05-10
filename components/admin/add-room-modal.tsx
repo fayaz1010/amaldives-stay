@@ -84,24 +84,40 @@ const emptyForm: FormState = {
 
 // ── Client-side image compression (Canvas API) ──────────────────────────────
 function compressImage(file: File, maxPx = 2000, quality = 0.85): Promise<Blob> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+
     img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width: w, height: h } = img;
+      const w0 = img.naturalWidth  || img.width;
+      const h0 = img.naturalHeight || img.height;
+
+      // If dimensions are unknown, skip compression
+      if (!w0 || !h0) { URL.revokeObjectURL(url); resolve(file); return; }
+
+      let w = w0, h = h0;
       if (w > maxPx || h > maxPx) {
         if (w >= h) { h = Math.round((h * maxPx) / w); w = maxPx; }
         else        { w = Math.round((w * maxPx) / h); h = maxPx; }
       }
+
       const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
+      canvas.width  = w;
+      canvas.height = h;
       const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('Canvas unavailable')); return; }
+      if (!ctx) { URL.revokeObjectURL(url); resolve(file); return; }
+
       ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Compression failed')), 'image/jpeg', quality);
+      URL.revokeObjectURL(url);
+
+      canvas.toBlob(
+        (blob) => resolve(blob ?? file),
+        'image/jpeg',
+        quality,
+      );
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`Failed to load ${file.name}`)); };
+
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
   });
 }
