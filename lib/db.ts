@@ -51,9 +51,12 @@ export class TenantDb {
 
   // Booking queries
   async getBookings(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.booking.findMany({
       where,
+      ...(limit ? { take: limit } : {}),
+      ...(limit ? { take: limit } : {}),
       include: {
         guest: {
           include: {
@@ -139,7 +142,8 @@ export class TenantDb {
 
   // Room queries
   async getRooms(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.room.findMany({
       where,
       include: {
@@ -210,7 +214,8 @@ export class TenantDb {
 
   // Staff queries
   async getStaff(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.user.findMany({
       where: {
         staffProfile: {
@@ -240,9 +245,11 @@ export class TenantDb {
 
   // Housekeeping queries
   async getHousekeepingTasks(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.housekeepingTask.findMany({
       where,
+      ...(limit ? { take: limit } : {}),
       include: {
         room: {
           include: {
@@ -273,7 +280,8 @@ export class TenantDb {
 
   // Maintenance queries
   async getMaintenanceRequests(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.maintenanceRequest.findMany({
       where,
       include: {
@@ -303,7 +311,8 @@ export class TenantDb {
 
   // Inventory queries
   async getInventoryItems(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.inventoryItem.findMany({
       where,
       orderBy: { name: 'asc' },
@@ -324,7 +333,8 @@ export class TenantDb {
 
   // Service queries
   async getServices(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.service.findMany({
       where,
       orderBy: { name: 'asc' },
@@ -332,7 +342,8 @@ export class TenantDb {
   }
 
   async getServiceOrders(filters?: any) {
-    const where = { tenantId: this.tenantId, ...filters };
+    const { limit, ...rest } = filters || {};
+    const where = { tenantId: this.tenantId, ...rest };
     return await prisma.serviceOrder.findMany({
       where,
       include: {
