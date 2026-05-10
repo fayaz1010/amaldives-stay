@@ -64,6 +64,7 @@ model User {
   assignedTasks HousekeepingTask[]
   reportedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceReporter")
   assignedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceAssignee")
+  arrivalPickups              ArrivalRecord[]      @relation("ArrivalPickupStaff")
   
   @@index([tenantId])
   @@index([email])
@@ -103,6 +104,7 @@ model Tenant {
   staff       StaffProfile[]
   inventory   InventoryItem[]
   reports     Report[]
+  arrivals    ArrivalRecord[]
   
   @@index([subdomain])
   @@index([status])
@@ -201,6 +203,7 @@ model Booking {
   
   payments      Payment[]
   serviceOrders ServiceOrder[]
+  arrival       ArrivalRecord?
   
   @@index([tenantId])
   @@index([confirmationNumber])
@@ -530,4 +533,77 @@ enum ReportType {
   STAFF_PERFORMANCE
   MAINTENANCE
   INVENTORY
+}
+
+// ─── Arrival / Departure Management ───────────────────────────────────────────
+
+model ArrivalRecord {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  bookingId           String        @unique
+
+  // Transport
+  transportType       TransportType @default(SPEEDBOAT)
+  transportRef        String?       // flight no., vessel name, etc.
+  transportCost       Float?
+  costPaid            Boolean       @default(false)
+
+  // Pickup
+  pickupBy            PickupType    @default(STAFF)
+  pickupStaffId       String?
+  pickupVendor        String?       // outsourced company/person name
+
+  // Timeline milestones (stored as UTC)
+  scheduledArrival    DateTime?     // when guest is expected
+  departedAt          DateTime?     // departed origin (flight/boat departed)
+  eta                 DateTime?     // current estimated arrival at jetty
+  arrivedJettyAt      DateTime?     // arrived jetty / port
+  arrivedPropertyAt   DateTime?     // arrived at property
+  checkedInAt         DateTime?     // formal check-in completed
+
+  // Arrival details
+  luggageCount        Int?
+  jettyTransport      String?       // e.g. "dhoni", "walk", "buggy"
+  specialNotes        String?
+
+  // Check-in milestones
+  cardIssued          Boolean       @default(false)
+  welcomeDrink        Boolean       @default(false)
+
+  // Overall pipeline status
+  status              ArrivalStatus @default(SCHEDULED)
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking             Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  pickupStaff         User?         @relation("ArrivalPickupStaff", fields: [pickupStaffId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+enum TransportType {
+  DOMESTIC_FLIGHT
+  SEAPLANE
+  SPEEDBOAT
+  CHARTER_BOAT
+  FERRY
+  SELF_ARRANGED
+  OTHER
+}
+
+enum PickupType {
+  STAFF
+  OUTSOURCED
+  SELF
+}
+
+enum ArrivalStatus {
+  SCHEDULED
+  IN_TRANSIT
+  AT_JETTY
+  AT_PROPERTY
+  CHECKED_IN
 }
