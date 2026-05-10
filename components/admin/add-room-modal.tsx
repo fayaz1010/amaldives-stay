@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ImageIcon, X, Upload, Loader2 } from 'lucide-react';
 import type { GroupedRoomType } from '@/components/admin/rooms-manager';
 
 const ROOM_TYPES = [
@@ -65,7 +66,7 @@ type FormState = {
   size: string;
   amenities: string[];
   roomNumbers: string;
-  photoUrl: string;
+  images: string[];
 };
 
 const emptyForm: FormState = {
@@ -78,7 +79,7 @@ const emptyForm: FormState = {
   size: '',
   amenities: [],
   roomNumbers: '',
-  photoUrl: '',
+  images: [],
 };
 
 export function AddRoomModal({
@@ -92,6 +93,8 @@ export function AddRoomModal({
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = Boolean(editGroup);
   const isAddUnit = Boolean(prefillType) && !editGroup;
@@ -112,7 +115,7 @@ export function AddRoomModal({
         size: source.size != null ? String(source.size) : '',
         amenities: [...source.amenities],
         roomNumbers: '',
-        photoUrl: source.images?.[0] ?? '',
+        images: source.images ?? [],
       });
     } else {
       setForm(emptyForm);
@@ -155,6 +158,30 @@ export function AddRoomModal({
     return null;
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      files.forEach((f) => fd.append('files', f));
+      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setForm((f) => ({ ...f, images: [...f.images, ...data.urls] }));
+    } catch (err: any) {
+      setError(err.message ?? 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (url: string) => {
+    setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const v = validate();
@@ -163,7 +190,6 @@ export function AddRoomModal({
     setSubmitting(true);
 
     const sizeVal = form.size ? Number(form.size) : null;
-    const photoUrl = form.photoUrl.trim();
     const typePayload = {
       name: form.typeName.trim(),
       type: form.type,
@@ -173,7 +199,7 @@ export function AddRoomModal({
       bedType: form.bedType.trim() || null,
       size: sizeVal,
       amenities: form.amenities,
-      images: photoUrl ? [photoUrl] : [],
+      images: form.images,
     };
 
     try {
@@ -333,14 +359,70 @@ export function AddRoomModal({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="photoUrl">Photo URL (optional)</Label>
-              <Input
-                id="photoUrl"
-                placeholder="https://..."
-                value={form.photoUrl}
-                onChange={(e) => update('photoUrl', e.target.value)}
+            <div className="space-y-2 md:col-span-2">
+              <Label>Room Photos</Label>
+
+              {/* Photo grid */}
+              {form.images.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+                  {form.images.map((url, i) => (
+                    <div key={url} className="relative group rounded-lg overflow-hidden border bg-gray-100 aspect-video">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(url)}
+                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      {i === 0 && (
+                        <span className="absolute bottom-1 left-1 text-[9px] bg-cyan-600 text-white px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide">
+                          Cover
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload zone */}
+              <div
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-5 cursor-pointer transition-colors ${
+                  uploading
+                    ? 'border-cyan-300 bg-cyan-50'
+                    : 'border-gray-300 hover:border-cyan-400 hover:bg-cyan-50/50'
+                }`}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
+                    <p className="text-sm text-cyan-600 font-medium">Uploading…</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-gray-400" />
+                    <p className="text-sm text-gray-500">
+                      <span className="text-cyan-600 font-medium">Click to upload</span> photos
+                    </p>
+                    <p className="text-xs text-gray-400">JPEG, PNG or WebP · max 10 MB each · multiple OK</p>
+                  </>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileSelect}
               />
+              {form.images.length === 0 && (
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <ImageIcon className="h-3.5 w-3.5" /> First uploaded photo becomes the cover image.
+                </p>
+              )}
             </div>
           </div>
 
