@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
@@ -34,30 +35,32 @@ export default async function GuestsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {guests.map((g: any) => (
-            <Card key={g.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{g.name}</CardTitle>
-                <p className="text-sm text-gray-500">{g.email}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Nationality</span>
-                    <span>{g.guestProfile?.nationality || '—'}</span>
+            <Link key={g.id} href={`/admin/guests/${g.id}`} className="block">
+              <Card className="hover:shadow-md hover:border-cyan-300 transition-all cursor-pointer h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{g.name}</CardTitle>
+                  <p className="text-sm text-gray-500">{g.email}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Nationality</span>
+                      <span>{g.guestProfile?.nationality || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total Stays</span>
+                      <span className="font-medium">{g.bookings.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total Spent</span>
+                      <span className="font-medium text-cyan-700">
+                        ${g.bookings.reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Total Stays</span>
-                    <span className="font-medium">{g.bookings.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Total Spent</span>
-                    <span className="font-medium text-cyan-700">
-                      ${g.bookings.reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

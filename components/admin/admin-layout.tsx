@@ -24,7 +24,13 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  Beer,
+  Compass,
+  UserCheck,
+  Package,
+  Utensils,
+  ShoppingBag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,10 +49,15 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
     { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
     { name: 'Availability', href: '/admin/availability', icon: CalendarDays },
     { name: 'Guests', href: '/admin/guests', icon: Users },
+    { name: 'Staff', href: '/admin/staff', icon: UserCheck },
     { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
     { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
+    { name: 'Logistics', href: '/admin/logistics', icon: Package },
     { name: 'Room Service', href: '/admin/room-service', icon: UtensilsCrossed },
     { name: 'Menu', href: '/admin/room-service/menu', icon: BookOpen, indent: true },
+    { name: 'Mini Bar', href: '/admin/minibar', icon: Beer },
+    { name: 'Extra Services', href: '/admin/extra-services', icon: Compass },
+    { name: 'F&B', href: '/admin/fnb', icon: Utensils },
     { name: 'Arrivals', href: '/admin/arrivals', icon: PlaneLanding },
     { name: 'Transfers', href: '/admin/arrivals/transport', icon: Anchor, indent: true },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
