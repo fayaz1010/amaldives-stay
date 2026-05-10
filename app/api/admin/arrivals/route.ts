@@ -13,6 +13,8 @@ const ARRIVAL_INCLUDE = {
     },
   },
   pickupStaff: { select: { id: true, name: true } },
+  transportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, schedule: true } },
+  jettyTransportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, capacity: true } },
 } as const;
 
 export async function GET(_req: NextRequest) {

@@ -80,6 +80,15 @@ export function AddArrivalModal({
   const [seatNumbers, setSeatNumbers] = useState('');
   const [airportPickupConfirmed, setAirportPickupConfirmed] = useState(false);
 
+  // Transport catalog
+  const [catalogOptions, setCatalogOptions] = useState<Array<{
+    id: string; type: string; name: string; operator?: string | null;
+    contactName?: string | null; contactPhone?: string | null;
+    capacity?: number | null; arrivalPoint?: string | null; departurePoint?: string | null; schedule?: string | null;
+  }>>([]);
+  const [transportOptionId, setTransportOptionId] = useState('');
+  const [jettyTransportOptionId, setJettyTransportOptionId] = useState('');
+
   // Reset on open/close
   useEffect(() => {
     if (!open) {
@@ -90,7 +99,13 @@ export function AddArrivalModal({
       setPickupVendor(''); setScheduledArrival(''); setLuggageCount('');
       setJettyTransport(''); setJettyTransportSeats(''); setJettyTransportCapacity('');
       setSpecialNotes(''); setTicketsPurchased(false); setSeatNumbers(''); setAirportPickupConfirmed(false);
+      setTransportOptionId(''); setJettyTransportOptionId('');
     } else {
+      // Load transport catalog
+      fetch('/api/admin/transport-options')
+        .then((r) => r.json())
+        .then((d) => setCatalogOptions(d.options ?? []))
+        .catch(() => {});
       // Pre-fill date
       if (defaultDate) {
         setScheduledArrival(`${defaultDate}T12:00`);
@@ -115,6 +130,31 @@ export function AddArrivalModal({
   const transportMeta = TRANSPORT_TYPES.find((t) => t.value === transportType);
   const needsTicket = transportMeta?.needsTicket ?? false;
   const needsAirportPickup = transportMeta?.needsAirportPickup ?? false;
+
+  // Options filtered by type for the inbound transport dropdown
+  const inboundOptions = catalogOptions.filter((o) => o.type === transportType);
+  // All own-boat/speedboat types for jetty transport
+  const jettyOptions = catalogOptions.filter((o) =>
+    ['SPEEDBOAT', 'CHARTER_BOAT', 'SEAPLANE', 'OTHER'].includes(o.type)
+  );
+
+  // When user picks a catalog option for inbound, auto-fill known fields
+  function applyInboundOption(id: string) {
+    setTransportOptionId(id);
+    const opt = catalogOptions.find((o) => o.id === id);
+    if (!opt) return;
+    if (opt.name) setTransportRef(opt.name);
+    if (opt.capacity) setJettyTransportCapacity(String(opt.capacity));
+  }
+
+  // When user picks jetty transport option, auto-fill capacity
+  function applyJettyOption(id: string) {
+    setJettyTransportOptionId(id);
+    const opt = catalogOptions.find((o) => o.id === id);
+    if (!opt) return;
+    if (opt.name) setJettyTransport(opt.name);
+    if (opt.capacity) setJettyTransportCapacity(String(opt.capacity));
+  }
 
   async function loadList(off: number, q: string) {
     setListLoading(true);
@@ -168,6 +208,8 @@ export function AddArrivalModal({
           ticketsPurchased,
           seatNumbers: seatNumbers || null,
           airportPickupConfirmed,
+          transportOptionId: transportOptionId || null,
+          jettyTransportOptionId: jettyTransportOptionId || null,
         }),
       });
       if (!res.ok) {
@@ -313,7 +355,7 @@ export function AddArrivalModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Transport Type *</Label>
-              <select value={transportType} onChange={(e) => setTransportType(e.target.value)}
+              <select value={transportType} onChange={(e) => { setTransportType(e.target.value); setTransportOptionId(''); }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                 {TRANSPORT_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
@@ -326,6 +368,36 @@ export function AddArrivalModal({
                 placeholder="e.g. MV123, Q2-450" />
             </div>
           </div>
+
+          {/* Catalog lookup for inbound transport */}
+          {inboundOptions.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">📋 Select from Transfer Catalog</p>
+              <select value={transportOptionId}
+                onChange={(e) => applyInboundOption(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-amber-300 bg-white px-3 py-1 text-sm">
+                <option value="">— Choose a saved transport —</option>
+                {inboundOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}{o.operator ? ` · ${o.operator}` : ''}{o.capacity ? ` (${o.capacity} pax)` : ''}
+                  </option>
+                ))}
+              </select>
+              {transportOptionId && (() => {
+                const opt = catalogOptions.find((o) => o.id === transportOptionId);
+                if (!opt) return null;
+                return (
+                  <div className="text-[11px] text-amber-700 space-y-0.5">
+                    {(opt.departurePoint || opt.arrivalPoint) && (
+                      <p>📍 {opt.departurePoint}{opt.departurePoint && opt.arrivalPoint ? ' → ' : ''}{opt.arrivalPoint}</p>
+                    )}
+                    {opt.contactName && <p>👤 {opt.contactName}{opt.contactPhone ? `  📞 ${opt.contactPhone}` : ''}</p>}
+                    {opt.schedule && <p>🕐 {opt.schedule}</p>}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
@@ -422,6 +494,33 @@ export function AddArrivalModal({
                   ℹ Guest needs to be met at the airport before their onward connection.
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Jetty transport catalog lookup */}
+          {jettyOptions.length > 0 && (
+            <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 space-y-2">
+              <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide">📋 Select Jetty Transport from Catalog</p>
+              <select value={jettyTransportOptionId}
+                onChange={(e) => applyJettyOption(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-teal-300 bg-white px-3 py-1 text-sm">
+                <option value="">— Choose a saved boat/vehicle —</option>
+                {jettyOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}{o.capacity ? ` (${o.capacity} pax)` : ''}
+                  </option>
+                ))}
+              </select>
+              {jettyTransportOptionId && (() => {
+                const opt = catalogOptions.find((o) => o.id === jettyTransportOptionId);
+                if (!opt) return null;
+                return (
+                  <div className="text-[11px] text-teal-700 space-y-0.5">
+                    {opt.contactName && <p>👤 Captain/Driver: {opt.contactName}{opt.contactPhone ? `  📞 ${opt.contactPhone}` : ''}</p>}
+                    {opt.arrivalPoint && <p>📍 Route: {opt.departurePoint ?? 'Jetty'} → {opt.arrivalPoint}</p>}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

@@ -13,6 +13,8 @@ const ARRIVAL_INCLUDE = {
     },
   },
   pickupStaff: { select: { id: true, name: true } },
+  transportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, schedule: true } },
+  jettyTransportOption: { select: { id: true, name: true, contactName: true, contactPhone: true, capacity: true } },
 } as const;
 
 export async function PATCH(
@@ -31,6 +33,7 @@ export async function PATCH(
     // Scalar fields
     const scalars = [
       'transportType', 'transportRef', 'transportCost', 'costPaid',
+      'transportOptionId', 'jettyTransportOptionId',
       'pickupBy', 'pickupStaffId', 'pickupVendor',
       'luggageCount', 'jettyTransport', 'jettyTransportSeats', 'jettyTransportCapacity',
       'specialNotes', 'cardIssued', 'welcomeDrink', 'status',

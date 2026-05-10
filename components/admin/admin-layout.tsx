@@ -18,6 +18,7 @@ import {
   UtensilsCrossed,
   BookOpen,
   PlaneLanding,
+  Anchor,
   BarChart3,
   Settings,
   Menu,
@@ -47,6 +48,7 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
     { name: 'Room Service', href: '/admin/room-service', icon: UtensilsCrossed },
     { name: 'Menu', href: '/admin/room-service/menu', icon: BookOpen, indent: true },
     { name: 'Arrivals', href: '/admin/arrivals', icon: PlaneLanding },
+    { name: 'Transfers', href: '/admin/arrivals/transport', icon: Anchor, indent: true },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];

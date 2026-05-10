@@ -50,6 +50,8 @@ interface ArrivalRecord {
     room: { id: string; number: string; name: string | null };
   };
   pickupStaff?: { id: string; name: string | null } | null;
+  transportOption?: { id: string; name: string; contactName?: string | null; contactPhone?: string | null; schedule?: string | null } | null;
+  jettyTransportOption?: { id: string; name: string; contactName?: string | null; contactPhone?: string | null; capacity?: number | null } | null;
 }
 
 interface UnplannedBooking {
@@ -163,6 +165,17 @@ function ArrivalCard({
           )}
         </div>
 
+        {/* Transport option details (from catalog) */}
+        {record.transportOption && (
+          <div className="text-[10px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 space-y-0.5">
+            <p className="font-semibold truncate">📋 {record.transportOption.name}</p>
+            {record.transportOption.schedule && <p>🕐 {record.transportOption.schedule}</p>}
+            {record.transportOption.contactName && (
+              <p>👤 {record.transportOption.contactName}{record.transportOption.contactPhone ? `  📞 ${record.transportOption.contactPhone}` : ''}</p>
+            )}
+          </div>
+        )}
+
         {/* Ticket + pickup confirmation badges */}
         {(record.ticketsPurchased !== undefined || record.airportPickupConfirmed !== undefined) && (
           <div className="flex flex-wrap gap-1.5">
@@ -197,6 +210,16 @@ function ArrivalCard({
               }`}>
                 🚤 {record.jettyTransportSeats ?? '?'}/{record.jettyTransportCapacity} seats
               </span>
+            )}
+          </div>
+        )}
+
+        {/* Jetty transport option contact */}
+        {record.jettyTransportOption && (
+          <div className="text-[10px] text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-2 py-1 space-y-0.5">
+            <p className="font-semibold truncate">🚤 {record.jettyTransportOption.name}{record.jettyTransportOption.capacity ? ` · ${record.jettyTransportOption.capacity} pax` : ''}</p>
+            {record.jettyTransportOption.contactName && (
+              <p>👤 {record.jettyTransportOption.contactName}{record.jettyTransportOption.contactPhone ? `  📞 ${record.jettyTransportOption.contactPhone}` : ''}</p>
             )}
           </div>
         )}

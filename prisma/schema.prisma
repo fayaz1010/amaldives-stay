@@ -105,6 +105,7 @@ model Tenant {
   inventory   InventoryItem[]
   reports     Report[]
   arrivals    ArrivalRecord[]
+  transportOptions TransportOption[]
   
   @@index([subdomain])
   @@index([status])
@@ -546,6 +547,7 @@ model ArrivalRecord {
   // Transport
   transportType       TransportType @default(SPEEDBOAT)
   transportRef        String?       // flight no., vessel name, etc.
+  transportOptionId   String?       // link to TransportOption catalog
   transportCost       Float?
   costPaid            Boolean       @default(false)
 
@@ -567,6 +569,7 @@ model ArrivalRecord {
   jettyTransport      String?       // e.g. "dhoni", "walk", "buggy"
   jettyTransportSeats Int?          // seats this party occupies
   jettyTransportCapacity Int?       // max capacity of the jetty vehicle
+  jettyTransportOptionId String?    // link to TransportOption catalog (own boat)
   specialNotes        String?
 
   // Ticket / transfer confirmation
@@ -587,9 +590,37 @@ model ArrivalRecord {
   tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   booking             Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   pickupStaff         User?         @relation("ArrivalPickupStaff", fields: [pickupStaffId], references: [id])
+  transportOption     TransportOption? @relation("InboundTransport", fields: [transportOptionId], references: [id])
+  jettyTransportOption TransportOption? @relation("JettyTransport", fields: [jettyTransportOptionId], references: [id])
 
   @@index([tenantId])
   @@index([status])
+}
+
+model TransportOption {
+  id            String        @id @default(cuid())
+  tenantId      String
+  type          TransportType
+  name          String        // e.g. "Maldivian MH123", "Island Ferry Hulhumale", "Sea Star Dhoni"
+  operator      String?       // company / operator name
+  contactName   String?       // captain / agent / coordinator
+  contactPhone  String?
+  contactEmail  String?
+  capacity      Int?          // max passengers
+  arrivalPoint  String?       // airport code / jetty name e.g. "VIA", "HDH", "Male Ferry Terminal"
+  departurePoint String?      // where it departs from
+  schedule      String?       // e.g. "Daily 08:00, 14:00, 18:00"
+  notes         String?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inboundArrivals  ArrivalRecord[] @relation("InboundTransport")
+  jettyArrivals    ArrivalRecord[] @relation("JettyTransport")
+
+  @@index([tenantId])
+  @@index([type])
 }
 
 enum TransportType {
