@@ -13,6 +13,7 @@ export default async function SettingsPage() {
   const tenant = await prisma.tenant.findUnique({
     where: { id: session.user.tenantId },
     include: { properties: true },
+    // settings field is included by default (Json? type)
   });
 
   if (!tenant) redirect('/auth/signin');

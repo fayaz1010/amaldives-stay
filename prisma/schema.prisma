@@ -400,7 +400,8 @@ model Payment {
   currency    String        @default("USD")
   method      PaymentMethod
   status      PaymentStatus @default(PENDING)
-  transactionId String?
+  transactionId String?     // POS reference / FPOS terminal ID
+  notes       String?       // staff notes / channel info
   gatewayResponse Json?
   processedAt DateTime?
   createdAt   DateTime      @default(now())

@@ -28,6 +28,7 @@ export async function PATCH(request: NextRequest) {
     const tenantUpdates: any = {};
     if (data.name !== undefined) tenantUpdates.name = data.name;
     if (data.description !== undefined) tenantUpdates.description = data.description;
+    if (data.settings !== undefined) tenantUpdates.settings = data.settings;
 
     const propertyUpdates: any = {};
     if (data.address !== undefined) propertyUpdates.address = data.address;
