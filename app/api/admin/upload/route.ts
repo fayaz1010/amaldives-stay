@@ -13,8 +13,8 @@ const s3 = new S3Client({
   },
 });
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/octet-stream'];
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB (pre-compression; canvas output will be much smaller)
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
