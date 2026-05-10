@@ -26,6 +26,35 @@ interface Staff {
   name: string | null;
 }
 
+interface ArrivalRecord {
+  id: string;
+  transportType: string;
+  transportRef?: string | null;
+  transportOptionId?: string | null;
+  transportCost?: number | null;
+  costPaid: boolean;
+  pickupBy: string;
+  pickupStaffId?: string | null;
+  pickupVendor?: string | null;
+  scheduledArrival?: string | Date | null;
+  luggageCount?: number | null;
+  jettyTransport?: string | null;
+  jettyTransportSeats?: number | null;
+  jettyTransportCapacity?: number | null;
+  jettyTransportOptionId?: string | null;
+  specialNotes?: string | null;
+  ticketsPurchased: boolean;
+  seatNumbers?: string | null;
+  airportPickupConfirmed: boolean;
+  booking: {
+    id: string;
+    confirmationNumber: string;
+    checkInDate: string | Date;
+    guest: { name: string | null; email: string };
+    room: { number: string; name: string | null };
+  };
+}
+
 interface AddArrivalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,6 +64,8 @@ interface AddArrivalModalProps {
   preselectedBookingId?: string;
   /** Default date to pre-fill scheduledArrival (YYYY-MM-DD) */
   defaultDate?: string;
+  /** When set the modal is in edit mode — pre-fills and PATCHes */
+  editRecord?: ArrivalRecord | null;
 }
 
 export const TRANSPORT_TYPES = [
@@ -48,7 +79,7 @@ export const TRANSPORT_TYPES = [
 ];
 
 export function AddArrivalModal({
-  open, onOpenChange, staff, onCreated, preselectedBookingId, defaultDate,
+  open, onOpenChange, staff, onCreated, preselectedBookingId, defaultDate, editRecord,
 }: AddArrivalModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -106,23 +137,52 @@ export function AddArrivalModal({
         .then((r) => r.json())
         .then((d) => setCatalogOptions(d.options ?? []))
         .catch(() => {});
-      // Pre-fill date
-      if (defaultDate) {
-        setScheduledArrival(`${defaultDate}T12:00`);
-      }
-      // If preselectedBookingId is given, fetch it
-      if (preselectedBookingId) {
-        fetch(`/api/admin/arrivals/bookings?id=${preselectedBookingId}`)
-          .then((r) => r.json())
-          .then((d) => {
-            const found = (d.bookings ?? [])[0];
-            if (found) setSelectedBooking(found);
-          })
-          .catch(() => {});
+
+      if (editRecord) {
+        // Edit mode — pre-fill from existing record
+        setSelectedBooking(editRecord.booking as any);
+        setTransportType(editRecord.transportType);
+        setTransportRef(editRecord.transportRef ?? '');
+        setTransportOptionId(editRecord.transportOptionId ?? '');
+        setTransportCost(editRecord.transportCost != null ? String(editRecord.transportCost) : '');
+        setCostPaid(editRecord.costPaid);
+        setPickupBy(editRecord.pickupBy);
+        setPickupStaffId(editRecord.pickupStaffId ?? '');
+        setPickupVendor(editRecord.pickupVendor ?? '');
+        setScheduledArrival(
+          editRecord.scheduledArrival
+            ? new Date(editRecord.scheduledArrival).toISOString().slice(0, 16)
+            : ''
+        );
+        setLuggageCount(editRecord.luggageCount != null ? String(editRecord.luggageCount) : '');
+        setJettyTransport(editRecord.jettyTransport ?? '');
+        setJettyTransportSeats(editRecord.jettyTransportSeats != null ? String(editRecord.jettyTransportSeats) : '');
+        setJettyTransportCapacity(editRecord.jettyTransportCapacity != null ? String(editRecord.jettyTransportCapacity) : '');
+        setJettyTransportOptionId(editRecord.jettyTransportOptionId ?? '');
+        setSpecialNotes(editRecord.specialNotes ?? '');
+        setTicketsPurchased(editRecord.ticketsPurchased);
+        setSeatNumbers(editRecord.seatNumbers ?? '');
+        setAirportPickupConfirmed(editRecord.airportPickupConfirmed);
+        setPickerOpen(false);
       } else {
-        // Load default list
-        loadList(0, '');
-        setPickerOpen(true);
+        // Pre-fill date
+        if (defaultDate) {
+          setScheduledArrival(`${defaultDate}T12:00`);
+        }
+        // If preselectedBookingId is given, fetch it
+        if (preselectedBookingId) {
+          fetch(`/api/admin/arrivals/bookings?id=${preselectedBookingId}`)
+            .then((r) => r.json())
+            .then((d) => {
+              const found = (d.bookings ?? [])[0];
+              if (found) setSelectedBooking(found);
+            })
+            .catch(() => {});
+        } else {
+          // Load default list
+          loadList(0, '');
+          setPickerOpen(true);
+        }
       }
     }
   }, [open]);
@@ -187,39 +247,51 @@ export function AddArrivalModal({
     if (!selectedBooking) { alert('Please select a booking'); return; }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/admin/arrivals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId: selectedBooking.id,
-          transportType,
-          transportRef: transportRef || null,
-          transportCost: transportCost ? Number(transportCost) : null,
-          costPaid,
-          pickupBy,
-          pickupStaffId: pickupBy === 'STAFF' && pickupStaffId ? pickupStaffId : null,
-          pickupVendor: pickupBy === 'OUTSOURCED' && pickupVendor ? pickupVendor : null,
-          scheduledArrival: scheduledArrival || null,
-          luggageCount: luggageCount ? Number(luggageCount) : null,
-          jettyTransport: jettyTransport || null,
-          jettyTransportSeats: jettyTransportSeats ? Number(jettyTransportSeats) : null,
-          jettyTransportCapacity: jettyTransportCapacity ? Number(jettyTransportCapacity) : null,
-          specialNotes: specialNotes || null,
-          ticketsPurchased,
-          seatNumbers: seatNumbers || null,
-          airportPickupConfirmed,
-          transportOptionId: transportOptionId || null,
-          jettyTransportOptionId: jettyTransportOptionId || null,
-        }),
-      });
+      const payload = {
+        bookingId: selectedBooking.id,
+        transportType,
+        transportRef: transportRef || null,
+        transportCost: transportCost ? Number(transportCost) : null,
+        costPaid,
+        pickupBy,
+        pickupStaffId: pickupBy === 'STAFF' && pickupStaffId ? pickupStaffId : null,
+        pickupVendor: pickupBy === 'OUTSOURCED' && pickupVendor ? pickupVendor : null,
+        scheduledArrival: scheduledArrival || null,
+        luggageCount: luggageCount ? Number(luggageCount) : null,
+        jettyTransport: jettyTransport || null,
+        jettyTransportSeats: jettyTransportSeats ? Number(jettyTransportSeats) : null,
+        jettyTransportCapacity: jettyTransportCapacity ? Number(jettyTransportCapacity) : null,
+        specialNotes: specialNotes || null,
+        ticketsPurchased,
+        seatNumbers: seatNumbers || null,
+        airportPickupConfirmed,
+        transportOptionId: transportOptionId || null,
+        jettyTransportOptionId: jettyTransportOptionId || null,
+      };
+
+      let res: Response;
+      if (editRecord) {
+        res = await fetch(`/api/admin/arrivals/${editRecord.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch('/api/admin/arrivals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || 'Failed to create arrival');
+        throw new Error(body?.error || (editRecord ? 'Failed to update arrival' : 'Failed to create arrival'));
       }
       onOpenChange(false);
       onCreated();
     } catch (err: any) {
-      alert(err?.message || 'Failed to create arrival record');
+      alert(err?.message || 'Failed to save arrival record');
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +301,7 @@ export function AddArrivalModal({
     <Dialog open={open} onOpenChange={(o) => !submitting && onOpenChange(o)}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Plan Guest Arrival</DialogTitle>
+          <DialogTitle>{editRecord ? 'Edit Arrival Plan' : 'Plan Guest Arrival'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
@@ -238,7 +310,19 @@ export function AddArrivalModal({
           <div className="space-y-2">
             <Label>Link to Booking *</Label>
 
-            {selectedBooking ? (
+            {editRecord ? (
+              /* In edit mode booking is locked — show read-only */
+              <div className="flex items-center p-3 border rounded-lg bg-gray-50 border-gray-200">
+                <div>
+                  <p className="font-semibold text-sm">{editRecord.booking.guest.name || editRecord.booking.guest.email}</p>
+                  <p className="text-xs text-gray-600">
+                    Room {editRecord.booking.room.number} · #{editRecord.booking.confirmationNumber} ·{' '}
+                    Check-in {new Date(editRecord.booking.checkInDate).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="ml-auto text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">locked</span>
+              </div>
+            ) : selectedBooking ? (
               <div className="flex items-center justify-between p-3 border rounded-lg bg-cyan-50 border-cyan-300">
                 <div>
                   <p className="font-semibold text-sm">{selectedBooking.guest.name || selectedBooking.guest.email}</p>
@@ -599,7 +683,7 @@ export function AddArrivalModal({
             </Button>
             <Button type="submit" disabled={submitting || !selectedBooking}
               className="bg-cyan-600 hover:bg-cyan-700">
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Arrival Plan'}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : editRecord ? 'Update Arrival Plan' : 'Create Arrival Plan'}
             </Button>
           </DialogFooter>
         </form>

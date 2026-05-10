@@ -8,7 +8,7 @@ import {
   Plus, Loader2, Plane, Anchor, Clock, CalendarCheck,
   Luggage, MapPin, Key, Coffee, CheckCircle2, ChevronRight,
   DollarSign, User, AlertCircle, ChevronLeft, ChevronRight as ChevronR,
-  CalendarDays,
+  CalendarDays, Pencil,
 } from 'lucide-react';
 import { AddArrivalModal, TRANSPORT_TYPES } from './add-arrival-modal';
 
@@ -121,9 +121,11 @@ function buildDateStrip(anchor: Date): Array<{ date: Date; ymd: string; label: s
 function ArrivalCard({
   record,
   onUpdate,
+  onEdit,
 }: {
   record: ArrivalRecord;
   onUpdate: (id: string, data: any) => Promise<void>;
+  onEdit: (record: ArrivalRecord) => void;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -148,9 +150,16 @@ function ArrivalCard({
               {record.booking.children > 0 ? ` +${record.booking.children}` : ''}
             </p>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 shrink-0">
-            #{record.booking.confirmationNumber.slice(-6)}
-          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => onEdit(record)}
+              className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700"
+              title="Edit arrival plan">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700">
+              #{record.booking.confirmationNumber.slice(-6)}
+            </span>
+          </div>
         </div>
 
         {/* Transport */}
@@ -438,6 +447,7 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [preselectedBookingId, setPreselectedBookingId] = useState<string | undefined>();
+  const [editRecord, setEditRecord] = useState<ArrivalRecord | null>(null);
 
   const todayYmd = toYMD(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(todayYmd);
@@ -608,7 +618,7 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
                   <p className="text-xs text-gray-400 text-center py-5">None</p>
                 ) : (
                   colArrivals.map((a) => (
-                    <ArrivalCard key={a.id} record={a} onUpdate={updateArrival} />
+                    <ArrivalCard key={a.id} record={a} onUpdate={updateArrival} onEdit={(rec) => setEditRecord(rec)} />
                   ))
                 )}
               </div>
@@ -624,6 +634,15 @@ export function ArrivalsBoard({ arrivals, staff }: ArrivalsBoardProps) {
         preselectedBookingId={preselectedBookingId}
         defaultDate={selectedDate !== 'all' ? selectedDate : undefined}
         onCreated={() => router.refresh()}
+      />
+
+      {/* Edit modal */}
+      <AddArrivalModal
+        open={editRecord !== null}
+        onOpenChange={(o) => { if (!o) setEditRecord(null); }}
+        staff={staff}
+        editRecord={editRecord}
+        onCreated={() => { setEditRecord(null); router.refresh(); }}
       />
     </div>
   );

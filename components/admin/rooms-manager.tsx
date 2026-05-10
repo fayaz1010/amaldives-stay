@@ -42,6 +42,7 @@ interface RoomsManagerProps {
 export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [prefillType, setPrefillType] = useState<GroupedRoomType | null>(null);
+  const [editGroup, setEditGroup] = useState<GroupedRoomType | null>(null);
 
   const totals = useMemo(() => {
     const totalUnits = groupedRoomTypes.reduce((s, g) => s + g.rooms.length, 0);
@@ -58,11 +59,19 @@ export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps
 
   const openAddType = () => {
     setPrefillType(null);
+    setEditGroup(null);
     setModalOpen(true);
   };
 
   const openAddUnit = (type: GroupedRoomType) => {
     setPrefillType(type);
+    setEditGroup(null);
+    setModalOpen(true);
+  };
+
+  const openEditType = (type: GroupedRoomType) => {
+    setPrefillType(null);
+    setEditGroup(type);
     setModalOpen(true);
   };
 
@@ -123,6 +132,7 @@ export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps
               key={group.typeName}
               group={group}
               onAddUnit={() => openAddUnit(group)}
+              onEditType={() => openEditType(group)}
             />
           ))}
         </div>
@@ -133,6 +143,7 @@ export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps
         onOpenChange={setModalOpen}
         propertyId={propertyId}
         prefillType={prefillType}
+        editGroup={editGroup}
       />
     </div>
   );
@@ -141,9 +152,11 @@ export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps
 function RoomTypeCard({
   group,
   onAddUnit,
+  onEditType,
 }: {
   group: GroupedRoomType;
   onAddUnit: () => void;
+  onEditType: () => void;
 }) {
   const visibleAmenities = group.amenities.slice(0, 5);
   const moreAmenities = Math.max(0, group.amenities.length - 5);
@@ -256,7 +269,7 @@ function RoomTypeCard({
           <Button
             variant="outline"
             className="flex-1"
-            onClick={() => alert('Edit Type — coming soon')}
+            onClick={onEditType}
           >
             <Pencil className="h-4 w-4 mr-1.5" />
             Edit Type

@@ -51,6 +51,8 @@ interface AddRoomModalProps {
   onOpenChange: (open: boolean) => void;
   propertyId: string;
   prefillType?: GroupedRoomType | null;
+  /** When set the modal is in edit-type mode — updates all rooms in the group */
+  editGroup?: GroupedRoomType | null;
 }
 
 type FormState = {
@@ -84,35 +86,38 @@ export function AddRoomModal({
   onOpenChange,
   propertyId,
   prefillType,
+  editGroup,
 }: AddRoomModalProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
 
+  const isEditMode = Boolean(editGroup);
+  const isAddUnit = Boolean(prefillType) && !editGroup;
+
   useEffect(() => {
     if (!open) return;
     setError(null);
     setProgress({ done: 0, total: 0 });
-    if (prefillType) {
+    const source = editGroup ?? prefillType;
+    if (source) {
       setForm({
-        typeName: prefillType.typeName,
-        type: prefillType.type,
-        description: prefillType.description,
-        basePrice: String(prefillType.basePrice ?? ''),
-        capacity: String(prefillType.capacity ?? 2),
-        bedType: prefillType.bedType,
-        size: prefillType.size != null ? String(prefillType.size) : '',
-        amenities: [...prefillType.amenities],
+        typeName: source.typeName,
+        type: source.type,
+        description: source.description,
+        basePrice: String(source.basePrice ?? ''),
+        capacity: String(source.capacity ?? 2),
+        bedType: source.bedType,
+        size: source.size != null ? String(source.size) : '',
+        amenities: [...source.amenities],
         roomNumbers: '',
-        photoUrl: prefillType.images?.[0] ?? '',
+        photoUrl: source.images?.[0] ?? '',
       });
     } else {
       setForm(emptyForm);
     }
-  }, [open, prefillType]);
-
-  const isEditingType = Boolean(prefillType);
+  }, [open, prefillType, editGroup]);
 
   const numbers = useMemo(
     () =>
@@ -145,7 +150,7 @@ export function AddRoomModal({
     const capacity = Number(form.capacity);
     if (!form.capacity || Number.isNaN(capacity) || capacity < 1)
       return 'Capacity must be at least 1.';
-    if (numbers.length === 0)
+    if (!isEditMode && numbers.length === 0)
       return 'Enter at least one room number (comma-separated).';
     return null;
   };
@@ -153,49 +158,64 @@ export function AddRoomModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const v = validate();
-    if (v) {
-      setError(v);
-      return;
-    }
+    if (v) { setError(v); return; }
     setError(null);
     setSubmitting(true);
-    setProgress({ done: 0, total: numbers.length });
 
     const sizeVal = form.size ? Number(form.size) : null;
     const photoUrl = form.photoUrl.trim();
+    const typePayload = {
+      name: form.typeName.trim(),
+      type: form.type,
+      description: form.description.trim() || null,
+      capacity: Number(form.capacity),
+      basePrice: Number(form.basePrice),
+      bedType: form.bedType.trim() || null,
+      size: sizeVal,
+      amenities: form.amenities,
+      images: photoUrl ? [photoUrl] : [],
+    };
 
     try {
-      let done = 0;
-      for (const number of numbers) {
-        const res = await fetch('/api/admin/rooms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            propertyId,
-            number,
-            name: form.typeName.trim(),
-            type: form.type,
-            description: form.description.trim() || null,
-            capacity: Number(form.capacity),
-            basePrice: Number(form.basePrice),
-            bedType: form.bedType.trim() || null,
-            size: sizeVal,
-            amenities: form.amenities,
-            images: photoUrl ? [photoUrl] : [],
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(
-            body?.error || `Failed to create room ${number} (HTTP ${res.status})`
-          );
+      if (isEditMode && editGroup) {
+        // PATCH every room in the group with updated type data
+        const rooms = editGroup.rooms;
+        setProgress({ done: 0, total: rooms.length });
+        let done = 0;
+        for (const room of rooms) {
+          const res = await fetch(`/api/admin/rooms/${room.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(typePayload),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.error || `Failed to update room ${room.number} (HTTP ${res.status})`);
+          }
+          done += 1;
+          setProgress({ done, total: rooms.length });
         }
-        done += 1;
-        setProgress({ done, total: numbers.length });
+      } else {
+        // Create new rooms
+        setProgress({ done: 0, total: numbers.length });
+        let done = 0;
+        for (const number of numbers) {
+          const res = await fetch('/api/admin/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ propertyId, number, ...typePayload }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.error || `Failed to create room ${number} (HTTP ${res.status})`);
+          }
+          done += 1;
+          setProgress({ done, total: numbers.length });
+        }
       }
       window.location.reload();
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to create rooms');
+      setError(err?.message ?? 'Failed to save rooms');
       setSubmitting(false);
     }
   };
@@ -205,10 +225,16 @@ export function AddRoomModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditingType ? `Add Units to "${prefillType?.typeName}"` : 'Add Room Type'}
+            {isEditMode
+              ? `Edit Room Type: "${editGroup?.typeName}"`
+              : isAddUnit
+              ? `Add Units to "${prefillType?.typeName}"`
+              : 'Add Room Type'}
           </DialogTitle>
           <DialogDescription>
-            {isEditingType
+            {isEditMode
+              ? `Update details for all ${editGroup?.rooms.length} unit${(editGroup?.rooms.length ?? 0) !== 1 ? 's' : ''} in this type.`
+              : isAddUnit
               ? 'Add additional room units that share the same type details.'
               : 'Create a new room type and its initial units. All fields apply to every unit you add.'}
           </DialogDescription>
@@ -223,7 +249,7 @@ export function AddRoomModal({
                 placeholder="e.g. Ocean View Deluxe"
                 value={form.typeName}
                 onChange={(e) => update('typeName', e.target.value)}
-                disabled={isEditingType}
+                disabled={isAddUnit}
                 required
               />
             </div>
@@ -233,7 +259,7 @@ export function AddRoomModal({
               <Select
                 value={form.type}
                 onValueChange={(v) => update('type', v)}
-                disabled={isEditingType}
+                disabled={isAddUnit}
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />
@@ -342,20 +368,22 @@ export function AddRoomModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="roomNumbers">Room Numbers</Label>
-            <Input
-              id="roomNumbers"
-              placeholder="101, 102, 103"
-              value={form.roomNumbers}
-              onChange={(e) => update('roomNumbers', e.target.value)}
-              required
-            />
-            <p className="text-xs text-gray-500">
-              Comma-separated. One unit will be created per number.
-              {numbers.length > 0 ? ` (${numbers.length} unit${numbers.length === 1 ? '' : 's'})` : ''}
-            </p>
-          </div>
+          {!isEditMode && (
+            <div className="space-y-2">
+              <Label htmlFor="roomNumbers">Room Numbers</Label>
+              <Input
+                id="roomNumbers"
+                placeholder="101, 102, 103"
+                value={form.roomNumbers}
+                onChange={(e) => update('roomNumbers', e.target.value)}
+                required={!isEditMode}
+              />
+              <p className="text-xs text-gray-500">
+                Comma-separated. One unit will be created per number.
+                {numbers.length > 0 ? ` (${numbers.length} unit${numbers.length === 1 ? '' : 's'})` : ''}
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
@@ -366,7 +394,7 @@ export function AddRoomModal({
           {submitting && progress.total > 0 && (
             <div className="rounded-md bg-cyan-50 border border-cyan-200 px-3 py-2">
               <div className="flex items-center justify-between text-sm text-cyan-800 mb-1">
-                <span>Creating rooms...</span>
+                <span>{isEditMode ? 'Updating rooms...' : 'Creating rooms...'}</span>
                 <span>
                   {progress.done} / {progress.total}
                 </span>
@@ -398,9 +426,11 @@ export function AddRoomModal({
             >
               {submitting
                 ? 'Saving...'
-                : isEditingType
-                  ? 'Add Units'
-                  : 'Create Room Type'}
+                : isEditMode
+                  ? `Save Changes (${editGroup?.rooms.length} unit${(editGroup?.rooms.length ?? 0) !== 1 ? 's' : ''})`
+                  : isAddUnit
+                    ? 'Add Units'
+                    : 'Create Room Type'}
             </Button>
           </DialogFooter>
         </form>
