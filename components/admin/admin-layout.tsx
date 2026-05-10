@@ -15,6 +15,7 @@ import {
   Users,
   ClipboardList,
   Wrench,
+  UtensilsCrossed,
   BarChart3,
   Settings,
   Menu,
@@ -41,6 +42,7 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
     { name: 'Guests', href: '/admin/guests', icon: Users },
     { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
     { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
+    { name: 'Room Service', href: '/admin/room-service', icon: UtensilsCrossed },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
