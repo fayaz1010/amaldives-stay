@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import imageCompression from 'browser-image-compression';
 import {
   Dialog,
   DialogContent,
@@ -82,45 +83,6 @@ const emptyForm: FormState = {
   images: [],
 };
 
-// ── Client-side image compression (Canvas API) ──────────────────────────────
-function compressImage(file: File, maxPx = 2000, quality = 0.85): Promise<Blob> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-
-    img.onload = () => {
-      const w0 = img.naturalWidth  || img.width;
-      const h0 = img.naturalHeight || img.height;
-
-      // If dimensions are unknown, skip compression
-      if (!w0 || !h0) { URL.revokeObjectURL(url); resolve(file); return; }
-
-      let w = w0, h = h0;
-      if (w > maxPx || h > maxPx) {
-        if (w >= h) { h = Math.round((h * maxPx) / w); w = maxPx; }
-        else        { w = Math.round((w * maxPx) / h); h = maxPx; }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width  = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { URL.revokeObjectURL(url); resolve(file); return; }
-
-      ctx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-
-      canvas.toBlob(
-        (blob) => resolve(blob ?? file),
-        'image/jpeg',
-        quality,
-      );
-    };
-
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-    img.src = url;
-  });
-}
 
 export function AddRoomModal({
   open,
@@ -203,21 +165,35 @@ export function AddRoomModal({
     if (!files.length) return;
     setUploading(true);
     setError(null);
-    try {
-      // Compress each image client-side before uploading
-      const compressed = await Promise.all(files.map(compressImage));
-      const fd = new FormData();
-      compressed.forEach((blob, i) => fd.append('files', blob, `photo-${i}.jpg`));
-      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setForm((f) => ({ ...f, images: [...f.images, ...data.urls] }));
-    } catch (err: any) {
-      setError(err.message ?? 'Upload failed');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+
+    const newUrls: string[] = [];
+
+    for (const file of files) {
+      try {
+        // Compress to max 0.5 MB / 1920 px before sending — stays well under Vercel's 4.5 MB limit
+        const compressed = await imageCompression(file, {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          fileType: 'image/jpeg',
+        });
+
+        const fd = new FormData();
+        fd.append('files', compressed, `photo-${Date.now()}.jpg`);
+
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+        const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+        newUrls.push(...(data.urls as string[]));
+      } catch (err: any) {
+        setError(err.message ?? 'Upload failed');
+        break;
+      }
     }
+
+    if (newUrls.length) setForm((f) => ({ ...f, images: [...f.images, ...newUrls] }));
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (url: string) => {
@@ -440,7 +416,7 @@ export function AddRoomModal({
                 {uploading ? (
                   <>
                     <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
-                    <p className="text-sm text-cyan-600 font-medium">Uploading…</p>
+                    <p className="text-sm text-cyan-600 font-medium">Compressing &amp; uploading…</p>
                   </>
                 ) : (
                   <>
@@ -448,7 +424,7 @@ export function AddRoomModal({
                     <p className="text-sm text-gray-500">
                       <span className="text-cyan-600 font-medium">Click to upload</span> photos
                     </p>
-                    <p className="text-xs text-gray-400">JPEG, PNG or WebP · max 10 MB each · multiple OK</p>
+                    <p className="text-xs text-gray-400">JPEG, PNG or WebP · auto-compressed · multiple OK</p>
                   </>
                 )}
               </div>

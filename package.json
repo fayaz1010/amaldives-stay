@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@floating-ui/react": "0.26.0",
     "@headlessui/react": "1.7.18",
     "@hookform/resolvers": "3.9.0",
@@ -72,6 +73,7 @@
     "@types/react-plotly.js": "2.6.3",
     "autoprefixer": "10.4.15",
     "bcryptjs": "2.4.3",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "4.4.9",
     "class-variance-authority": "0.7.0",
     "clsx": "2.1.1",
