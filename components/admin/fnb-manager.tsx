@@ -1091,6 +1091,15 @@ function ReservationsTab({ outlets }: { outlets: Outlet[] }) {
   );
 }
 
+type CheckedInGuest = {
+  bookingId: string;
+  confirmationNumber: string;
+  roomNumber: string;
+  guestName: string;
+  guestPhone: string | null;
+  checkOutDate: string;
+};
+
 function ReservationDialog({
   open,
   onOpenChange,
@@ -1103,27 +1112,54 @@ function ReservationDialog({
   onSaved: () => void;
 }) {
   const [outletId, setOutletId] = useState(outlets[0]?.id ?? '');
+  const [guestSource, setGuestSource] = useState<'inhouse' | 'walkin'>('inhouse');
+  const [selectedBookingId, setSelectedBookingId] = useState('');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [partySize, setPartySize] = useState('2');
   const [date, setDate] = useState(toLocalDateTimeInput());
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [checkedInGuests, setCheckedInGuests] = useState<CheckedInGuest[]>([]);
+  const [loadingGuests, setLoadingGuests] = useState(false);
 
+  // Fetch currently checked-in guests when dialog opens
   useEffect(() => {
-    if (open) {
-      setOutletId(outlets[0]?.id ?? '');
-      setGuestName('');
-      setGuestPhone('');
-      setPartySize('2');
-      setDate(toLocalDateTimeInput());
-      setNotes('');
-    }
+    if (!open) return;
+    setOutletId(outlets[0]?.id ?? '');
+    setGuestSource('inhouse');
+    setSelectedBookingId('');
+    setGuestName('');
+    setGuestPhone('');
+    setPartySize('2');
+    setDate(toLocalDateTimeInput());
+    setNotes('');
+    setLoadingGuests(true);
+    fetch('/api/admin/fnb/checked-in-guests')
+      .then((r) => r.json())
+      .then((d) => setCheckedInGuests(d.guests ?? []))
+      .catch(() => setCheckedInGuests([]))
+      .finally(() => setLoadingGuests(false));
   }, [open, outlets]);
+
+  // When an in-house guest is selected from the dropdown, auto-fill name + phone
+  function handleInHouseSelect(bookingId: string) {
+    setSelectedBookingId(bookingId);
+    const guest = checkedInGuests.find((g) => g.bookingId === bookingId);
+    if (guest) {
+      setGuestName(guest.guestName);
+      setGuestPhone(guest.guestPhone ?? '');
+    }
+  }
+
+  // Derive the effective name for validation
+  const effectiveName = guestSource === 'inhouse'
+    ? (checkedInGuests.find((g) => g.bookingId === selectedBookingId)?.guestName ?? guestName)
+    : guestName;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!outletId || !guestName.trim() || !date) return;
+    if (!outletId || !effectiveName.trim() || !date) return;
     setSaving(true);
     try {
       const res = await fetch('/api/admin/fnb/reservations', {
@@ -1131,11 +1167,12 @@ function ReservationDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           outletId,
-          guestName,
-          guestPhone,
+          guestName: effectiveName.trim(),
+          guestPhone: guestPhone.trim() || null,
           partySize: Number(partySize),
           date: new Date(date).toISOString(),
           notes,
+          bookingId: guestSource === 'inhouse' && selectedBookingId ? selectedBookingId : undefined,
         }),
       });
       if (!res.ok) throw new Error('Save failed');
@@ -1147,13 +1184,17 @@ function ReservationDialog({
     }
   }
 
+  const hasInHouseGuests = checkedInGuests.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>New Reservation</DialogTitle>
+          <DialogDescription>Book a table at one of your outlets.</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
+          {/* Outlet */}
           <div className="space-y-2">
             <Label>Outlet *</Label>
             <Select value={outletId} onValueChange={setOutletId}>
@@ -1163,16 +1204,125 @@ function ReservationDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="r-guest">Guest name *</Label>
-              <Input id="r-guest" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="r-phone">Phone</Label>
-              <Input id="r-phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} />
+
+          {/* Guest source toggle */}
+          <div className="space-y-2">
+            <Label>Guest</Label>
+            <div className="flex rounded-lg border overflow-hidden text-sm">
+              <button
+                type="button"
+                onClick={() => setGuestSource('inhouse')}
+                className={`flex-1 py-2 px-3 font-medium transition-colors ${
+                  guestSource === 'inhouse'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                🏨 In-House Guest
+              </button>
+              <button
+                type="button"
+                onClick={() => { setGuestSource('walkin'); setSelectedBookingId(''); setGuestName(''); setGuestPhone(''); }}
+                className={`flex-1 py-2 px-3 font-medium transition-colors border-l ${
+                  guestSource === 'walkin'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                🚶 Walk-in / External
+              </button>
             </div>
           </div>
+
+          {guestSource === 'inhouse' ? (
+            <>
+              {/* In-house guest dropdown */}
+              <div className="space-y-2">
+                <Label>Select checked-in guest *</Label>
+                {loadingGuests ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading guests…
+                  </div>
+                ) : !hasInHouseGuests ? (
+                  <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">
+                    No guests currently checked in. Switch to Walk-in to enter a name manually.
+                  </div>
+                ) : (
+                  <Select value={selectedBookingId} onValueChange={handleInHouseSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose room / guest…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {checkedInGuests.map((g) => (
+                        <SelectItem key={g.bookingId} value={g.bookingId}>
+                          <span className="font-medium">Room {g.roomNumber}</span>
+                          <span className="text-gray-500 ml-2">— {g.guestName}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {/* Show auto-filled details as read-only chips */}
+                {selectedBookingId && (
+                  <div className="flex gap-2 flex-wrap mt-1">
+                    {(() => {
+                      const g = checkedInGuests.find((x) => x.bookingId === selectedBookingId);
+                      return g ? (
+                        <>
+                          <span className="inline-flex items-center gap-1 text-xs bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-full px-2 py-0.5">
+                            Room {g.roomNumber}
+                          </span>
+                          {g.guestPhone && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-gray-50 text-gray-600 border rounded-full px-2 py-0.5">
+                              📞 {g.guestPhone}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-xs bg-gray-50 text-gray-500 border rounded-full px-2 py-0.5">
+                            Check-out {new Date(g.checkOutDate).toLocaleDateString()}
+                          </span>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+              {/* Allow overriding the phone number even for in-house */}
+              <div className="space-y-2">
+                <Label htmlFor="r-phone-ih">Phone (optional override)</Label>
+                <Input
+                  id="r-phone-ih"
+                  placeholder="Leave blank to use guest profile phone"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            /* Walk-in / external guest free-text */
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="r-guest">Guest name *</Label>
+                <Input
+                  id="r-guest"
+                  placeholder="e.g. John Smith"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="r-phone">Phone</Label>
+                <Input
+                  id="r-phone"
+                  placeholder="+960 ..."
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Party size + date */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="r-party">Party size</Label>
@@ -1195,13 +1345,20 @@ function ReservationDialog({
               />
             </div>
           </div>
+
+          {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="r-notes">Notes</Label>
-            <Textarea id="r-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            <Textarea id="r-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Dietary requirements, occasion, seating preference…" />
           </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving} className="bg-cyan-600 hover:bg-cyan-700">
+            <Button
+              type="submit"
+              disabled={saving || (guestSource === 'inhouse' ? (!selectedBookingId && hasInHouseGuests) : !guestName.trim())}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}
             </Button>
           </DialogFooter>
