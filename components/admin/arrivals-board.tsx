@@ -74,6 +74,7 @@ interface ArrivalsBoardProps {
   staff: Staff[];
   defaultTransportType?: string;
   defaultJettyTransport?: string;
+  unplannedByDate?: Record<string, number>;
 }
 
 // ─── Pipeline columns ─────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ function fmtDateTime(d?: string | Date | null) {
   return new Date(d).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
 }
 function toYMD(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function buildDateStrip(anchor: Date): Array<{ date: Date; ymd: string; label: string; day: string }> {
   return Array.from({ length: 7 }, (_, i) => {
@@ -445,7 +446,7 @@ function UnplannedPanel({
 
 // ─── Main Board ───────────────────────────────────────────────────────────────
 
-export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJettyTransport }: ArrivalsBoardProps) {
+export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJettyTransport, unplannedByDate = {} }: ArrivalsBoardProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [preselectedBookingId, setPreselectedBookingId] = useState<string | undefined>();
@@ -498,10 +499,11 @@ export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJe
       const d = new Date();
       d.setDate(d.getDate() + i);
       const ymd = toYMD(d);
-      const count = arrivals.filter((a) => {
+      const planned = arrivals.filter((a) => {
         const dep = a.scheduledArrival ?? a.booking.checkInDate;
         return dep ? toYMD(new Date(dep)) === ymd : false;
       }).length;
+      const count = planned + (unplannedByDate[ymd] ?? 0);
       return {
         ymd,
         label: ymd === todayYmd ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }),
@@ -509,7 +511,7 @@ export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJe
         count,
       };
     });
-  }, [arrivals, todayYmd]);
+  }, [arrivals, todayYmd, unplannedByDate]);
 
   function selectDate(ymd: string) {
     setSelectedDate(ymd);
@@ -593,10 +595,12 @@ export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJe
           <div className="flex gap-1.5 flex-1 overflow-x-auto">
             {dateStrip.map(({ ymd, label, day }) => {
               const isSelected = selectedDate === ymd;
-              const count = arrivals.filter((a) => {
+              const planned = arrivals.filter((a) => {
                 const d = a.scheduledArrival ?? a.booking.checkInDate;
                 return d ? toYMD(new Date(d)) === ymd : false;
               }).length;
+              const unplanned = unplannedByDate[ymd] ?? 0;
+              const count = planned + unplanned;
               return (
                 <button
                   key={ymd}

@@ -15,9 +15,11 @@ interface Props {
     arrivalJettyTransport?: string | null;
     departureJettyTransport?: string | null;
   };
+  unplannedArrivalsByDate?: Record<string, number>;
+  unplannedDeparturesByDate?: Record<string, number>;
 }
 
-export function ArrivalsPageClient({ arrivals, departureRecords, staff, defaultPlans = {} }: Props) {
+export function ArrivalsPageClient({ arrivals, departureRecords, staff, defaultPlans = {}, unplannedArrivalsByDate = {}, unplannedDeparturesByDate = {} }: Props) {
   const [tab, setTab] = useState<'arrivals' | 'departures'>('arrivals');
 
   const todayStr = new Date().toDateString();
@@ -71,9 +73,9 @@ export function ArrivalsPageClient({ arrivals, departureRecords, staff, defaultP
       </div>
 
       {tab === 'arrivals' ? (
-        <ArrivalsBoard arrivals={arrivals} staff={staff} defaultTransportType={defaultPlans.arrivalTransportType ?? undefined} defaultJettyTransport={defaultPlans.arrivalJettyTransport ?? undefined} />
+        <ArrivalsBoard arrivals={arrivals} staff={staff} defaultTransportType={defaultPlans.arrivalTransportType ?? undefined} defaultJettyTransport={defaultPlans.arrivalJettyTransport ?? undefined} unplannedByDate={unplannedArrivalsByDate} />
       ) : (
-        <DeparturesBoard records={departureRecords} defaultTransportType={defaultPlans.departureTransportType ?? undefined} defaultJettyTransport={defaultPlans.departureJettyTransport ?? undefined} />
+        <DeparturesBoard records={departureRecords} defaultTransportType={defaultPlans.departureTransportType ?? undefined} defaultJettyTransport={defaultPlans.departureJettyTransport ?? undefined} unplannedByDate={unplannedDeparturesByDate} />
       )}
     </div>
   );

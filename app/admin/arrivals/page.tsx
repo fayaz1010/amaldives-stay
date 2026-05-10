@@ -76,6 +76,44 @@ export default async function ArrivalsPage() {
   });
   const defaultPlans = (tenant?.settings as any)?.defaultPlans ?? {};
 
+  // Upcoming unplanned check-ins (no arrival record) in next 30 days
+  const horizon = new Date();
+  horizon.setDate(horizon.getDate() + 30);
+  const upcomingCheckIns = await prisma.booking.findMany({
+    where: {
+      tenantId,
+      checkInDate: { lte: horizon },
+      status: { in: ['CONFIRMED', 'CHECKED_IN'] },
+      arrivalRecord: null,
+    },
+    select: { checkInDate: true },
+  });
+  // Upcoming unplanned check-outs (no departure record) in next 30 days
+  const upcomingCheckOuts = await prisma.booking.findMany({
+    where: {
+      tenantId,
+      checkOutDate: { lte: horizon },
+      status: { in: ['CONFIRMED', 'CHECKED_IN'] },
+      departure: null,
+    },
+    select: { checkOutDate: true },
+  });
+
+  // Build { 'YYYY-MM-DD': count } maps for unplanned dates
+  function localYMD(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  const unplannedArrivalsByDate: Record<string, number> = {};
+  for (const b of upcomingCheckIns) {
+    const k = localYMD(b.checkInDate);
+    unplannedArrivalsByDate[k] = (unplannedArrivalsByDate[k] ?? 0) + 1;
+  }
+  const unplannedDeparturesByDate: Record<string, number> = {};
+  for (const b of upcomingCheckOuts) {
+    const k = localYMD(b.checkOutDate);
+    unplannedDeparturesByDate[k] = (unplannedDeparturesByDate[k] ?? 0) + 1;
+  }
+
   const serialisedArrivals = arrivals.map((a) => ({
     ...a,
     scheduledArrival: a.scheduledArrival?.toISOString() ?? null,
@@ -116,6 +154,8 @@ export default async function ArrivalsPage() {
       departureRecords={serialisedDepartures}
       staff={staff}
       defaultPlans={defaultPlans}
+      unplannedArrivalsByDate={unplannedArrivalsByDate}
+      unplannedDeparturesByDate={unplannedDeparturesByDate}
     />
   );
 }

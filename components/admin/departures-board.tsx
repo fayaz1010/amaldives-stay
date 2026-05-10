@@ -62,6 +62,7 @@ interface DeparturesBoardProps {
   records: DepartureRecord[];
   defaultTransportType?: string;
   defaultJettyTransport?: string;
+  unplannedByDate?: Record<string, number>;
 }
 
 // ─── Kanban Columns ───────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ const COLUMNS = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toYMD(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function transportEmoji(type: string) {
@@ -328,7 +329,7 @@ function DepartureCard({
 
 // ─── Main Board ───────────────────────────────────────────────────────────────
 
-export function DeparturesBoard({ records, defaultTransportType, defaultJettyTransport }: DeparturesBoardProps) {
+export function DeparturesBoard({ records, defaultTransportType, defaultJettyTransport, unplannedByDate = {} }: DeparturesBoardProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [preselectedBookingId, setPreselectedBookingId] = useState<string | undefined>();
@@ -345,10 +346,11 @@ export function DeparturesBoard({ records, defaultTransportType, defaultJettyTra
       const d = new Date();
       d.setDate(d.getDate() + i);
       const ymd = toYMD(d);
-      const count = records.filter((r) => {
+      const planned = records.filter((r) => {
         const dep = r.scheduledDeparture ?? r.booking.checkOutDate;
         return dep ? toYMD(new Date(dep)) === ymd : false;
       }).length;
+      const count = planned + (unplannedByDate[ymd] ?? 0);
       const isToday = ymd === todayYmd;
       return {
         ymd,
@@ -357,7 +359,7 @@ export function DeparturesBoard({ records, defaultTransportType, defaultJettyTra
         count,
       };
     });
-  }, [records, todayYmd]);
+  }, [records, todayYmd, unplannedByDate]);
 
   // Date-filtered records
   const filtered = selectedDate === 'all'
@@ -368,10 +370,11 @@ export function DeparturesBoard({ records, defaultTransportType, defaultJettyTra
       });
 
   function countForDate(ymd: string) {
-    return records.filter((r) => {
+    const planned = records.filter((r) => {
       const d = r.scheduledDeparture ?? r.booking.checkOutDate;
       return d ? toYMD(new Date(d)) === ymd : false;
     }).length;
+    return planned + (unplannedByDate[ymd] ?? 0);
   }
 
   function selectDate(ymd: string) {
