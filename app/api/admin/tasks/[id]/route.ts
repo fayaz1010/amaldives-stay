@@ -33,7 +33,7 @@ export async function PATCH(
     } else if (type === 'maint') {
       await prisma.maintenanceRequest.update({
         where: { id: sourceId },
-        data: { status: status === 'COMPLETED' ? 'RESOLVED' : status },
+        data: { status: 'COMPLETED' },
       });
     } else if (type === 'svc') {
       await prisma.serviceOrder.update({

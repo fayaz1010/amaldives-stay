@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
         // Maintenance requests
         prisma.maintenanceRequest.findMany({
-          where: { tenantId, status: { not: 'RESOLVED' }, ...(statusWhere as any) },
+          where: { tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
           include: {
             room: { select: { number: true } },
           },
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
         // Room/extra service orders
         prisma.serviceOrder.findMany({
-          where: { tenantId, status: { not: 'COMPLETED' as any }, ...(statusWhere as any) },
+          where: { tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
           include: {
             room: { select: { number: true } },
             service: { select: { name: true, category: true } },
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
         // Logistics orders
         prisma.logisticsOrder.findMany({
-          where: { tenantId, status: { not: 'DELIVERED' as any }, ...(statusWhere as any) },
+          where: { tenantId, status: { notIn: ['DELIVERED', 'CANCELLED'] } },
           include: {
             items: { select: { name: true, quantity: true } },
           },
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
         completedAt: null,
         room: t.room?.number ?? null,
         assignedTo: null,
-        notes: t.notes,
+        notes: (t as any).notes ?? null,
         link: '/admin/maintenance',
         bookingRef: null,
         createdAt: t.createdAt.toISOString(),

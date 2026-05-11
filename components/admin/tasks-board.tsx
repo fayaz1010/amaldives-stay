@@ -63,13 +63,14 @@ const PRIORITY_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   PENDING:     'text-yellow-600',
   IN_PROGRESS: 'text-blue-600',
+  ASSIGNED:    'text-blue-500',
   COMPLETED:   'text-green-600',
   CANCELLED:   'text-gray-400',
-  RESOLVED:    'text-green-600',
-  REPORTED:    'text-yellow-600',
   DRAFT:       'text-gray-500',
   SENT:        'text-blue-500',
+  IN_TRANSIT:  'text-purple-500',
   DELIVERED:   'text-green-600',
+  REPORTED:    'text-yellow-600',
 };
 
 const SOURCE_FILTERS = [
@@ -90,7 +91,7 @@ const STATUS_GROUPS = [
 
 function isOverdue(dueDate?: string | null, status?: string) {
   if (!dueDate) return false;
-  if (['COMPLETED', 'RESOLVED', 'DELIVERED', 'CANCELLED'].includes(status ?? '')) return false;
+  if (['COMPLETED', 'DELIVERED', 'CANCELLED'].includes(status ?? '')) return false;
   return new Date(dueDate) < new Date();
 }
 
@@ -106,7 +107,7 @@ function TaskCard({
   const meta = SOURCE_META[task.source] ?? SOURCE_META.STAFF;
   const catIcon = CATEGORY_ICON[task.category];
   const overdue = isOverdue(task.dueDate, task.status);
-  const isOpen = !['COMPLETED', 'RESOLVED', 'DELIVERED', 'CANCELLED'].includes(task.status);
+  const isOpen = !['COMPLETED', 'DELIVERED', 'CANCELLED'].includes(task.status);
 
   return (
     <Card className={`hover:shadow-md transition-shadow ${overdue ? 'border-red-200' : ''}`}>
@@ -258,8 +259,8 @@ export function TasksBoard() {
     }
   }
 
-  const openStatuses = new Set(['PENDING', 'IN_PROGRESS', 'REPORTED', 'DRAFT', 'SENT']);
-  const doneStatuses = new Set(['COMPLETED', 'RESOLVED', 'DELIVERED']);
+  const openStatuses = new Set(['PENDING', 'IN_PROGRESS', 'REPORTED', 'ASSIGNED', 'DRAFT', 'SENT', 'IN_TRANSIT']);
+  const doneStatuses = new Set(['COMPLETED', 'DELIVERED']);
   const cancelStatuses = new Set(['CANCELLED']);
 
   const filtered = tasks.filter((t) => {
@@ -285,7 +286,6 @@ export function TasksBoard() {
     { key: 'done',      label: 'Done',      statuses: doneStatuses,   color: 'bg-green-50 border-green-200' },
     { key: 'cancelled', label: 'Cancelled', statuses: cancelStatuses, color: 'bg-gray-50 border-gray-200' },
   ];
-
   return (
     <div className="p-6">
       {/* Header */}
