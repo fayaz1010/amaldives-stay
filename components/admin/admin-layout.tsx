@@ -32,6 +32,7 @@ import {
   Utensils,
   ShoppingBag,
   CheckSquare,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,7 +47,8 @@ export function AdminLayout({ children, user }: AdminLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
+    { name: 'Tasks',   href: '/admin/tasks',   icon: CheckSquare },
+    { name: 'Finance', href: '/admin/finance', icon: DollarSign },
     { name: 'Reservations', href: '/admin/reservations', icon: Calendar },
     { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
     { name: 'Availability', href: '/admin/availability', icon: CalendarDays },

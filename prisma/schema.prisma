@@ -112,6 +112,8 @@ model Tenant {
   logisticsInventory LogisticsInventoryItem[]
   logisticsAssets   LogisticsAsset[]
   fnbOutlets        FnBOutlet[]
+  expenses          Expense[]
+  payrollEntries    PayrollEntry[]
   
   @@index([subdomain])
   @@index([status])
@@ -269,6 +271,7 @@ model StaffProfile {
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clockRecords StaffClockRecord[]
   tasks       StaffTask[]
+  payrollEntries PayrollEntry[]
   
   @@index([tenantId])
   @@index([userId])
@@ -1068,4 +1071,80 @@ enum FnBBillStatus {
   CLOSED
   PAID
   VOIDED
+}
+
+// ---- Finance Module ----
+
+model Expense {
+  id          String          @id @default(cuid())
+  tenantId    String
+  category    ExpenseCategory
+  title       String
+  description String?
+  amount      Float
+  currency    String          @default("USD")
+  status      ExpenseStatus   @default(PENDING)
+  dueDate     DateTime?
+  paidAt      DateTime?
+  paidBy      String?
+  linkedType  String?
+  linkedId    String?
+  receiptUrl  String?
+  notes       String?
+  approvedBy  String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId])
+  @@index([status])
+  @@index([category])
+}
+
+model PayrollEntry {
+  id           String        @id @default(cuid())
+  tenantId     String
+  staffId      String
+  period       String
+  baseSalary   Float
+  hoursWorked  Float         @default(0)
+  overtimePay  Float         @default(0)
+  deductions   Float         @default(0)
+  netPay       Float
+  currency     String        @default("USD")
+  status       PayrollStatus @default(DRAFT)
+  paidAt       DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  staff        StaffProfile  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, staffId, period])
+  @@index([tenantId])
+  @@index([staffId])
+  @@index([period])
+}
+
+enum ExpenseCategory {
+  LOGISTICS
+  MAINTENANCE
+  SALARY
+  TRANSPORT
+  UTILITIES
+  SUPPLIES
+  MARKETING
+  OTHER
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+  PAID
 }
