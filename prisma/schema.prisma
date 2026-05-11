@@ -109,6 +109,7 @@ model Tenant {
   departures  DepartureRecord[]
   minIBarItems      MinIBarItem[]
   logisticsOrders   LogisticsOrder[]
+  logisticsInventory LogisticsInventoryItem[]
   fnbOutlets        FnBOutlet[]
   
   @@index([subdomain])
@@ -845,17 +846,55 @@ model LogisticsOrder {
 }
 
 model LogisticsOrderItem {
-  id            String              @id @default(cuid())
-  orderId       String
-  name          String
-  quantity      Float
-  unit          String              @default("pcs")
-  estimatedCost Float?
-  actualCost    Float?
-  notes         String?
-  status        LogisticsItemStatus @default(PENDING)
-  order         LogisticsOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id              String              @id @default(cuid())
+  orderId         String
+  inventoryItemId String?
+  name            String
+  quantity        Float
+  unit            String              @default("pcs")
+  estimatedCost   Float?
+  actualCost      Float?
+  notes           String?
+  status          LogisticsItemStatus @default(PENDING)
+  order           LogisticsOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventoryItem   LogisticsInventoryItem? @relation(fields: [inventoryItemId], references: [id])
   @@index([orderId])
+  @@index([inventoryItemId])
+}
+
+model LogisticsInventoryItem {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  category     String   @default("general")
+  unit         String   @default("pcs")
+  description  String?
+  parLevel     Float    @default(0)
+  currentStock Float    @default(0)
+  location     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stockMovements LogisticsStockMovement[]
+  orderItems   LogisticsOrderItem[]
+  @@index([tenantId])
+}
+
+model LogisticsStockMovement {
+  id           String              @id @default(cuid())
+  tenantId     String
+  itemId       String
+  type         StockMovementType
+  quantity     Float
+  balanceAfter Float               @default(0)
+  notes        String?
+  reference    String?
+  recordedBy   String?
+  recordedAt   DateTime            @default(now())
+  item         LogisticsInventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  @@index([tenantId])
+  @@index([itemId])
 }
 
 enum LogisticsStatus {
@@ -871,6 +910,12 @@ enum LogisticsItemStatus {
   SENT
   RECEIVED
   PARTIAL
+}
+
+enum StockMovementType {
+  RECEIVED
+  USED
+  ADJUSTED
 }
 
 // @@@ Food and Beverage @@@

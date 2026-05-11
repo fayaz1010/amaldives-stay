@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,22 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Package,
   Truck,
@@ -31,6 +46,16 @@ import {
   Loader2,
   X,
   Plus,
+  LayoutList,
+  BarChart3,
+  TrendingDown,
+  TrendingUp,
+  Edit2,
+  RefreshCw,
+  Link2,
+  MinusCircle,
+  SlidersHorizontal,
+  History,
 } from 'lucide-react';
 
 type LogisticsStatus = 'DRAFT' | 'SENT' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
@@ -79,6 +104,49 @@ interface LogisticsBoardProps {
   stats: Stats;
 }
 
+// ── Inventory types ────────────────────────────────────────────────────────
+
+const INVENTORY_CATEGORIES = [
+  { value: 'general', label: 'General', emoji: '📦' },
+  { value: 'food', label: 'Food & Beverage', emoji: '🍱' },
+  { value: 'cleaning', label: 'Cleaning', emoji: '🧹' },
+  { value: 'amenities', label: 'Amenities', emoji: '🧴' },
+  { value: 'linen', label: 'Linen & Laundry', emoji: '🛏️' },
+  { value: 'maintenance', label: 'Maintenance', emoji: '🔧' },
+  { value: 'office', label: 'Office', emoji: '📎' },
+  { value: 'other', label: 'Other', emoji: '🗂️' },
+];
+
+function invCatMeta(value: string) {
+  return INVENTORY_CATEGORIES.find((c) => c.value === value) ?? INVENTORY_CATEGORIES[0];
+}
+
+interface StockMovement {
+  id: string;
+  type: 'RECEIVED' | 'USED' | 'ADJUSTED';
+  quantity: number;
+  balanceAfter: number;
+  notes: string | null;
+  reference: string | null;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  description: string | null;
+  parLevel: number;
+  currentStock: number;
+  location: string | null;
+  isActive: boolean;
+  createdAt: string;
+  stockMovements?: StockMovement[];
+  _count?: { orderItems: number };
+}
+
 const URGENCY_STYLES: Record<Urgency, string> = {
   LOW: 'bg-gray-100 text-gray-700 border-gray-200',
   MEDIUM: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -116,10 +184,38 @@ type FilterTab = 'ALL' | LogisticsStatus;
 
 export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
   const router = useRouter();
+  const [mainTab, setMainTab] = useState<'orders' | 'inventory' | 'stock'>('orders');
   const [filter, setFilter] = useState<FilterTab>('ALL');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<LogisticsOrder | null>(null);
+
+  // Inventory state
+  const [inventory, setInventory] = useState<InventoryItem[] | null>(null);
+  const [invLoading, setInvLoading] = useState(false);
+  const [invDialogOpen, setInvDialogOpen] = useState(false);
+  const [editInvItem, setEditInvItem] = useState<InventoryItem | null>(null);
+  const [useDialogItem, setUseDialogItem] = useState<InventoryItem | null>(null);
+  const [adjustDialogItem, setAdjustDialogItem] = useState<InventoryItem | null>(null);
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
+
+  const loadInventory = useCallback(async () => {
+    setInvLoading(true);
+    try {
+      const res = await fetch('/api/admin/logistics/inventory');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setInventory(data.items);
+    } catch {
+      alert('Failed to load inventory');
+    } finally {
+      setInvLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mainTab === 'inventory' || mainTab === 'stock') loadInventory();
+  }, [mainTab, loadInventory]);
 
   const filtered = useMemo(() => {
     if (filter === 'ALL') return orders;
@@ -168,102 +264,346 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Logistics</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Track supply orders shipped from Male to the property
+            Supply orders, inventory catalog and stock tracking
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="bg-teal-600 hover:bg-teal-700">
-          <PlusCircle className="h-4 w-4 mr-2" />
-          New Order
-        </Button>
+        {mainTab === 'orders' && (
+          <Button onClick={() => setCreateOpen(true)} className="bg-teal-600 hover:bg-teal-700">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Order
+          </Button>
+        )}
+        {(mainTab === 'inventory' || mainTab === 'stock') && (
+          <Button onClick={() => { setEditInvItem(null); setInvDialogOpen(true); }} className="bg-teal-600 hover:bg-teal-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
+        )}
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <StatCard
-          label="Total Orders"
-          value={stats.totalOrders}
-          icon={<Boxes className="h-5 w-5 text-teal-600" />}
-        />
-        <StatCard
-          label="Items Pending"
-          value={stats.itemsPending}
-          icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
-        />
-        <StatCard
-          label="In Transit"
-          value={stats.inTransit}
-          icon={<Truck className="h-5 w-5 text-blue-600" />}
-        />
-        <StatCard
-          label="Delivered This Month"
-          value={stats.deliveredThisMonth}
-          icon={<CheckCircle2 className="h-5 w-5 text-green-600" />}
-        />
-      </div>
-
-      {/* Filter tabs */}
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterTab)} className="mb-4">
-        <TabsList>
-          <TabsTrigger value="ALL">All</TabsTrigger>
-          <TabsTrigger value="DRAFT">Draft</TabsTrigger>
-          <TabsTrigger value="SENT">Sent</TabsTrigger>
-          <TabsTrigger value="IN_TRANSIT">In Transit</TabsTrigger>
-          <TabsTrigger value="DELIVERED">Delivered</TabsTrigger>
+      {/* Main tab switcher */}
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as any)} className="mb-5">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="orders" className="gap-1.5">
+            <Truck className="h-4 w-4" /> Orders
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="gap-1.5">
+            <LayoutList className="h-4 w-4" /> Inventory
+          </TabsTrigger>
+          <TabsTrigger value="stock" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" /> Stock
+            {inventory && inventory.some(i => i.currentStock <= i.parLevel && i.parLevel > 0) && (
+              <Badge className="ml-1 h-5 bg-red-500 hover:bg-red-500 text-white">!</Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
+
+        {/* ========== ORDERS TAB ========== */}
+        <TabsContent value="orders" className="mt-4">
+          {/* Stats bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <StatCard label="Total Orders" value={stats.totalOrders} icon={<Boxes className="h-5 w-5 text-teal-600" />} />
+            <StatCard label="Items Pending" value={stats.itemsPending} icon={<AlertTriangle className="h-5 w-5 text-amber-600" />} />
+            <StatCard label="In Transit" value={stats.inTransit} icon={<Truck className="h-5 w-5 text-blue-600" />} />
+            <StatCard label="Delivered This Month" value={stats.deliveredThisMonth} icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} />
+          </div>
+
+          {/* Filter tabs */}
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterTab)} className="mb-4">
+            <TabsList>
+              <TabsTrigger value="ALL">All</TabsTrigger>
+              <TabsTrigger value="DRAFT">Draft</TabsTrigger>
+              <TabsTrigger value="SENT">Sent</TabsTrigger>
+              <TabsTrigger value="IN_TRANSIT">In Transit</TabsTrigger>
+              <TabsTrigger value="DELIVERED">Delivered</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Kanban */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {COLUMNS.map((col) => {
+              const colOrders = filtered.filter((o) => o.status === col.key);
+              const Icon = col.icon;
+              return (
+                <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3`}>
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-gray-600" />
+                      <h2 className="font-semibold text-gray-800 text-sm">{col.title}</h2>
+                    </div>
+                    <span className="text-xs font-medium bg-white px-2 py-0.5 rounded-full border">
+                      {colOrders.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {colOrders.length === 0 ? (
+                      <p className="text-xs text-gray-400 text-center py-6">No orders</p>
+                    ) : (
+                      colOrders.map((order) => (
+                        <OrderCard
+                          key={order.id}
+                          order={order}
+                          busy={busyId === order.id}
+                          onOpen={() => setDetailOrder(order)}
+                          onAdvance={() => advanceStatus(order)}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* ========== INVENTORY TAB ========== */}
+        <TabsContent value="inventory" className="mt-4">
+          {invLoading && !inventory ? (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading…
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <div>
+                    <h2 className="font-semibold">Item Catalog</h2>
+                    <p className="text-xs text-gray-500">
+                      {inventory?.length ?? 0} items · set par levels to get low-stock alerts
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={loadInventory} disabled={invLoading}>
+                    <RefreshCw className={`h-4 w-4 ${invLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+                {!inventory || inventory.length === 0 ? (
+                  <div className="py-12 text-center text-gray-500">
+                    <LayoutList className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                    <p className="text-lg font-medium mb-1">No items yet</p>
+                    <p className="text-sm">Add items to track stock and link to orders.</p>
+                  </div>
+                ) : (
+                  <>
+                    {Array.from(new Set(inventory.map(i => i.category))).map(cat => {
+                      const meta = invCatMeta(cat);
+                      const catItems = inventory.filter(i => i.category === cat);
+                      return (
+                        <div key={cat}>
+                          <div className="px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {meta.emoji} {meta.label}
+                          </div>
+                          <Table>
+                            <TableBody>
+                              {catItems.map(item => {
+                                const lowStock = item.parLevel > 0 && item.currentStock <= item.parLevel;
+                                return (
+                                  <TableRow key={item.id}>
+                                    <TableCell className="font-medium">
+                                      <div>{item.name}</div>
+                                      {item.description && <div className="text-xs text-gray-400 line-clamp-1">{item.description}</div>}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-gray-500">
+                                      {item.location ?? '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className={`text-sm font-semibold ${lowStock ? 'text-red-600' : 'text-gray-800'}`}>
+                                        {item.currentStock} {item.unit}
+                                      </div>
+                                      {item.parLevel > 0 && (
+                                        <div className="text-[10px] text-gray-400">par: {item.parLevel}</div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {lowStock && (
+                                        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 gap-1" variant="outline">
+                                          <AlertTriangle className="h-3 w-3" /> Low
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <button onClick={() => setUseDialogItem(item)} className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded" title="Record Usage">
+                                          <MinusCircle className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => setAdjustDialogItem(item)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Adjust Stock">
+                                          <SlidersHorizontal className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => setHistoryItem(item)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded" title="Movement History">
+                                          <History className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => { setEditInvItem(item); setInvDialogOpen(true); }} className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded" title="Edit">
+                                          <Edit2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* ========== STOCK TAB ========== */}
+        <TabsContent value="stock" className="mt-4">
+          {invLoading && !inventory ? (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading…
+            </div>
+          ) : !inventory || inventory.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-gray-500">
+                <BarChart3 className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                <p className="text-lg font-medium mb-1">No inventory items</p>
+                <p className="text-sm mb-4">Add items in the Inventory tab first.</p>
+                <Button variant="outline" size="sm" onClick={() => setMainTab('inventory')}>Go to Inventory</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Low-stock alerts */}
+              {inventory.filter(i => i.parLevel > 0 && i.currentStock <= i.parLevel).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" /> Low Stock Alerts
+                  </p>
+                  <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                    {inventory.filter(i => i.parLevel > 0 && i.currentStock <= i.parLevel).map(item => (
+                      <div key={item.id} className="flex items-center justify-between bg-white rounded px-3 py-2 text-sm border border-red-100">
+                        <span className="font-medium truncate">{item.name}</span>
+                        <span className="text-red-600 font-bold shrink-0 ml-2">
+                          {item.currentStock}/{item.parLevel} {item.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stock cards grid */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {inventory.map(item => {
+                  const pct = item.parLevel > 0 ? Math.min(100, (item.currentStock / item.parLevel) * 100) : null;
+                  const lowStock = item.parLevel > 0 && item.currentStock <= item.parLevel;
+                  const outOfStock = item.currentStock === 0;
+                  return (
+                    <Card key={item.id} className={`border-2 ${outOfStock ? 'border-red-300' : lowStock ? 'border-orange-200' : 'border-green-100'}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm truncate">{item.name}</p>
+                            <p className="text-[11px] text-gray-400">{invCatMeta(item.category).emoji} {invCatMeta(item.category).label}</p>
+                          </div>
+                          {outOfStock ? (
+                            <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 shrink-0" variant="outline">Out</Badge>
+                          ) : lowStock ? (
+                            <Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100 shrink-0" variant="outline">Low</Badge>
+                          ) : (
+                            <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 shrink-0" variant="outline">OK</Badge>
+                          )}
+                        </div>
+
+                        <div className="text-2xl font-bold text-gray-900 mb-0.5">
+                          {item.currentStock} <span className="text-sm font-normal text-gray-500">{item.unit}</span>
+                        </div>
+                        {item.parLevel > 0 && (
+                          <div className="text-xs text-gray-500 mb-2">par level: {item.parLevel} {item.unit}</div>
+                        )}
+                        {pct !== null && (
+                          <div className="w-full bg-gray-100 rounded-full h-1.5 mb-3">
+                            <div
+                              className={`h-1.5 rounded-full ${pct <= 50 ? 'bg-red-500' : pct <= 80 ? 'bg-orange-400' : 'bg-green-500'}`}
+                              style={{ width: `${Math.min(100, pct)}%` }}
+                            />
+                          </div>
+                        )}
+                        {item.location && (
+                          <p className="text-[11px] text-gray-400 mb-2">📍 {item.location}</p>
+                        )}
+
+                        <div className="flex gap-1.5 pt-1 border-t border-gray-100">
+                          <button
+                            onClick={() => setUseDialogItem(item)}
+                            className="flex-1 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded px-2 py-1.5 flex items-center justify-center gap-1"
+                          >
+                            <MinusCircle className="h-3.5 w-3.5" /> Use
+                          </button>
+                          <button
+                            onClick={() => setAdjustDialogItem(item)}
+                            className="flex-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded px-2 py-1.5 flex items-center justify-center gap-1"
+                          >
+                            <SlidersHorizontal className="h-3.5 w-3.5" /> Adjust
+                          </button>
+                          <button
+                            onClick={() => setHistoryItem(item)}
+                            className="text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded px-2 py-1.5 flex items-center justify-center gap-1"
+                          >
+                            <History className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </TabsContent>
       </Tabs>
 
-      {/* Kanban */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {COLUMNS.map((col) => {
-          const colOrders = filtered.filter((o) => o.status === col.key);
-          const Icon = col.icon;
-          return (
-            <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3`}>
-              <div className="flex items-center justify-between mb-3 px-1">
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-gray-600" />
-                  <h2 className="font-semibold text-gray-800 text-sm">{col.title}</h2>
-                </div>
-                <span className="text-xs font-medium bg-white px-2 py-0.5 rounded-full border">
-                  {colOrders.length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {colOrders.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-6">No orders</p>
-                ) : (
-                  colOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      busy={busyId === order.id}
-                      onOpen={() => setDetailOrder(order)}
-                      onAdvance={() => advanceStatus(order)}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+      {/* ── Dialogs ── */}
       <CreateOrderDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        inventory={inventory ?? []}
         onCreated={() => router.refresh()}
       />
 
       {detailOrder && (
         <OrderDetailDialog
           order={detailOrder}
+          inventory={inventory ?? []}
           onOpenChange={(open) => !open && setDetailOrder(null)}
-          onChanged={() => {
-            router.refresh();
-          }}
+          onChanged={() => router.refresh()}
           onCancel={() => cancelOrder(detailOrder)}
           busy={busyId === detailOrder.id}
+        />
+      )}
+
+      <InventoryItemDialog
+        open={invDialogOpen}
+        onOpenChange={setInvDialogOpen}
+        initial={editInvItem}
+        onSaved={() => { setInvDialogOpen(false); loadInventory(); }}
+      />
+
+      {useDialogItem && (
+        <UseStockDialog
+          item={useDialogItem}
+          onClose={() => setUseDialogItem(null)}
+          onSaved={() => { setUseDialogItem(null); loadInventory(); }}
+        />
+      )}
+
+      {adjustDialogItem && (
+        <AdjustStockDialog
+          item={adjustDialogItem}
+          onClose={() => setAdjustDialogItem(null)}
+          onSaved={() => { setAdjustDialogItem(null); loadInventory(); }}
+        />
+      )}
+
+      {historyItem && (
+        <StockHistoryDialog
+          item={historyItem}
+          onClose={() => setHistoryItem(null)}
         />
       )}
     </div>
@@ -392,10 +732,12 @@ function OrderCard({
 function CreateOrderDialog({
   open,
   onOpenChange,
+  inventory,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  inventory: InventoryItem[];
   onCreated: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
@@ -406,8 +748,8 @@ function CreateOrderDialog({
   const [urgency, setUrgency] = useState<Urgency>('MEDIUM');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<
-    { name: string; quantity: string; unit: string; estimatedCost: string; notes: string }[]
-  >([{ name: '', quantity: '1', unit: 'pcs', estimatedCost: '', notes: '' }]);
+    { name: string; quantity: string; unit: string; estimatedCost: string; notes: string; inventoryItemId: string }[]
+  >([{ name: '', quantity: '1', unit: 'pcs', estimatedCost: '', notes: '', inventoryItemId: '' }]);
 
   function reset() {
     setTitle('');
@@ -416,13 +758,13 @@ function CreateOrderDialog({
     setDestination('Male');
     setUrgency('MEDIUM');
     setNotes('');
-    setItems([{ name: '', quantity: '1', unit: 'pcs', estimatedCost: '', notes: '' }]);
+    setItems([{ name: '', quantity: '1', unit: 'pcs', estimatedCost: '', notes: '', inventoryItemId: '' }]);
   }
 
   function addItemRow() {
     setItems((prev) => [
       ...prev,
-      { name: '', quantity: '1', unit: 'pcs', estimatedCost: '', notes: '' },
+      { name: '', quantity: '1', unit: 'pcs', estimatedCost: '', notes: '', inventoryItemId: '' },
     ]);
   }
 
@@ -450,6 +792,7 @@ function CreateOrderDialog({
         unit: it.unit.trim() || 'pcs',
         estimatedCost: it.estimatedCost ? Number(it.estimatedCost) : undefined,
         notes: it.notes.trim() || undefined,
+        inventoryItemId: it.inventoryItemId || undefined,
       }));
 
     setSubmitting(true);
@@ -606,6 +949,32 @@ function CreateOrderDialog({
                       </Button>
                     )}
                   </div>
+                  {/* Inventory link row */}
+                  {inventory.length > 0 && (
+                    <div className="col-span-12">
+                      <select
+                        value={it.inventoryItemId}
+                        onChange={(e) => {
+                          updateItem(idx, 'inventoryItemId', e.target.value);
+                          if (e.target.value) {
+                            const inv = inventory.find(i => i.id === e.target.value);
+                            if (inv) {
+                              updateItem(idx, 'name', inv.name);
+                              updateItem(idx, 'unit', inv.unit);
+                            }
+                          }
+                        }}
+                        className="w-full text-xs rounded border border-dashed border-teal-300 bg-teal-50 px-2 py-1"
+                      >
+                        <option value="">🔗 Link to inventory item (optional)</option>
+                        {inventory.map(inv => (
+                          <option key={inv.id} value={inv.id}>
+                            {inv.name} — stock: {inv.currentStock} {inv.unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -647,12 +1016,14 @@ function CreateOrderDialog({
 
 function OrderDetailDialog({
   order,
+  inventory,
   onOpenChange,
   onChanged,
   onCancel,
   busy,
 }: {
   order: LogisticsOrder;
+  inventory: InventoryItem[];
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
   onCancel: () => void;
@@ -820,6 +1191,12 @@ function OrderDetailDialog({
                         {it.estimatedCost != null && ` · est ${it.estimatedCost}`}
                         {it.actualCost != null && ` · actual ${it.actualCost}`}
                       </p>
+                      {(it as any).inventoryItemId && (
+                        <p className="text-[10px] text-teal-600 flex items-center gap-0.5 mt-0.5">
+                          <Link2 className="h-3 w-3" />
+                          Linked to inventory — stock updates on Received
+                        </p>
+                      )}
                     </div>
                     <select
                       value={it.status}
@@ -913,6 +1290,302 @@ function OrderDetailDialog({
           <Button type="button" onClick={() => onOpenChange(false)}>
             Close
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Inventory Item Dialog (create/edit) ──────────────────────────────────────
+
+function InventoryItemDialog({
+  open, onOpenChange, initial, onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  initial: InventoryItem | null;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('general');
+  const [unit, setUnit] = useState('pcs');
+  const [description, setDescription] = useState('');
+  const [parLevel, setParLevel] = useState('0');
+  const [openingStock, setOpeningStock] = useState('0');
+  const [location, setLocation] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(initial?.name ?? '');
+      setCategory(initial?.category ?? 'general');
+      setUnit(initial?.unit ?? 'pcs');
+      setDescription(initial?.description ?? '');
+      setParLevel(initial?.parLevel?.toString() ?? '0');
+      setOpeningStock(initial?.currentStock?.toString() ?? '0');
+      setLocation(initial?.location ?? '');
+    }
+  }, [open, initial]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const url = initial ? `/api/admin/logistics/inventory/${initial.id}` : '/api/admin/logistics/inventory';
+      const method = initial ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, category, unit, description, parLevel: Number(parLevel), openingStock: Number(openingStock), location }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      onSaved();
+    } catch {
+      alert('Failed to save item');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{initial ? 'Edit Inventory Item' : 'Add Inventory Item'}</DialogTitle>
+          <DialogDescription>Track stock levels and link to supply orders.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 space-y-1">
+              <Label>Name *</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Shower Gel 250ml" required />
+            </div>
+            <div className="space-y-1">
+              <Label>Category</Label>
+              <select value={category} onChange={e => setCategory(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                {INVENTORY_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Unit</Label>
+              <Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="pcs / bottles / kg…" />
+            </div>
+            <div className="space-y-1">
+              <Label>Par Level (min stock)</Label>
+              <Input type="number" min="0" step="any" value={parLevel} onChange={e => setParLevel(e.target.value)} />
+            </div>
+            {!initial && (
+              <div className="space-y-1">
+                <Label>Opening Stock</Label>
+                <Input type="number" min="0" step="any" value={openingStock} onChange={e => setOpeningStock(e.target.value)} />
+              </div>
+            )}
+            <div className={initial ? 'col-span-2' : ''} style={{ gridColumn: initial ? 'span 2' : undefined }}>
+              <Label>Location</Label>
+              <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Store Room A, Kitchen…" className="mt-1" />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label>Description</Label>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Optional notes" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="bg-teal-600 hover:bg-teal-700">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (initial ? 'Save Changes' : 'Add Item')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Use Stock Dialog ──────────────────────────────────────────────────────────
+
+function UseStockDialog({ item, onClose, onSaved }: { item: InventoryItem; onClose: () => void; onSaved: () => void }) {
+  const [qty, setQty] = useState('1');
+  const [notes, setNotes] = useState('');
+  const [ref, setRef] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!qty || Number(qty) <= 0) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/logistics/inventory/${item.id}/use`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: Number(qty), notes, reference: ref }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      onSaved();
+    } catch {
+      alert('Failed to record usage');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Record Usage — {item.name}</DialogTitle>
+          <DialogDescription>Current stock: {item.currentStock} {item.unit}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <Label>Quantity Used *</Label>
+            <Input type="number" min="0.01" step="any" value={qty} onChange={e => setQty(e.target.value)} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Reference / Area</Label>
+            <Input value={ref} onChange={e => setRef(e.target.value)} placeholder="Room 101, Kitchen…" />
+          </div>
+          <div className="space-y-1">
+            <Label>Notes</Label>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional" />
+          </div>
+          <div className="text-sm bg-orange-50 rounded p-3 text-orange-700 font-medium">
+            After: {Math.max(0, item.currentStock - Number(qty || 0)).toFixed(2)} {item.unit}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-700">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Record Usage'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Adjust Stock Dialog ───────────────────────────────────────────────────────
+
+function AdjustStockDialog({ item, onClose, onSaved }: { item: InventoryItem; onClose: () => void; onSaved: () => void }) {
+  const [newStock, setNewStock] = useState(item.currentStock.toString());
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/logistics/inventory/${item.id}/adjust`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newStock: Number(newStock), notes }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      onSaved();
+    } catch {
+      alert('Failed to adjust stock');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const delta = Number(newStock) - item.currentStock;
+
+  return (
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Adjust Stock — {item.name}</DialogTitle>
+          <DialogDescription>Current: {item.currentStock} {item.unit}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <Label>New Stock Quantity *</Label>
+            <Input type="number" min="0" step="any" value={newStock} onChange={e => setNewStock(e.target.value)} required />
+          </div>
+          {delta !== 0 && (
+            <div className={`text-sm rounded p-3 font-medium flex items-center gap-2 ${delta > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {delta > 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {delta > 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2)} {item.unit} adjustment
+            </div>
+          )}
+          <div className="space-y-1">
+            <Label>Reason / Notes</Label>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Physical count, damaged, etc." />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply Adjustment'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Stock History Dialog ──────────────────────────────────────────────────────
+
+const MOVEMENT_STYLES: Record<string, string> = {
+  RECEIVED: 'text-green-700 bg-green-50',
+  USED: 'text-orange-700 bg-orange-50',
+  ADJUSTED: 'text-blue-700 bg-blue-50',
+};
+
+function StockHistoryDialog({ item, onClose }: { item: InventoryItem; onClose: () => void }) {
+  const [movements, setMovements] = useState<StockMovement[]>(item.stockMovements ?? []);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/admin/logistics/inventory/${item.id}`)
+      .then(r => r.json())
+      .then(d => setMovements(d.item?.stockMovements ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [item.id]);
+
+  return (
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Stock History — {item.name}</DialogTitle>
+          <DialogDescription>Current: {item.currentStock} {item.unit} · par: {item.parLevel}</DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto space-y-1.5 py-2">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+          ) : movements.length === 0 ? (
+            <p className="text-center text-gray-400 py-8 text-sm">No movements recorded yet.</p>
+          ) : (
+            movements.map(m => (
+              <div key={m.id} className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-xs">
+                <span className={`shrink-0 px-2 py-0.5 rounded-full font-semibold ${MOVEMENT_STYLES[m.type] ?? ''}`}>
+                  {m.type === 'RECEIVED' ? '▲' : m.type === 'USED' ? '▼' : '⟳'} {m.type}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-bold ${m.quantity >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                      {m.quantity >= 0 ? '+' : ''}{m.quantity} {item.unit}
+                    </span>
+                    <span className="text-gray-500">→ {m.balanceAfter} {item.unit}</span>
+                  </div>
+                  <div className="text-gray-400 truncate">
+                    {m.notes ?? ''}
+                    {m.reference ? ` · ref: ${m.reference}` : ''}
+                    {m.recordedBy ? ` · ${m.recordedBy}` : ''}
+                  </div>
+                </div>
+                <span className="text-gray-400 shrink-0">
+                  {new Date(m.recordedAt).toLocaleDateString()}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
