@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ArrivalsBoard } from '@/components/admin/arrivals-board';
 import { DeparturesBoard } from '@/components/admin/departures-board';
 import { Plane, LogOut } from 'lucide-react';
@@ -20,7 +21,9 @@ interface Props {
 }
 
 export function ArrivalsPageClient({ arrivals, departureRecords, staff, defaultPlans = {}, unplannedArrivalsByDate = {}, unplannedDeparturesByDate = {} }: Props) {
-  const [tab, setTab] = useState<'arrivals' | 'departures'>('arrivals');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'departures' ? 'departures' : 'arrivals';
+  const [tab, setTab] = useState<'arrivals' | 'departures'>(initialTab);
 
   const todayStr = new Date().toDateString();
 
