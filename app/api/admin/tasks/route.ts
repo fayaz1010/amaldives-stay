@@ -156,22 +156,30 @@ export async function GET(request: NextRequest) {
 
     // --- Service orders ---
     for (const t of serviceOrders) {
+      // notes may contain JSON (order items) — show item name × qty instead
+      let desc = `Qty: ${t.quantity}`;
+      if (t.scheduledDate) {
+        desc += ` · Scheduled: ${new Date(t.scheduledDate).toLocaleString()}`;
+      }
+      const isRoomSvc = !['EXCURSION', 'DIVING', 'SNORKELLING', 'PICNIC', 'FISHING', 'RENTAL'].includes(
+        t.service?.category ?? ''
+      );
       unified.push({
         id: `svc:${t.id}`,
         sourceId: t.id,
         source: 'SERVICE',
-        sourceLabel: 'Room Service',
+        sourceLabel: isRoomSvc ? 'Room Service' : 'Extra Service',
         category: t.service?.category ?? 'SERVICE',
-        title: `${t.service?.name ?? 'Service'} — Room ${t.room?.number ?? '?'}`,
-        description: t.notes,
+        title: `${t.service?.name ?? 'Service'} ×${t.quantity} — Room ${t.room?.number ?? '?'}`,
+        description: desc,
         status: t.status,
         priority: 'MEDIUM',
         dueDate: t.scheduledDate?.toISOString() ?? t.createdAt.toISOString(),
         completedAt: t.completedAt?.toISOString() ?? null,
         room: t.room?.number ?? null,
         assignedTo: null,
-        notes: t.notes,
-        link: '/admin/extra-services',
+        notes: null,
+        link: isRoomSvc ? '/admin/room-service' : '/admin/extra-services',
         bookingRef: null,
         createdAt: t.createdAt.toISOString(),
       });
