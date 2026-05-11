@@ -213,6 +213,48 @@ export async function POST(request: NextRequest) {
       notes,
     });
 
+    // Auto-create arrival prep tasks for the booking
+    const guestLabel = guestData?.name || 'Guest';
+    const roomLabel = room.id;
+    const checkInLabel = checkIn.toLocaleDateString();
+    await prisma.staffTask.createMany({
+      data: [
+        {
+          tenantId,
+          bookingId: booking.id,
+          source: 'BOOKING',
+          category: 'TRANSFER',
+          title: `Arrange transfer — ${guestLabel} (${checkInLabel})`,
+          description: 'Book and confirm transport from airport to property for arriving guest.',
+          priority: 'HIGH',
+          status: 'PENDING',
+          dueDate: checkIn,
+        },
+        {
+          tenantId,
+          bookingId: booking.id,
+          source: 'BOOKING',
+          category: 'AIRPORT_PICKUP',
+          title: `Airport pickup — ${guestLabel} (${checkInLabel})`,
+          description: 'Confirm who is picking up the guest at the airport and arrange logistics.',
+          priority: 'HIGH',
+          status: 'PENDING',
+          dueDate: checkIn,
+        },
+        {
+          tenantId,
+          bookingId: booking.id,
+          source: 'BOOKING',
+          category: 'ARRIVAL_WELCOME',
+          title: `Arrival welcome — ${guestLabel} (${checkInLabel})`,
+          description: 'Prepare welcome drinks, room key, and check-in materials.',
+          priority: 'MEDIUM',
+          status: 'PENDING',
+          dueDate: checkIn,
+        },
+      ],
+    });
+
     return NextResponse.json({ booking }, { status: 201 });
   } catch (error: any) {
     console.error('Create booking API error:', error);

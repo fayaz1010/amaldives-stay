@@ -215,6 +215,7 @@ model Booking {
   arrival       ArrivalRecord?
   departure     DepartureRecord?
   minIBarUsages MinIBarUsage[]
+  staffTasks    StaffTask[]
   
   @@index([tenantId])
   @@index([confirmationNumber])
@@ -796,6 +797,8 @@ model StaffTask {
   id          String        @id @default(cuid())
   tenantId    String
   staffId     String?
+  bookingId   String?
+  source      String?       // BOOKING | MANUAL | SYSTEM
   title       String
   description String?
   category    String?
@@ -807,8 +810,10 @@ model StaffTask {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   staff       StaffProfile? @relation(fields: [staffId], references: [id])
+  booking     Booking?      @relation(fields: [bookingId], references: [id])
   @@index([tenantId])
   @@index([staffId])
+  @@index([bookingId])
   @@index([status])
 }
 
