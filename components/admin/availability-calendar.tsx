@@ -40,10 +40,10 @@ function toKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function formatDateShort(d: Date) {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 function formatDateLong(d: Date) {
-  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 }
 function calcNights(start: string, end: string) {
   const a = new Date(start), b = new Date(end);
@@ -298,10 +298,33 @@ function CalendarSkeleton() {
 
 // ---- Main Calendar ----
 export function AvailabilityCalendar() {
-  const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
+  const [anchor, setAnchor] = useState<Date | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [rooms, setRooms] = useState<RoomAvailability[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Avoid hydration mismatch — dates depend on local timezone which differs from server UTC
+  useEffect(() => {
+    setAnchor(startOfDay(new Date()));
+    setMounted(true);
+  }, []);
+
+  // Show skeleton until client has mounted (avoids SSR/client mismatch)
+  if (!mounted || !anchor) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+        <CalendarSkeleton />
+      </div>
+    );
+  }
 
   // Selection state
   const [selStart, setSelStart] = useState<string | null>(null);
@@ -424,7 +447,7 @@ export function AvailabilityCalendar() {
   const normalStart = hasSelection ? (selStart! <= selEnd! ? selStart! : selEnd!) : null;
   const normalEnd = hasSelection ? (selStart! <= selEnd! ? selEnd! : selStart!) : null;
 
-  const rangeLabel = `${days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const rangeLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <div className="space-y-4 relative">
