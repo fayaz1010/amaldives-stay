@@ -6,13 +6,18 @@ import { RoomServiceBoard } from '@/components/admin/room-service-board';
 
 export const dynamic = 'force-dynamic';
 
+const EXTRA_CATEGORIES = ['EXCURSION', 'DIVING', 'SNORKELLING', 'PICNIC', 'FISHING', 'RENTAL'];
+
 export default async function RoomServicePage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.tenantId) redirect('/auth/signin');
 
   const [orders, rooms] = await Promise.all([
     prisma.serviceOrder.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: {
+        tenantId: session.user.tenantId,
+        service: { category: { notIn: EXTRA_CATEGORIES } },
+      },
       include: {
         service: { select: { name: true, category: true } },
         booking: {
