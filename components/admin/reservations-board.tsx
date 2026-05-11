@@ -91,6 +91,7 @@ interface Booking {
   status: string;
   source?: string | null;
   notes?: string | null;
+  groupBookingId?: string | null;
   guest?: { name: string | null; email: string } | null;
   room?: { number: string; name: string | null; type: string; basePrice: number; property?: { currency?: string } | null } | null;
   serviceOrders?: Array<{ id: string; totalAmount: number }> | null;
@@ -210,8 +211,13 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                 <User className="h-3 w-3 text-gray-400 shrink-0" />
                                 <p className="font-semibold text-sm truncate">{b.guest?.name || '—'}</p>
                               </div>
-                              <p className="text-[11px] text-gray-400">
+                              <p className="text-[11px] text-gray-400 flex items-center gap-1">
                                 #{b.confirmationNumber.slice(-8)}
+                                {b.groupBookingId && (
+                                  <span className="inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0 text-[10px] font-semibold text-purple-700">
+                                    Group
+                                  </span>
+                                )}
                               </p>
                             </div>
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${STATUS_CHIP[b.status] || 'bg-gray-100 text-gray-600'}`}>

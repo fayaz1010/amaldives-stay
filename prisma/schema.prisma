@@ -114,6 +114,7 @@ model Tenant {
   fnbOutlets        FnBOutlet[]
   expenses          Expense[]
   payrollEntries    PayrollEntry[]
+  groupBookings     GroupBooking[]
   
   @@index([subdomain])
   @@index([status])
@@ -204,6 +205,7 @@ model Booking {
   source        String?       // "direct", "booking.com", etc.
   notes         String?
   specialRequests String?
+  groupBookingId String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -211,6 +213,7 @@ model Booking {
   property      Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   room          Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   guest         User          @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  groupBooking  GroupBooking? @relation(fields: [groupBookingId], references: [id])
   
   payments      Payment[]
   serviceOrders ServiceOrder[]
@@ -224,6 +227,18 @@ model Booking {
   @@index([checkInDate])
   @@index([checkOutDate])
   @@index([status])
+  @@index([groupBookingId])
+}
+
+model GroupBooking {
+  id        String    @id @default(cuid())
+  tenantId  String
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings  Booking[]
+  @@index([tenantId])
 }
 
 // Guest Management
