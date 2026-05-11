@@ -22,6 +22,7 @@ export async function GET(
         description: true,
         logo: true,
         subdomain: true,
+        plan: true,
         isVerifiedDirect: true,
         properties: {
           select: {
@@ -31,9 +32,29 @@ export async function GET(
             address: true,
             city: true,
             country: true,
+            phone: true,
+            email: true,
+            website: true,
             images: true,
             amenities: true,
+            settings: true,
+            checkInTime: true,
+            checkOutTime: true,
+            rooms: {
+              where: { status: { in: ['AVAILABLE', 'OCCUPIED'] } },
+              select: {
+                id: true,
+                type: true,
+                capacity: true,
+                basePrice: true,
+                description: true,
+                amenities: true,
+                images: true,
+              },
+              distinct: ['type'],
+            },
           },
+          take: 1,
         },
       },
     });
@@ -42,15 +63,37 @@ export async function GET(
       return NextResponse.json({ error: 'Guesthouse not found' }, { status: 404 });
     }
 
+    const property = tenant.properties[0] ?? null;
+    const webProfile = (property?.settings as any)?.webProfile ?? {};
+
     return NextResponse.json({
       tenant: {
         name: tenant.name,
         description: tenant.description,
         logo: tenant.logo,
         subdomain: tenant.subdomain,
+        plan: tenant.plan,
         isVerifiedDirect: tenant.isVerifiedDirect,
-        properties: tenant.properties,
       },
+      property: property
+        ? {
+            name: property.name,
+            description: property.description,
+            address: property.address,
+            city: property.city,
+            country: property.country,
+            phone: property.phone,
+            email: property.email,
+            website: property.website,
+            images: property.images,
+            amenities: property.amenities,
+            checkInTime: property.checkInTime,
+            checkOutTime: property.checkOutTime,
+            tagline: webProfile.tagline ?? null,
+            highlights: webProfile.highlights ?? [],
+            roomTypes: property.rooms ?? [],
+          }
+        : null,
     });
   } catch (error) {
     console.error('Public info API error:', error);

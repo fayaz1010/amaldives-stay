@@ -370,7 +370,9 @@ export class TenantDb {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [rooms, bookings, monthlyRevenue, todayCheckIns, todayCheckOuts] = await Promise.all([
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const [rooms, bookings, monthlyPaid, todayCheckIns, todayCheckOuts, pendingTasksCount, openBookings] = await Promise.all([
       prisma.room.findMany({
         where: { tenantId: this.tenantId },
         select: { status: true },
@@ -380,35 +382,42 @@ export class TenantDb {
           tenantId: this.tenantId,
           status: { in: ['CONFIRMED', 'CHECKED_IN'] },
         },
-        select: { totalAmount: true, status: true },
+        select: { totalAmount: true, paidAmount: true, status: true },
       }),
-      prisma.booking.aggregate({
+      // Monthly revenue = all payments received this month
+      prisma.payment.aggregate({
         where: {
           tenantId: this.tenantId,
-          status: 'CHECKED_OUT',
-          checkOutDate: {
-            gte: new Date(today.getFullYear(), today.getMonth(), 1),
-          },
+          status: 'COMPLETED',
+          processedAt: { gte: monthStart },
         },
-        _sum: { totalAmount: true },
+        _sum: { amount: true },
       }),
       prisma.booking.count({
         where: {
           tenantId: this.tenantId,
-          checkInDate: {
-            gte: today,
-            lt: tomorrow,
-          },
+          checkInDate: { gte: today, lt: tomorrow },
         },
       }),
       prisma.booking.count({
         where: {
           tenantId: this.tenantId,
-          checkOutDate: {
-            gte: today,
-            lt: tomorrow,
-          },
+          checkOutDate: { gte: today, lt: tomorrow },
         },
+      }),
+      prisma.staffTask.count({
+        where: {
+          tenantId: this.tenantId,
+          status: { in: ['PENDING', 'IN_PROGRESS'] },
+        },
+      }),
+      // Open receivables: confirmed/in-house bookings with outstanding balance
+      prisma.booking.findMany({
+        where: {
+          tenantId: this.tenantId,
+          status: { in: ['CONFIRMED', 'CHECKED_IN'] },
+        },
+        select: { totalAmount: true, paidAmount: true },
       }),
     ]);
 
@@ -418,10 +427,11 @@ export class TenantDb {
     const cleaningRooms = rooms.filter(r => r.status === 'CLEANING').length;
     const maintenanceRooms = rooms.filter(r => r.status === 'MAINTENANCE').length;
 
-    const totalRevenue = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
+    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
     const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
     const averageDailyRate = occupiedRooms > 0 ? totalRevenue / occupiedRooms : 0;
     const revPAR = totalRooms > 0 ? totalRevenue / totalRooms : 0;
+    const openReceivables = openBookings.reduce((s, b) => s + Math.max(0, b.totalAmount - b.paidAmount), 0);
 
     return {
       totalRooms,
@@ -431,8 +441,10 @@ export class TenantDb {
       maintenanceRooms,
       todayCheckIns,
       todayCheckOuts,
+      pendingTasksCount,
+      openReceivables,
       totalRevenue,
-      monthlyRevenue: monthlyRevenue._sum.totalAmount || 0,
+      monthlyRevenue: monthlyPaid._sum.amount || 0,
       occupancyRate,
       averageDailyRate,
       revPAR,

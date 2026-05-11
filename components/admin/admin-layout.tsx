@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -18,7 +17,6 @@ import {
   UtensilsCrossed,
   BookOpen,
   PlaneLanding,
-  Anchor,
   BarChart3,
   Settings,
   Menu,
@@ -30,160 +28,308 @@ import {
   UserCheck,
   Package,
   Utensils,
-  ShoppingBag,
   CheckSquare,
   DollarSign,
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  Layers,
+  Wifi,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  indent?: boolean;
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: any;
+  items: NavItem[];
+  planRequired?: string; // plan tier required to see (undefined = always visible)
+}
 
 interface AdminLayoutProps {
   children: React.ReactNode;
   user: any;
+  tenantPlan?: string;
+  tenantSubdomain?: string;
 }
 
-export function AdminLayout({ children, user }: AdminLayoutProps) {
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: LayoutDashboard,
+    items: [
+      { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+      { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
+      { name: 'Finance', href: '/admin/finance', icon: DollarSign },
+      { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
+    ],
+  },
+  {
+    id: 'reservations',
+    label: 'Reservations',
+    icon: Calendar,
+    items: [
+      { name: 'Reservations', href: '/admin/reservations', icon: Calendar },
+      { name: 'Availability', href: '/admin/availability', icon: CalendarDays },
+      { name: 'Arrivals & Departures', href: '/admin/arrivals', icon: PlaneLanding },
+    ],
+  },
+  {
+    id: 'rooms',
+    label: 'Rooms',
+    icon: Hotel,
+    items: [
+      { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
+      { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
+      { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
+    ],
+  },
+  {
+    id: 'guest-services',
+    label: 'Guest Services',
+    icon: UtensilsCrossed,
+    items: [
+      { name: 'Room Service', href: '/admin/room-service', icon: UtensilsCrossed },
+      { name: 'Service Menu', href: '/admin/room-service/menu', icon: BookOpen, indent: true },
+      { name: 'Mini Bar', href: '/admin/minibar', icon: Beer },
+      { name: 'Extra Services', href: '/admin/extra-services', icon: Compass },
+      { name: 'F&B', href: '/admin/fnb', icon: Utensils },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    icon: Layers,
+    items: [
+      { name: 'Guests', href: '/admin/guests', icon: Users },
+      { name: 'Staff', href: '/admin/staff', icon: UserCheck },
+      { name: 'Logistics', href: '/admin/logistics', icon: Package },
+    ],
+  },
+  {
+    id: 'web',
+    label: 'Web & Distribution',
+    icon: Globe,
+    planRequired: 'web',
+    items: [
+      { name: 'amaldives Page', href: '/admin/web', icon: Globe },
+      { name: 'Channel Manager', href: '/admin/web?tab=channels', icon: Wifi },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: Settings,
+    items: [
+      { name: 'Settings', href: '/admin/settings', icon: Settings },
+    ],
+  },
+];
+
+function SidebarContent({
+  pathname,
+  tenantPlan,
+  onClose,
+}: {
+  pathname: string;
+  tenantPlan: string;
+  onClose?: () => void;
+}) {
+  // Determine which group is active based on current path
+  const activeGroupId = useMemo(() => {
+    for (const group of NAV_GROUPS) {
+      if (group.items.some((item) => {
+        if (item.href === '/admin') return pathname === '/admin';
+        return pathname.startsWith(item.href);
+      })) {
+        return group.id;
+      }
+    }
+    return 'overview';
+  }, [pathname]);
+
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set([activeGroupId]));
+
+  function toggleGroup(id: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function isItemActive(item: NavItem) {
+    if (item.href === '/admin') return pathname === '/admin';
+    return pathname.startsWith(item.href.split('?')[0]);
+  }
+
+  const visibleGroups = NAV_GROUPS.filter((g) => {
+    if (!g.planRequired) return true;
+    // Always show Web group but gate content inside
+    return true;
+  });
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="flex items-center justify-between h-14 px-4 border-b shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center">
+            <Hotel className="h-4 w-4 text-white" />
+          </div>
+          <span className="font-bold text-gray-900 text-sm">amaldives STAY</span>
+        </div>
+        {onClose && (
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Nav groups */}
+      <nav className="flex-1 overflow-y-auto py-2 px-2">
+        {visibleGroups.map((group) => {
+          const isOpen = openGroups.has(group.id);
+          const isLocked = group.planRequired && tenantPlan === 'basic';
+          const GroupIcon = group.icon;
+
+          return (
+            <div key={group.id} className="mb-0.5">
+              {/* Group header */}
+              <button
+                onClick={() => toggleGroup(group.id)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors',
+                  isOpen ? 'text-teal-700 bg-teal-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
+                )}
+              >
+                <GroupIcon className="h-3.5 w-3.5 shrink-0" />
+                <span className="flex-1 text-left">{group.label}</span>
+                {isLocked && (
+                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">PRO</span>
+                )}
+                {isOpen ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </button>
+
+              {/* Group items */}
+              {isOpen && (
+                <div className="mt-0.5 space-y-0.5">
+                  {group.items.map((item) => {
+                    const active = isItemActive(item);
+                    const ItemIcon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={isLocked ? '/admin/web' : item.href}
+                        onClick={onClose}
+                        className={cn(
+                          'flex items-center gap-2.5 py-2 rounded-lg text-sm transition-colors',
+                          item.indent ? 'pl-8 pr-3' : 'pl-5 pr-3',
+                          active
+                            ? 'bg-teal-50 text-teal-700 font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                        )}
+                      >
+                        <ItemIcon className={cn('h-4 w-4 shrink-0', active ? 'text-teal-600' : 'text-gray-400')} />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdomain = '' }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Tasks',   href: '/admin/tasks',   icon: CheckSquare },
-    { name: 'Finance', href: '/admin/finance', icon: DollarSign },
-    { name: 'Reservations', href: '/admin/reservations', icon: Calendar },
-    { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
-    { name: 'Availability', href: '/admin/availability', icon: CalendarDays },
-    { name: 'Guests', href: '/admin/guests', icon: Users },
-    { name: 'Staff', href: '/admin/staff', icon: UserCheck },
-    { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
-    { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
-    { name: 'Logistics', href: '/admin/logistics', icon: Package },
-    { name: 'Room Service', href: '/admin/room-service', icon: UtensilsCrossed },
-    { name: 'Menu', href: '/admin/room-service/menu', icon: BookOpen, indent: true },
-    { name: 'Mini Bar', href: '/admin/minibar', icon: Beer },
-    { name: 'Extra Services', href: '/admin/extra-services', icon: Compass },
-    { name: 'F&B', href: '/admin/fnb', icon: Utensils },
-    { name: 'Arrivals', href: '/admin/arrivals', icon: PlaneLanding },
-    { name: 'Transfers', href: '/admin/arrivals/transport', icon: Anchor, indent: true },
-    { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
-  ];
-
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
-  };
+  const currentPageName = useMemo(() => {
+    for (const group of NAV_GROUPS) {
+      for (const item of group.items) {
+        if (item.href === '/admin' && pathname === '/admin') return 'Dashboard';
+        if (item.href !== '/admin' && pathname.startsWith(item.href.split('?')[0])) return item.name;
+      }
+    }
+    return 'Dashboard';
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar */}
-      <div className={cn(
-        "fixed inset-0 z-50 lg:hidden",
-        sidebarOpen ? "block" : "hidden"
-      )}>
-        <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-y-0 left-0 w-60 bg-white shadow-xl">
+            <SidebarContent
+              pathname={pathname}
+              tenantPlan={tenantPlan}
+              onClose={() => setSidebarOpen(false)}
+            />
           </div>
-          <nav className="mt-4">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center py-3 text-sm font-medium transition-colors hover:bg-gray-100",
-                  item.indent ? "pl-10 pr-4" : "px-4",
-                  pathname === item.href
-                    ? "bg-teal-50 text-teal-700 border-r-2 border-teal-600"
-                    : "text-gray-700"
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
         </div>
-      </div>
+      )}
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
-          <div className="flex items-center h-16 px-4 border-b">
-            <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-          </div>
-          <nav className="flex-1 py-4">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center py-3 text-sm font-medium transition-colors hover:bg-gray-100",
-                  item.indent ? "pl-10 pr-4" : "px-4",
-                  pathname === item.href
-                    ? "bg-teal-50 text-teal-700 border-r-2 border-teal-600"
-                    : "text-gray-700"
-                )}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col border-r border-gray-200 bg-white">
+        <SidebarContent pathname={pathname} tenantPlan={tenantPlan} />
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-56">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 bg-white border-b border-gray-200">
+        <div className="sticky top-0 z-40 flex h-12 bg-white border-b border-gray-200 items-center px-4 gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden ml-4"
+            className="lg:hidden h-8 w-8"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </Button>
-          
-          <div className="flex flex-1 justify-between px-4">
-            <div className="flex items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {navigation.find(item => item.href === pathname)?.name || 'Dashboard'}
-              </h2>
+
+          <span className="text-sm font-semibold text-gray-800 flex-1">{currentPageName}</span>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
+              <User className="h-4 w-4 text-gray-400" />
+              {user?.name}
+              <Badge variant="secondary" className="text-xs capitalize">
+                {user?.role?.replace('_', ' ').toLowerCase()}
+              </Badge>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-700">{user?.name}</span>
-                <Badge variant="secondary" className="text-xs">
-                  {user?.role?.replace('_', ' ')}
-                </Badge>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-gray-500 hover:text-red-600"
+              onClick={() => signOut({ callbackUrl: '/' })}
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-6">
-          {children}
-        </main>
+        <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

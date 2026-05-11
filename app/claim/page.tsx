@@ -36,6 +36,7 @@ function ClaimForm() {
 
   const [guesthouseName, setGuesthouseName] = useState(initialName);
   const [subdomain, setSubdomain] = useState(initialSubdomain);
+  const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -80,6 +81,7 @@ function ClaimForm() {
           guesthouseName,
           subdomain: finalSubdomain,
           email,
+          name: ownerName || email.split('@')[0],
           password,
         }),
       });
@@ -173,6 +175,17 @@ function ClaimForm() {
                 {slugify(subdomain || guesthouseName) || 'your-guesthouse'}.stay.amaldives.com
               </span>
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ownerName">Your name</Label>
+            <Input
+              id="ownerName"
+              type="text"
+              placeholder="Full name"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">

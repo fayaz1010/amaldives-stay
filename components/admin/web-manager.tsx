@@ -1,0 +1,541 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+  Globe,
+  Wifi,
+  Copy,
+  Check,
+  ExternalLink,
+  Plus,
+  Trash2,
+  Upload,
+  Loader2,
+  Save,
+  Image as ImageIcon,
+  Calendar,
+  CheckCircle,
+  ArrowRight,
+  Lock,
+  Hotel,
+} from 'lucide-react';
+import Image from 'next/image';
+
+interface WebManagerProps {
+  tenant: any;
+  property: any;
+  subdomain: string;
+  plan: string;
+  defaultTab?: string;
+}
+
+const COMMON_AMENITIES = [
+  'Free WiFi', 'Air Conditioning', 'Swimming Pool', 'Snorkelling', 'Diving',
+  'Restaurant', 'Bar', 'Room Service', 'Airport Transfer', 'Laundry',
+  'Bicycle Rental', 'Water Sports', 'Beach Access', 'Sea View', 'Garden View',
+  'Fishing Trips', 'Spa', 'Gym', 'Parking', '24-hour Reception',
+];
+
+function UpgradeBanner() {
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 flex flex-col items-center text-center gap-3">
+      <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+        <Lock className="h-6 w-6 text-amber-600" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-gray-900">Web & Distribution — Pro Feature</h3>
+        <p className="text-sm text-gray-600 mt-1">
+          Upgrade to the <strong>Web</strong> plan to edit your amaldives.com page, showcase your property,
+          and get an iCal feed for Booking.com, Airbnb and other channels.
+        </p>
+      </div>
+      <a
+        href="mailto:hello@amaldives.com?subject=Upgrade%20to%20Web%20Plan"
+        className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
+      >
+        Contact us to upgrade <ArrowRight className="h-4 w-4" />
+      </a>
+    </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <button
+      onClick={copy}
+      className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+      title="Copy"
+    >
+      {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+    </button>
+  );
+}
+
+export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'profile' }: WebManagerProps) {
+  const isLocked = plan === 'basic';
+  const icalUrl = `https://stay.amaldives.com/api/public/${subdomain}/calendar.ics`;
+  const amaldivesUrl = `https://www.amaldives.com/guesthouses/${tenant?.amaldivesSlug ?? subdomain}`;
+  const stayUrl = `https://${subdomain}.stay.amaldives.com`;
+
+  // Profile form state
+  const [profile, setProfile] = useState({
+    tenantName: tenant?.name ?? '',
+    tenantDescription: tenant?.description ?? '',
+    propertyName: property?.name ?? '',
+    propertyDescription: property?.description ?? '',
+    tagline: (property?.settings as any)?.webProfile?.tagline ?? '',
+    propertyPhone: property?.phone ?? '',
+    propertyEmail: property?.email ?? '',
+    propertyWebsite: property?.website ?? '',
+  });
+  const [highlights, setHighlights] = useState<string[]>((property?.settings as any)?.webProfile?.highlights ?? []);
+  const [amenities, setAmenities] = useState<string[]>(property?.amenities ?? []);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [newHighlight, setNewHighlight] = useState('');
+
+  // Photo state
+  const [photos, setPhotos] = useState<string[]>(property?.images ?? []);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // iCal test state
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+
+  async function saveProfile() {
+    setSaving(true);
+    try {
+      await fetch('/api/admin/web/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...profile, highlights, amenities }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function uploadPhoto(file: File) {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'property');
+      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+      if (res.ok) {
+        const { url } = await res.json();
+        const newPhotos = [...photos, url];
+        setPhotos(newPhotos);
+        await fetch('/api/admin/web/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: newPhotos }),
+        });
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removePhoto(url: string) {
+    const newPhotos = photos.filter((p) => p !== url);
+    setPhotos(newPhotos);
+    await fetch('/api/admin/web/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: newPhotos }),
+    });
+  }
+
+  async function testIcal() {
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(icalUrl);
+      if (!res.ok) { setTestResult('Error fetching iCal feed'); return; }
+      const text = await res.text();
+      const eventCount = (text.match(/BEGIN:VEVENT/g) ?? []).length;
+      setTestResult(`Feed OK — ${eventCount} blocked date${eventCount !== 1 ? 's' : ''} found.`);
+    } catch {
+      setTestResult('Could not reach feed URL');
+    } finally {
+      setTestLoading(false);
+    }
+  }
+
+  function toggleAmenity(a: string) {
+    setAmenities((prev) =>
+      prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
+    );
+  }
+
+  if (isLocked) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Globe className="h-5 w-5 text-teal-600" /> Web & Distribution
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">Manage your amaldives.com page and channel manager sync</p>
+        </div>
+        <UpgradeBanner />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Globe className="h-5 w-5 text-teal-600" /> Web & Distribution
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">Edit your amaldives.com page and set up channel manager sync</p>
+        </div>
+        <div className="flex gap-2">
+          <a href={amaldivesUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="gap-2 text-xs">
+              <ExternalLink className="h-3.5 w-3.5" /> View on amaldives.com
+            </Button>
+          </a>
+          <a href={stayUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="gap-2 text-xs">
+              <Hotel className="h-3.5 w-3.5" /> Booking page
+            </Button>
+          </a>
+        </div>
+      </div>
+
+      <Tabs defaultValue={defaultTab} className="bg-white rounded-xl border overflow-hidden">
+        <TabsList className="w-full rounded-none border-b bg-gray-50 h-10">
+          <TabsTrigger value="profile" className="flex-1 text-xs">Web Profile</TabsTrigger>
+          <TabsTrigger value="photos" className="flex-1 text-xs">Photos</TabsTrigger>
+          <TabsTrigger value="rooms" className="flex-1 text-xs">Rooms & Rates</TabsTrigger>
+          <TabsTrigger value="channels" className="flex-1 text-xs">Channel Manager</TabsTrigger>
+        </TabsList>
+
+        {/* Web Profile tab */}
+        <TabsContent value="profile" className="m-0 p-5 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Display Name</label>
+              <Input value={profile.tenantName} onChange={(e) => setProfile({ ...profile, tenantName: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Tagline</label>
+              <Input
+                placeholder="e.g. Your peaceful island retreat in the Maldives"
+                value={profile.tagline}
+                onChange={(e) => setProfile({ ...profile, tagline: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Property Description</label>
+            <Textarea
+              rows={4}
+              placeholder="Describe your property for guests browsing amaldives.com..."
+              value={profile.propertyDescription}
+              onChange={(e) => setProfile({ ...profile, propertyDescription: e.target.value })}
+            />
+          </div>
+
+          {/* Highlights */}
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-2 block">Highlights (bullet points on your page)</label>
+            <div className="space-y-2 mb-2">
+              {highlights.map((h, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-teal-500 text-sm">•</span>
+                  <Input
+                    value={h}
+                    onChange={(e) => setHighlights((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
+                    className="h-8 text-sm"
+                  />
+                  <button onClick={() => setHighlights((prev) => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a highlight..."
+                value={newHighlight}
+                onChange={(e) => setNewHighlight(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newHighlight.trim()) {
+                    setHighlights((prev) => [...prev, newHighlight.trim()]);
+                    setNewHighlight('');
+                  }
+                }}
+                className="h-8 text-sm"
+              />
+              <Button size="sm" variant="outline" onClick={() => {
+                if (newHighlight.trim()) { setHighlights((prev) => [...prev, newHighlight.trim()]); setNewHighlight(''); }
+              }}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Contact info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Phone</label>
+              <Input value={profile.propertyPhone} onChange={(e) => setProfile({ ...profile, propertyPhone: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Email</label>
+              <Input value={profile.propertyEmail} onChange={(e) => setProfile({ ...profile, propertyEmail: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Website</label>
+              <Input placeholder="https://" value={profile.propertyWebsite} onChange={(e) => setProfile({ ...profile, propertyWebsite: e.target.value })} />
+            </div>
+          </div>
+
+          {/* Amenities */}
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-2 block">Amenities</label>
+            <div className="flex flex-wrap gap-2">
+              {COMMON_AMENITIES.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => toggleAmenity(a)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    amenities.includes(a)
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-teal-400'
+                  }`}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button onClick={saveProfile} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+              {saved ? 'Saved!' : 'Save Profile'}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Photos tab */}
+        <TabsContent value="photos" className="m-0 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''} uploaded</p>
+            <div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0]); }}
+              />
+              <Button size="sm" onClick={() => fileRef.current?.click()} disabled={uploading} className="gap-2">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Upload Photo
+              </Button>
+            </div>
+          </div>
+
+          {photos.length === 0 ? (
+            <div
+              className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center cursor-pointer hover:border-teal-400 transition-colors"
+              onClick={() => fileRef.current?.click()}
+            >
+              <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-400">Click to upload your first property photo</p>
+              <p className="text-xs text-gray-300 mt-1">These appear on your amaldives.com page</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {photos.map((url, i) => (
+                <div key={url} className="relative group rounded-lg overflow-hidden border aspect-video bg-gray-100">
+                  <Image src={url} alt={`Property photo ${i + 1}`} fill className="object-cover" sizes="200px" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      onClick={() => removePhoto(url)}
+                      className="bg-red-600 text-white p-1.5 rounded-full hover:bg-red-700"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {i === 0 && (
+                    <span className="absolute top-1 left-1 bg-teal-600 text-white text-[10px] px-1.5 py-0.5 rounded">Cover</span>
+                  )}
+                </div>
+              ))}
+              <div
+                className="border-2 border-dashed border-gray-200 rounded-lg aspect-video flex items-center justify-center cursor-pointer hover:border-teal-400 transition-colors"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Plus className="h-6 w-6 text-gray-300" />
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Rooms & Rates tab */}
+        <TabsContent value="rooms" className="m-0 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-600">Room types shown on amaldives.com. Manage rates in Rooms.</p>
+            <a href="/admin/rooms">
+              <Button variant="outline" size="sm" className="gap-2 text-xs">
+                Manage Rooms <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </a>
+          </div>
+          {(property?.rooms ?? []).length === 0 ? (
+            <div className="text-center py-10 text-gray-400 text-sm">
+              No rooms configured yet. Add rooms to display them on your page.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(property?.rooms ?? []).map((r: any) => (
+                <div key={r.id} className="flex items-center gap-4 p-4 rounded-xl border bg-white hover:shadow-sm transition-shadow">
+                  {r.images?.[0] ? (
+                    <div className="relative w-20 h-14 rounded-lg overflow-hidden shrink-0">
+                      <Image src={r.images[0]} alt={r.type} fill className="object-cover" sizes="80px" />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                      <Hotel className="h-6 w-6 text-gray-300" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-gray-900">{r.type}</p>
+                    <p className="text-xs text-gray-400">Sleeps {r.capacity}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-teal-700">${r.basePrice}<span className="text-xs text-gray-400 font-normal">/night</span></p>
+                    <Badge variant="outline" className="text-xs">Visible on page</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Channel Manager tab */}
+        <TabsContent value="channels" className="m-0 p-5 space-y-6">
+          {/* iCal feed */}
+          <div className="rounded-xl border border-teal-200 bg-teal-50 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Wifi className="h-5 w-5 text-teal-600" />
+              <h3 className="font-semibold text-gray-900">Your iCal Availability Feed</h3>
+              <Badge className="bg-teal-100 text-teal-700 border-teal-200">Auto-updates</Badge>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Paste this URL into Booking.com, Airbnb, Expedia or any channel manager. It stays live — whenever you get a booking in Stay, blocked dates update automatically.
+            </p>
+            <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-2">
+              <code className="text-xs text-gray-700 flex-1 break-all">{icalUrl}</code>
+              <CopyButton text={icalUrl} />
+              <a href={icalUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <Button size="sm" variant="outline" onClick={testIcal} disabled={testLoading} className="gap-2">
+                {testLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
+                Test Feed
+              </Button>
+              {testResult && (
+                <span className={`text-xs ${testResult.startsWith('Feed OK') ? 'text-green-700' : 'text-red-600'}`}>
+                  {testResult}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Instructions by OTA */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-gray-800">How to connect</h3>
+            {[
+              {
+                name: 'Booking.com',
+                steps: [
+                  'Log in to your Booking.com Extranet',
+                  'Go to Rates & Availability → Sync calendars',
+                  'Select "Import from iCal" and paste the URL above',
+                  'Booking.com will sync every 6–12 hours',
+                ],
+                color: 'text-blue-700',
+                bg: 'bg-blue-50 border-blue-100',
+              },
+              {
+                name: 'Airbnb',
+                steps: [
+                  'Go to your Airbnb listing → Calendar',
+                  'Click "Availability settings" → Import Calendar',
+                  'Paste the URL above and click Import',
+                  'Airbnb syncs approximately every 2 hours',
+                ],
+                color: 'text-red-600',
+                bg: 'bg-red-50 border-red-100',
+              },
+              {
+                name: 'Expedia / Hotels.com',
+                steps: [
+                  'Log in to Expedia Partner Central',
+                  'Go to Availability → Calendar Sync',
+                  'Choose "iCalendar Import" and enter the URL',
+                  'Sync frequency depends on your account settings',
+                ],
+                color: 'text-yellow-700',
+                bg: 'bg-yellow-50 border-yellow-100',
+              },
+              {
+                name: 'Channel Manager (Cloudbeds, Lodgify, etc.)',
+                steps: [
+                  'Find the "External calendar / iCal import" section',
+                  'Paste the URL above as a blocked-dates feed',
+                  'Most channel managers poll every 1–4 hours',
+                  'Contact your CM support if you need help',
+                ],
+                color: 'text-gray-700',
+                bg: 'bg-gray-50 border-gray-200',
+              },
+            ].map((ota) => (
+              <div key={ota.name} className={`rounded-xl border p-4 ${ota.bg}`}>
+                <h4 className={`font-semibold text-sm mb-2 ${ota.color}`}>{ota.name}</h4>
+                <ol className="space-y-1">
+                  {ota.steps.map((step, i) => (
+                    <li key={i} className="text-xs text-gray-700 flex gap-2">
+                      <span className="font-bold text-gray-400 shrink-0">{i + 1}.</span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+
+          {/* Note on 2-way sync */}
+          <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+            <strong>Note:</strong> iCal export is one-way — bookings from OTAs won't automatically appear in Stay. To prevent double-bookings, close availability manually in Stay whenever you accept a booking from Booking.com or Airbnb. Full 2-way sync (Channel Manager Plus) is coming in a future update.
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

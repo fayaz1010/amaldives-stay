@@ -9,18 +9,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       guestHouseName,
+      guesthouseName,   // claim form field name
       subdomain,
       email,
       ownerName,
+      name,             // fallback from claim form
       password,
       amaldivesSlug,
     } = body;
 
-    if (!guestHouseName || !subdomain || !email || !ownerName || !password) {
+    const resolvedName = guestHouseName || guesthouseName;
+    const resolvedOwnerName = ownerName || name || email.split('@')[0];
+
+    if (!resolvedName || !subdomain || !email || !password) {
       return NextResponse.json(
         {
-          error:
-            'Missing required fields: guestHouseName, subdomain, email, ownerName, password',
+          error: 'Missing required fields: guestHouseName, subdomain, email, password',
         },
         { status: 400 }
       );
@@ -62,7 +66,7 @@ export async function POST(request: NextRequest) {
     const tenant = await prisma.$transaction(async (tx) => {
       const newTenant = await tx.tenant.create({
         data: {
-          name: guestHouseName,
+          name: resolvedName,
           subdomain: normalizedSubdomain,
           plan: 'free',
           status: 'ACTIVE',
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
       await tx.user.create({
         data: {
           email,
-          name: ownerName,
+          name: resolvedOwnerName,
           password: hashedPassword,
           role: 'TENANT_ADMIN',
           tenantId: newTenant.id,
