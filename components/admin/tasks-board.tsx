@@ -369,15 +369,27 @@ export function TasksBoard() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function updateStatus(id: string, status: string) {
+  async function updateStatus(id: string, newStatus: string) {
+    // Optimistic update — swap status in place immediately, no full reload
+    const prev = tasks.find((t) => t.id === id);
+    setTasks((all) =>
+      all.map((t) =>
+        t.id === id
+          ? { ...t, status: newStatus, completedAt: newStatus === 'COMPLETED' ? new Date().toISOString() : t.completedAt }
+          : t
+      )
+    );
     setBusyId(id);
     try {
-      await fetch(`/api/admin/tasks/${id}`, {
+      const res = await fetch(`/api/admin/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: newStatus }),
       });
-      await load();
+      if (!res.ok && prev) {
+        // Revert on error
+        setTasks((all) => all.map((t) => (t.id === id ? prev : t)));
+      }
     } finally {
       setBusyId(null);
     }

@@ -3,6 +3,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  @keyframes progress {
+    0%   { transform: translateX(-100%); }
+    50%  { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
+  }
+  .animate-progress {
+    animation: progress 1.4s ease-in-out infinite;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

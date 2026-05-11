@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -138,10 +138,12 @@ function SidebarContent({
   pathname,
   tenantPlan,
   onClose,
+  onNavClick,
 }: {
   pathname: string;
   tenantPlan: string;
   onClose?: () => void;
+  onNavClick?: () => void;
 }) {
   // Determine which group is active based on current path
   const activeGroupId = useMemo(() => {
@@ -234,7 +236,7 @@ function SidebarContent({
                       <Link
                         key={item.name}
                         href={isLocked ? '/admin/web' : item.href}
-                        onClick={onClose}
+                        onClick={() => { onNavClick?.(); onClose?.(); }}
                         className={cn(
                           'flex items-center gap-2.5 py-2 rounded-lg text-sm transition-colors',
                           item.indent ? 'pl-8 pr-3' : 'pl-5 pr-3',
@@ -260,7 +262,18 @@ function SidebarContent({
 
 export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdomain = '' }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const pathname = usePathname();
+
+  // Clear navigation indicator when route settles
+  useEffect(() => {
+    setNavigating(false);
+  }, [pathname]);
+
+  const handleNavClick = useCallback(() => {
+    setNavigating(true);
+    setSidebarOpen(false);
+  }, []);
 
   const currentPageName = useMemo(() => {
     for (const group of NAV_GROUPS) {
@@ -274,7 +287,7 @@ export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdom
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar overlay */}
+        {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
@@ -282,6 +295,7 @@ export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdom
             <SidebarContent
               pathname={pathname}
               tenantPlan={tenantPlan}
+              onNavClick={handleNavClick}
               onClose={() => setSidebarOpen(false)}
             />
           </div>
@@ -290,13 +304,19 @@ export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdom
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col border-r border-gray-200 bg-white">
-        <SidebarContent pathname={pathname} tenantPlan={tenantPlan} />
+        <SidebarContent pathname={pathname} tenantPlan={tenantPlan} onNavClick={handleNavClick} />
       </div>
 
       {/* Main content */}
       <div className="lg:pl-56">
         {/* Top bar */}
         <div className="sticky top-0 z-40 flex h-12 bg-white border-b border-gray-200 items-center px-4 gap-3">
+          {/* Navigation progress bar */}
+          {navigating && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-teal-100 overflow-hidden z-50">
+              <div className="h-full w-1/3 bg-teal-500 animate-progress rounded-full" />
+            </div>
+          )}
           <Button
             variant="ghost"
             size="icon"
