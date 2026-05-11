@@ -201,7 +201,7 @@ export function RoomServiceBoard({ orders, rooms }: RoomServiceBoardProps) {
                 ) : (
                   colOrders.map((order) => {
                     const { items, special, legacy, isJson } = parseOrderNotes(order);
-                    const roomNumber = order.booking?.room?.number;
+                    const roomNumber = order.room?.number ?? order.booking?.room?.number;
 
                     return (
                       <Card key={order.id} className="hover:shadow-md transition-shadow">

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       where: { tenantId: session.user.tenantId },
       include: {
         service: { select: { name: true, category: true } },
+        room: { select: { number: true } },
         booking: {
           select: {
             id: true,
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
         serviceId,
         guestId: session.user.id,
         bookingId: bookingId ?? null,
+        roomId: data.roomId ?? null,
         quantity: Array.isArray(data.items) ? data.items.length : (data.quantity ?? 1),
         totalAmount,
         status: 'PENDING',
