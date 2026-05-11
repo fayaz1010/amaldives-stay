@@ -110,6 +110,7 @@ model Tenant {
   minIBarItems      MinIBarItem[]
   logisticsOrders   LogisticsOrder[]
   logisticsInventory LogisticsInventoryItem[]
+  logisticsAssets   LogisticsAsset[]
   fnbOutlets        FnBOutlet[]
   
   @@index([subdomain])
@@ -916,6 +917,36 @@ enum StockMovementType {
   RECEIVED
   USED
   ADJUSTED
+}
+
+model LogisticsAsset {
+  id             String         @id @default(cuid())
+  tenantId       String
+  name           String
+  category       String         @default("equipment")
+  assetTag       String?
+  serialNumber   String?
+  location       String?
+  condition      AssetCondition @default(GOOD)
+  purchaseDate   DateTime?
+  purchaseCost   Float?
+  warrantyExpiry DateTime?
+  notes          String?
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId])
+  @@index([condition])
+}
+
+enum AssetCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  UNDER_REPAIR
+  RETIRED
 }
 
 // @@@ Food and Beverage @@@

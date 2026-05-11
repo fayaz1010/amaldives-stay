@@ -147,6 +147,50 @@ interface InventoryItem {
   _count?: { orderItems: number };
 }
 
+// ── Asset types ───────────────────────────────────────────────────────────────
+
+const ASSET_CATEGORIES = [
+  { value: 'furniture', label: 'Furniture', emoji: '🛋️' },
+  { value: 'electronics', label: 'Electronics', emoji: '📺' },
+  { value: 'appliances', label: 'Appliances', emoji: '❄️' },
+  { value: 'equipment', label: 'Equipment', emoji: '🔧' },
+  { value: 'vehicle', label: 'Vehicle / Boat', emoji: '⛵' },
+  { value: 'linen', label: 'Linen & Bedding', emoji: '🛏️' },
+  { value: 'safety', label: 'Safety & Security', emoji: '🔒' },
+  { value: 'other', label: 'Other', emoji: '📦' },
+];
+
+type AssetCondition = 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'UNDER_REPAIR' | 'RETIRED';
+
+const CONDITION_STYLES: Record<AssetCondition, { label: string; color: string; dot: string }> = {
+  EXCELLENT: { label: 'Excellent', color: 'bg-green-100 text-green-800 border-green-200', dot: 'bg-green-500' },
+  GOOD:      { label: 'Good',      color: 'bg-blue-100 text-blue-800 border-blue-200',   dot: 'bg-blue-500' },
+  FAIR:      { label: 'Fair',      color: 'bg-yellow-100 text-yellow-800 border-yellow-200', dot: 'bg-yellow-500' },
+  POOR:      { label: 'Poor',      color: 'bg-orange-100 text-orange-800 border-orange-200', dot: 'bg-orange-500' },
+  UNDER_REPAIR: { label: 'Under Repair', color: 'bg-red-100 text-red-800 border-red-200', dot: 'bg-red-500' },
+  RETIRED:   { label: 'Retired',   color: 'bg-gray-100 text-gray-600 border-gray-200',  dot: 'bg-gray-400' },
+};
+
+function assetCatMeta(value: string) {
+  return ASSET_CATEGORIES.find(c => c.value === value) ?? ASSET_CATEGORIES[ASSET_CATEGORIES.length - 1];
+}
+
+interface Asset {
+  id: string;
+  name: string;
+  category: string;
+  assetTag: string | null;
+  serialNumber: string | null;
+  location: string | null;
+  condition: AssetCondition;
+  purchaseDate: string | null;
+  purchaseCost: number | null;
+  warrantyExpiry: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
 const URGENCY_STYLES: Record<Urgency, string> = {
   LOW: 'bg-gray-100 text-gray-700 border-gray-200',
   MEDIUM: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -184,7 +228,7 @@ type FilterTab = 'ALL' | LogisticsStatus;
 
 export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
   const router = useRouter();
-  const [mainTab, setMainTab] = useState<'orders' | 'inventory' | 'stock'>('orders');
+  const [mainTab, setMainTab] = useState<'orders' | 'consumables' | 'stock' | 'assets'>('orders');
   const [filter, setFilter] = useState<FilterTab>('ALL');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -214,8 +258,30 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
   }, []);
 
   useEffect(() => {
-    if (mainTab === 'inventory' || mainTab === 'stock') loadInventory();
+    if (mainTab === 'consumables' || mainTab === 'stock') loadInventory();
+    if (mainTab === 'assets') loadAssets();
   }, [mainTab, loadInventory]);
+
+  // Assets state
+  const [assets, setAssets] = useState<Asset[] | null>(null);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [assetDialogOpen, setAssetDialogOpen] = useState(false);
+  const [editAsset, setEditAsset] = useState<Asset | null>(null);
+  const [assetFilter, setAssetFilter] = useState<string>('all');
+
+  const loadAssets = useCallback(async () => {
+    setAssetsLoading(true);
+    try {
+      const res = await fetch('/api/admin/logistics/assets');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setAssets(data.assets);
+    } catch {
+      alert('Failed to load assets');
+    } finally {
+      setAssetsLoading(false);
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     if (filter === 'ALL') return orders;
@@ -273,27 +339,39 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
             New Order
           </Button>
         )}
-        {(mainTab === 'inventory' || mainTab === 'stock') && (
+        {(mainTab === 'consumables' || mainTab === 'stock') && (
           <Button onClick={() => { setEditInvItem(null); setInvDialogOpen(true); }} className="bg-teal-600 hover:bg-teal-700">
             <Plus className="h-4 w-4 mr-2" />
-            Add Item
+            Add Consumable
+          </Button>
+        )}
+        {mainTab === 'assets' && (
+          <Button onClick={() => { setEditAsset(null); setAssetDialogOpen(true); }} className="bg-teal-600 hover:bg-teal-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Asset
           </Button>
         )}
       </div>
 
       {/* Main tab switcher */}
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as any)} className="mb-5">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-xl grid-cols-4">
           <TabsTrigger value="orders" className="gap-1.5">
             <Truck className="h-4 w-4" /> Orders
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="gap-1.5">
-            <LayoutList className="h-4 w-4" /> Inventory
+          <TabsTrigger value="consumables" className="gap-1.5">
+            <LayoutList className="h-4 w-4" /> Consumables
           </TabsTrigger>
           <TabsTrigger value="stock" className="gap-1.5">
-            <BarChart3 className="h-4 w-4" /> Stock
+            <BarChart3 className="h-4 w-4" /> Stock View
             {inventory && inventory.some(i => i.currentStock <= i.parLevel && i.parLevel > 0) && (
               <Badge className="ml-1 h-5 bg-red-500 hover:bg-red-500 text-white">!</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="assets" className="gap-1.5">
+            <Boxes className="h-4 w-4" /> Assets
+            {assets && assets.some(a => a.condition === 'POOR' || a.condition === 'UNDER_REPAIR') && (
+              <Badge className="ml-1 h-5 bg-orange-500 hover:bg-orange-500 text-white">!</Badge>
             )}
           </TabsTrigger>
         </TabsList>
@@ -356,8 +434,8 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
           </div>
         </TabsContent>
 
-        {/* ========== INVENTORY TAB ========== */}
-        <TabsContent value="inventory" className="mt-4">
+        {/* ========== CONSUMABLES TAB ========== */}
+        <TabsContent value="consumables" className="mt-4">
           {invLoading && !inventory ? (
             <div className="flex items-center justify-center py-16 text-gray-400">
               <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading…
@@ -462,8 +540,8 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
               <CardContent className="py-12 text-center text-gray-500">
                 <BarChart3 className="h-10 w-10 mx-auto text-gray-300 mb-3" />
                 <p className="text-lg font-medium mb-1">No inventory items</p>
-                <p className="text-sm mb-4">Add items in the Inventory tab first.</p>
-                <Button variant="outline" size="sm" onClick={() => setMainTab('inventory')}>Go to Inventory</Button>
+                <p className="text-sm mb-4">Add items in the Consumables tab first.</p>
+                <Button variant="outline" size="sm" onClick={() => setMainTab('consumables')}>Go to Consumables</Button>
               </CardContent>
             </Card>
           ) : (
@@ -556,6 +634,158 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
             </>
           )}
         </TabsContent>
+
+        {/* ========== ASSETS TAB ========== */}
+        <TabsContent value="assets" className="mt-4">
+          {assetsLoading && !assets ? (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading…
+            </div>
+          ) : (
+            <>
+              {/* Condition alerts */}
+              {assets && assets.filter(a => a.condition === 'POOR' || a.condition === 'UNDER_REPAIR').length > 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm font-semibold text-orange-700 mb-2 flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" /> Assets Needing Attention
+                  </p>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {assets.filter(a => a.condition === 'POOR' || a.condition === 'UNDER_REPAIR').map(a => (
+                      <div key={a.id} className="flex items-center justify-between bg-white rounded px-3 py-2 text-sm border border-orange-100">
+                        <span className="font-medium truncate">{a.name}</span>
+                        <span className={`shrink-0 ml-2 text-xs px-2 py-0.5 rounded-full border ${CONDITION_STYLES[a.condition].color}`}>
+                          {CONDITION_STYLES[a.condition].label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filter bar */}
+              {assets && assets.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {(['all', ...ASSET_CATEGORIES.map(c => c.value)] as string[]).map(cat => {
+                    const count = cat === 'all' ? assets.length : assets.filter(a => a.category === cat).length;
+                    if (count === 0 && cat !== 'all') return null;
+                    const meta = cat === 'all' ? { emoji: '🗂️', label: 'All' } : assetCatMeta(cat);
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setAssetFilter(cat)}
+                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                          assetFilter === cat ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
+                        }`}
+                      >
+                        {meta.emoji} {meta.label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!assets || assets.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center text-gray-500">
+                    <Boxes className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                    <p className="text-lg font-medium mb-1">No assets yet</p>
+                    <p className="text-sm">Track furniture, appliances, equipment and vehicles.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {(assets ?? [])
+                    .filter(a => assetFilter === 'all' || a.category === assetFilter)
+                    .map(asset => {
+                      const cond = CONDITION_STYLES[asset.condition];
+                      const catMeta = assetCatMeta(asset.category);
+                      const warrantyExpired = asset.warrantyExpiry && new Date(asset.warrantyExpiry) < new Date();
+                      return (
+                        <Card key={asset.id} className={`border-2 ${
+                          asset.condition === 'POOR' || asset.condition === 'UNDER_REPAIR' ? 'border-orange-200' :
+                          asset.condition === 'RETIRED' ? 'border-gray-200 opacity-60' : 'border-gray-100'
+                        }`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm truncate">{asset.name}</p>
+                                <p className="text-[11px] text-gray-400">{catMeta.emoji} {catMeta.label}</p>
+                              </div>
+                              <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${cond.color}`}>
+                                <span className={`inline-block h-1.5 w-1.5 rounded-full ${cond.dot}`} />
+                                {cond.label}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1 text-xs text-gray-600 mb-3">
+                              {asset.location && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-gray-400">📍</span> {asset.location}
+                                </div>
+                              )}
+                              {asset.assetTag && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-gray-400">🏷</span> {asset.assetTag}
+                                </div>
+                              )}
+                              {asset.serialNumber && (
+                                <div className="flex items-center gap-1.5 font-mono">
+                                  <span className="text-gray-400">S/N</span> {asset.serialNumber}
+                                </div>
+                              )}
+                              {asset.purchaseCost != null && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-gray-400">💰</span> ${asset.purchaseCost.toFixed(2)}
+                                  {asset.purchaseDate && ` · ${new Date(asset.purchaseDate).getFullYear()}`}
+                                </div>
+                              )}
+                              {asset.warrantyExpiry && (
+                                <div className={`flex items-center gap-1.5 ${warrantyExpired ? 'text-red-600 font-medium' : ''}`}>
+                                  <span className="text-gray-400">🛡</span>
+                                  Warranty {warrantyExpired ? 'expired' : 'until'} {new Date(asset.warrantyExpiry).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+
+                            {asset.notes && (
+                              <p className="text-[11px] text-gray-400 italic line-clamp-2 mb-3">{asset.notes}</p>
+                            )}
+
+                            <div className="flex gap-1.5 pt-2 border-t border-gray-100">
+                              {/* Quick condition update */}
+                              <select
+                                value={asset.condition}
+                                onChange={async (e) => {
+                                  await fetch(`/api/admin/logistics/assets/${asset.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ condition: e.target.value }),
+                                  });
+                                  loadAssets();
+                                }}
+                                className={`flex-1 text-[11px] font-medium rounded border px-2 py-1.5 ${cond.color}`}
+                              >
+                                {Object.entries(CONDITION_STYLES).map(([val, s]) => (
+                                  <option key={val} value={val}>{s.label}</option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => { setEditAsset(asset); setAssetDialogOpen(true); }}
+                                className="px-2 py-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded border border-gray-200"
+                                title="Edit"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* ── Dialogs ── */}
@@ -606,6 +836,13 @@ export function LogisticsBoard({ orders, stats }: LogisticsBoardProps) {
           onClose={() => setHistoryItem(null)}
         />
       )}
+
+      <AssetDialog
+        open={assetDialogOpen}
+        onOpenChange={setAssetDialogOpen}
+        initial={editAsset}
+        onSaved={() => { setAssetDialogOpen(false); loadAssets(); }}
+      />
     </div>
   );
 }
@@ -1587,6 +1824,136 @@ function StockHistoryDialog({ item, onClose }: { item: InventoryItem; onClose: (
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Asset Dialog (create/edit) ────────────────────────────────────────────────
+
+function AssetDialog({
+  open, onOpenChange, initial, onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  initial: Asset | null;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('equipment');
+  const [assetTag, setAssetTag] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
+  const [location, setLocation] = useState('');
+  const [condition, setCondition] = useState<AssetCondition>('GOOD');
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [purchaseCost, setPurchaseCost] = useState('');
+  const [warrantyExpiry, setWarrantyExpiry] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(initial?.name ?? '');
+      setCategory(initial?.category ?? 'equipment');
+      setAssetTag(initial?.assetTag ?? '');
+      setSerialNumber(initial?.serialNumber ?? '');
+      setLocation(initial?.location ?? '');
+      setCondition(initial?.condition ?? 'GOOD');
+      setPurchaseDate(initial?.purchaseDate ? initial.purchaseDate.split('T')[0] : '');
+      setPurchaseCost(initial?.purchaseCost?.toString() ?? '');
+      setWarrantyExpiry(initial?.warrantyExpiry ? initial.warrantyExpiry.split('T')[0] : '');
+      setNotes(initial?.notes ?? '');
+    }
+  }, [open, initial]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const url = initial ? `/api/admin/logistics/assets/${initial.id}` : '/api/admin/logistics/assets';
+      const method = initial ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, category, assetTag, serialNumber, location, condition,
+          purchaseDate: purchaseDate || null,
+          purchaseCost: purchaseCost ? Number(purchaseCost) : null,
+          warrantyExpiry: warrantyExpiry || null,
+          notes,
+        }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      onSaved();
+    } catch {
+      alert('Failed to save asset');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{initial ? 'Edit Asset' : 'Add Asset'}</DialogTitle>
+          <DialogDescription>Track property assets — furniture, equipment, appliances and more.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 space-y-1">
+              <Label>Asset Name *</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Samsung 55″ TV Room 101" required />
+            </div>
+            <div className="space-y-1">
+              <Label>Category</Label>
+              <select value={category} onChange={e => setCategory(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                {ASSET_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Condition</Label>
+              <select value={condition} onChange={e => setCondition(e.target.value as AssetCondition)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                {Object.entries(CONDITION_STYLES).map(([val, s]) => <option key={val} value={val}>{s.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Location / Room</Label>
+              <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Room 101, Lobby…" />
+            </div>
+            <div className="space-y-1">
+              <Label>Asset Tag</Label>
+              <Input value={assetTag} onChange={e => setAssetTag(e.target.value)} placeholder="AST-001" />
+            </div>
+            <div className="space-y-1">
+              <Label>Serial Number</Label>
+              <Input value={serialNumber} onChange={e => setSerialNumber(e.target.value)} placeholder="SN…" />
+            </div>
+            <div className="space-y-1">
+              <Label>Purchase Date</Label>
+              <Input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Purchase Cost ($)</Label>
+              <Input type="number" min="0" step="0.01" value={purchaseCost} onChange={e => setPurchaseCost(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label>Warranty Expiry</Label>
+              <Input type="date" value={warrantyExpiry} onChange={e => setWarrantyExpiry(e.target.value)} />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label>Notes</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Maintenance history, issues, specs…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="bg-teal-600 hover:bg-teal-700">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (initial ? 'Save Changes' : 'Add Asset')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
