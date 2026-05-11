@@ -296,35 +296,12 @@ function CalendarSkeleton() {
   );
 }
 
-// ---- Main Calendar ----
-export function AvailabilityCalendar() {
-  const [anchor, setAnchor] = useState<Date | null>(null);
-  const [mounted, setMounted] = useState(false);
+// ---- Main Calendar (inner — only ever runs on the client, never SSR) ----
+function AvailabilityCalendarInner() {
+  const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [rooms, setRooms] = useState<RoomAvailability[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Avoid hydration mismatch — dates depend on local timezone which differs from server UTC
-  useEffect(() => {
-    setAnchor(startOfDay(new Date()));
-    setMounted(true);
-  }, []);
-
-  // Show skeleton until client has mounted (avoids SSR/client mismatch)
-  if (!mounted || !anchor) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-        </div>
-        <CalendarSkeleton />
-      </div>
-    );
-  }
 
   // Selection state
   const [selStart, setSelStart] = useState<string | null>(null);
@@ -706,4 +683,27 @@ export function AvailabilityCalendar() {
       )}
     </div>
   );
+}
+
+// ---- Exported shell — defers inner calendar to client-only to avoid SSR timezone mismatch ----
+export function AvailabilityCalendar() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+        <CalendarSkeleton />
+      </div>
+    );
+  }
+
+  return <AvailabilityCalendarInner />;
 }
