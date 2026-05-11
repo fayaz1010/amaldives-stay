@@ -8,7 +8,7 @@ import {
   Plus, Loader2, Plane, Anchor, Clock, CalendarCheck,
   Luggage, MapPin, Key, Coffee, CheckCircle2, ChevronRight,
   DollarSign, User, AlertCircle, ChevronLeft, ChevronRight as ChevronR,
-  CalendarDays, Pencil,
+  CalendarDays, Pencil, Menu, X,
 } from 'lucide-react';
 import { AddArrivalModal, TRANSPORT_TYPES } from './add-arrival-modal';
 
@@ -455,6 +455,7 @@ export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJe
   const todayYmd = toYMD(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(todayYmd);
   const [stripAnchor, setStripAnchor] = useState<Date>(new Date());
+  const [datesPanelOpen, setDatesPanelOpen] = useState(false);
 
   const dateStrip = buildDateStrip(stripAnchor);
 
@@ -518,66 +519,102 @@ export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJe
     setStripAnchor(new Date(ymd + 'T12:00:00'));
   }
 
+  function selectDateAndClose(ymd: string) {
+    selectDate(ymd);
+    setDatesPanelOpen(false);
+  }
+
+  const sidebarContent = (
+    <>
+      <p className="px-3 pt-4 pb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+        Arrivals
+      </p>
+      <button
+        onClick={() => { setSelectedDate('all'); setDatesPanelOpen(false); }}
+        className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
+          selectedDate === 'all'
+            ? 'bg-cyan-50 border-r-2 border-cyan-500 text-cyan-700 font-semibold'
+            : 'text-gray-500 hover:bg-gray-50'
+        }`}
+      >
+        <span>All dates</span>
+        <span className="text-[10px] text-gray-400">{arrivals.length}</span>
+      </button>
+      {sidebarDates.map(({ ymd, label, day, count }) => (
+        <button
+          key={ymd}
+          onClick={() => selectDateAndClose(ymd)}
+          className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
+            selectedDate === ymd
+              ? 'bg-cyan-50 border-r-2 border-cyan-500 text-cyan-700 font-semibold'
+              : count > 0
+                ? 'text-gray-700 hover:bg-cyan-50'
+                : 'text-gray-400 hover:bg-gray-50'
+          }`}
+        >
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide leading-none mb-0.5">
+              {label}
+            </p>
+            <p className="text-sm font-medium leading-none">{day}</p>
+          </div>
+          {count > 0 && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+              selectedDate === ymd ? 'bg-cyan-200 text-cyan-800' : 'bg-cyan-100 text-cyan-700'
+            }`}>
+              {count}
+            </span>
+          )}
+        </button>
+      ))}
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-gray-50">
 
-      {/* ── Sidebar date list ──────────────────────────────────────────────── */}
-      <aside className="w-44 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-        <p className="px-3 pt-4 pb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-          Arrivals
-        </p>
-        <button
-          onClick={() => setSelectedDate('all')}
-          className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
-            selectedDate === 'all'
-              ? 'bg-cyan-50 border-r-2 border-cyan-500 text-cyan-700 font-semibold'
-              : 'text-gray-500 hover:bg-gray-50'
-          }`}
-        >
-          <span>All dates</span>
-          <span className="text-[10px] text-gray-400">{arrivals.length}</span>
-        </button>
-        {sidebarDates.map(({ ymd, label, day, count }) => (
-          <button
-            key={ymd}
-            onClick={() => selectDate(ymd)}
-            className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
-              selectedDate === ymd
-                ? 'bg-cyan-50 border-r-2 border-cyan-500 text-cyan-700 font-semibold'
-                : count > 0
-                  ? 'text-gray-700 hover:bg-cyan-50'
-                  : 'text-gray-400 hover:bg-gray-50'
-            }`}
-          >
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide leading-none mb-0.5">
-                {label}
-              </p>
-              <p className="text-sm font-medium leading-none">{day}</p>
-            </div>
-            {count > 0 && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                selectedDate === ymd ? 'bg-cyan-200 text-cyan-800' : 'bg-cyan-100 text-cyan-700'
-              }`}>
-                {count}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* ── Sidebar date list (desktop) ────────────────────────────────────── */}
+      <aside className="hidden md:block w-44 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+        {sidebarContent}
       </aside>
 
+      {/* ── Sidebar date list (mobile overlay) ─────────────────────────────── */}
+      {datesPanelOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setDatesPanelOpen(false)} />
+          <div className="fixed inset-y-0 left-0 w-56 bg-white shadow-xl overflow-y-auto">
+            <div className="flex items-center justify-between px-3 pt-3">
+              <span className="text-sm font-semibold text-gray-700">Dates</span>
+              <button onClick={() => setDatesPanelOpen(false)} className="p-1 rounded hover:bg-gray-100">
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+
       {/* ── Main content ──────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden p-6 space-y-5">
+      <div className="flex-1 overflow-hidden p-4 md:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Arrivals</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {today.length} expected today · {arrivals.filter((a) => a.status !== 'CHECKED_IN').length} active
-          </p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={() => setDatesPanelOpen(true)}
+            className="md:hidden p-1.5 rounded-lg border hover:bg-gray-50 text-gray-500 shrink-0"
+            aria-label="Open dates panel"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900">Arrivals</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {today.length} expected today · {arrivals.filter((a) => a.status !== 'CHECKED_IN').length} active
+            </p>
+          </div>
         </div>
         <Button onClick={() => { setPreselectedBookingId(undefined); setAddOpen(true); }}
-          className="bg-cyan-600 hover:bg-cyan-700">
+          className="bg-cyan-600 hover:bg-cyan-700 shrink-0">
           <Plus className="h-4 w-4 mr-2" />Plan Arrival
         </Button>
       </div>
@@ -670,14 +707,14 @@ export function ArrivalsBoard({ arrivals, staff, defaultTransportType, defaultJe
       </div>
 
       {/* ── Pipeline kanban ─────────────────────────────────────────────────── */}
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex flex-col md:flex-row gap-3 md:overflow-x-auto pb-2">
         {PIPELINE.map((col) => {
           const colArrivals = filteredArrivals.filter((a) => a.status === col.key);
           const totalForDate = arrivals.filter((a) => a.status === col.key).length;
           const ColIcon = col.icon;
 
           return (
-            <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3 flex-shrink-0 w-64`}>
+            <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3 w-full md:w-56 md:flex-shrink-0`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
                   <ColIcon className="h-4 w-4 text-gray-600" />

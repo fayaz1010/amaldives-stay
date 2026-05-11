@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Loader2, Clock, CalendarCheck, DollarSign,
-  Receipt, LogIn, LogOut, AlertCircle, User,
+  Receipt, LogIn, LogOut, AlertCircle, User, Share2,
 } from 'lucide-react';
 import { CheckoutModal } from './checkout-modal';
 import { QuickPayModal } from './quick-pay-modal';
@@ -111,6 +111,37 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
   const [billId, setBillId] = useState<string | null>(null);
   const [quickPayBooking, setQuickPayBooking] = useState<Booking | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('all');
+  const [sharingId, setSharingId] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!shareToast) return;
+    const t = setTimeout(() => setShareToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [shareToast]);
+
+  async function shareGuestPortal(bookingId: string) {
+    setSharingId(bookingId);
+    try {
+      const res = await fetch(`/api/admin/bookings/${bookingId}/guest-token`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      const fullUrl = `${window.location.origin}${data.url}`;
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+        setShareToast('Guest portal link copied!');
+      } catch {
+        // Clipboard blocked — show the URL so it can be copied manually.
+        window.prompt('Copy this guest portal link:', fullUrl);
+      }
+    } catch {
+      setShareToast('Failed to generate link');
+    } finally {
+      setSharingId(null);
+    }
+  }
 
   // For Checked Out column, apply date filter on checkOutDate
   const filteredBookings = useMemo(() => {
@@ -174,13 +205,13 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
       </div>
 
       {/* Kanban grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="flex flex-col md:flex-row md:overflow-x-auto gap-4 pb-2">
         {COLUMNS.map((col) => {
           const colBookings = filteredBookings.filter((b) => col.statuses.includes(b.status));
           const totalForCol = bookings.filter((b) => col.statuses.includes(b.status)).length;
 
           return (
-            <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3`}>
+            <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3 w-full md:w-72 md:min-w-[18rem] md:flex-shrink-0`}>
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="font-semibold text-gray-800">{col.title}</h2>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${col.badge}`}>
@@ -294,6 +325,20 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 text-xs border-teal-300 text-teal-700 hover:bg-teal-50"
+                                  disabled={sharingId === b.id}
+                                  onClick={() => shareGuestPortal(b.id)}
+                                  title="Share guest portal link"
+                                >
+                                  {sharingId === b.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Share2 className="h-3 w-3" />
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
                                   className={`h-7 text-xs gap-1 ${balance > 0 ? 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}`}
                                   onClick={() => setQuickPayBooking(b)}
                                   title="Record payment"
@@ -337,6 +382,14 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
         mode="bill"
         onClose={() => setBillId(null)}
       />
+      {/* Share toast */}
+      {shareToast && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div className="bg-gray-900 text-white text-sm rounded-lg shadow-lg px-4 py-3">
+            {shareToast}
+          </div>
+        </div>
+      )}
       {/* Quick Pay modal */}
       {quickPayBooking && (
         <QuickPayModal

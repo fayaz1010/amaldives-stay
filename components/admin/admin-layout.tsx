@@ -29,12 +29,15 @@ import {
   Package,
   Utensils,
   CheckSquare,
+  CheckSquare2,
   DollarSign,
   Globe,
   ChevronDown,
   ChevronRight,
   Layers,
   Wifi,
+  Home,
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -88,6 +91,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Hotel,
     items: [
       { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
+      { name: 'Pricing & Rates', href: '/admin/pricing', icon: Tag },
       { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
       { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
     ],
@@ -349,8 +353,37 @@ export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdom
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-4 pb-20 md:p-6 md:pb-6">{children}</main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-30 flex md:hidden">
+        {[
+          { name: 'Home', href: '/admin', icon: Home },
+          { name: 'Calendar', href: '/admin/availability', icon: Calendar },
+          { name: 'Reservations', href: '/admin/reservations', icon: ClipboardList },
+          { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare2 },
+          { name: 'Settings', href: '/admin/settings', icon: Settings },
+        ].map((item) => {
+          const active = item.href === '/admin'
+            ? pathname === '/admin'
+            : pathname.startsWith(item.href);
+          const ItemIcon = item.icon;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
+                active ? 'text-teal-600' : 'text-gray-500 hover:text-gray-700',
+              )}
+            >
+              <ItemIcon className="h-5 w-5" />
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

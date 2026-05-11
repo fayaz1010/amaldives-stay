@@ -37,8 +37,29 @@ export async function PATCH(request: NextRequest) {
     if (data.phone !== undefined) propertyUpdates.phone = data.phone;
     if (data.email !== undefined) propertyUpdates.email = data.email;
 
+    // Fields that get merged into tenant.settings JSON
+    const settingsMerge: Record<string, any> = {};
+    if (data.onboardingComplete !== undefined) settingsMerge.onboardingComplete = data.onboardingComplete;
+    // tagline lives under settings.webProfile.tagline (matches public info API)
+    const taglineProvided = data.tagline !== undefined;
+
     const result = await prisma.$transaction(async (tx) => {
       let tenant = null;
+
+      const needsSettingsMerge = Object.keys(settingsMerge).length > 0 || taglineProvided;
+      if (needsSettingsMerge) {
+        const current = await tx.tenant.findUnique({ where: { id: tenantId } });
+        const currentSettings = (current?.settings as Record<string, any> | null) ?? {};
+        const nextSettings: Record<string, any> = { ...currentSettings, ...settingsMerge };
+        if (taglineProvided) {
+          nextSettings.webProfile = {
+            ...(currentSettings.webProfile ?? {}),
+            tagline: data.tagline,
+          };
+        }
+        tenantUpdates.settings = nextSettings;
+      }
+
       if (Object.keys(tenantUpdates).length > 0) {
         tenant = await tx.tenant.update({
           where: { id: tenantId },

@@ -115,6 +115,7 @@ model Tenant {
   expenses          Expense[]
   payrollEntries    PayrollEntry[]
   groupBookings     GroupBooking[]
+  ratePlans         RatePlan[]
   
   @@index([subdomain])
   @@index([status])
@@ -206,6 +207,7 @@ model Booking {
   notes         String?
   specialRequests String?
   groupBookingId String?
+  guestToken    String?       @unique
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -239,6 +241,23 @@ model GroupBooking {
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bookings  Booking[]
   @@index([tenantId])
+}
+
+model RatePlan {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  multiplier  Float    @default(1.0)
+  minStay     Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId])
+  @@index([startDate, endDate])
 }
 
 // Guest Management

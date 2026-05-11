@@ -216,6 +216,99 @@ export async function POST(request: NextRequest) {
       console.error('Auto-task creation failed (group booking still created):', taskErr);
     }
 
+    // Fire-and-forget consolidated confirmation email for the whole group
+    (async () => {
+      try {
+        const [guestRec, propRec, roomDetails] = await Promise.all([
+          prisma.user.findUnique({ where: { id: guestId! }, include: { guestProfile: true } }),
+          prisma.property.findUnique({ where: { id: resolvedPropertyId }, select: { name: true, phone: true, email: true } }),
+          prisma.room.findMany({
+            where: { id: { in: roomIds } },
+            select: { id: true, number: true, name: true, type: true },
+          }),
+        ]);
+
+        if (!guestRec?.email) return;
+
+        const totalAmount = createdBookings.reduce((sum, b) => {
+          const room = rooms.find((r) => r.id === b.roomId);
+          return sum + (room ? room.basePrice * nights : 0);
+        }, 0);
+
+        const checkInLong = checkIn.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const checkOutLong = checkOut.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const propertyName = propRec?.name ?? 'Property';
+        const displayName = guestRec.guestProfile?.firstName ?? guestRec.name ?? 'Guest';
+
+        const roomsListHtml = createdBookings
+          .map((b) => {
+            const room = roomDetails.find((r) => r.id === b.roomId);
+            const label = room?.name ?? String(room?.type ?? 'Room');
+            const num = room?.number ? ` (Room ${room.number})` : '';
+            return `<tr>
+              <td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;color:#111827;font-size:14px;">${label}${num}</td>
+              <td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:13px;text-align:right;">${b.confirmationNumber}</td>
+            </tr>`;
+          })
+          .join('');
+
+        const contactRows: string[] = [];
+        if (propRec?.phone) {
+          contactRows.push(`<tr><td style="padding:6px 0;color:#6B7280;font-size:14px;">Phone</td><td style="padding:6px 0;color:#111827;font-size:14px;text-align:right;">${propRec.phone}</td></tr>`);
+        }
+        if (propRec?.email) {
+          contactRows.push(`<tr><td style="padding:6px 0;color:#6B7280;font-size:14px;">Email</td><td style="padding:6px 0;color:#111827;font-size:14px;text-align:right;"><a href="mailto:${propRec.email}" style="color:#0F766E;text-decoration:none;">${propRec.email}</a></td></tr>`);
+        }
+
+        const totalFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(totalAmount);
+
+        const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Booking Confirmed</title></head>
+<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9FAFB;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;">
+        <tr><td style="background:#14B8A6;padding:28px 32px;"><div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">amaldives STAY</div></td></tr>
+        <tr><td style="padding:32px;">
+          <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">Booking Confirmed!</h1>
+          <p style="margin:0 0 8px;font-size:16px;color:#111827;">Dear ${displayName},</p>
+          <p style="margin:0 0 24px;font-size:14px;color:#6B7280;line-height:1.5;">Thank you for booking with <strong style="color:#111827;">${propertyName}</strong>. Your group reservation of <strong>${rooms.length} room${rooms.length === 1 ? '' : 's'}</strong> is confirmed.</p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E5E7EB;border-radius:6px;margin-bottom:20px;">
+            <tr><td style="padding:14px 16px;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Check-in</td><td style="padding:14px 16px;border-bottom:1px solid #E5E7EB;color:#111827;font-size:14px;text-align:right;">${checkInLong}</td></tr>
+            <tr><td style="padding:14px 16px;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Check-out</td><td style="padding:14px 16px;border-bottom:1px solid #E5E7EB;color:#111827;font-size:14px;text-align:right;">${checkOutLong}</td></tr>
+            <tr><td style="padding:14px 16px;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Nights</td><td style="padding:14px 16px;border-bottom:1px solid #E5E7EB;color:#111827;font-size:14px;text-align:right;">${nights}</td></tr>
+            <tr><td style="padding:14px 16px;color:#6B7280;font-size:13px;">Total Amount</td><td style="padding:14px 16px;color:#0F766E;font-size:16px;font-weight:700;text-align:right;">${totalFormatted}</td></tr>
+          </table>
+
+          <h2 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#111827;">Rooms (${rooms.length})</h2>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E5E7EB;border-radius:6px;margin-bottom:24px;">
+            ${roomsListHtml}
+          </table>
+
+          ${contactRows.length ? `<h2 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#111827;">Property Contact</h2>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">${contactRows.join('')}</table>` : ''}
+
+          <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5;">We look forward to welcoming your group. Reply to this email with any questions or special requests.</p>
+        </td></tr>
+        <tr><td style="padding:20px 32px;background:#F9FAFB;border-top:1px solid #E5E7EB;text-align:center;"><div style="font-size:12px;color:#6B7280;">Powered by <strong style="color:#0F766E;">amaldives STAY</strong></div></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+        const { resend } = await import('@/lib/email');
+        await resend.emails.send({
+          from: `amaldives STAY <${process.env.RESEND_FROM_EMAIL}>`,
+          to: guestRec.email,
+          subject: `Booking Confirmed - ${rooms.length} room${rooms.length === 1 ? '' : 's'} at ${propertyName}`,
+          html,
+        });
+      } catch (e) {
+        console.error('Group email send failed:', e);
+      }
+    })();
+
     return NextResponse.json(
       {
         groupBookingId: groupBooking.id,

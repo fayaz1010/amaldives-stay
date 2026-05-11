@@ -273,6 +273,43 @@ export async function POST(request: NextRequest) {
       console.error('Auto-task creation failed (booking still created):', taskErr);
     }
 
+    // Fire-and-forget confirmation email
+    (async () => {
+      try {
+        const [guestRec, roomRec, propRec] = await Promise.all([
+          prisma.user.findUnique({ where: { id: guestId! }, include: { guestProfile: true } }),
+          prisma.room.findUnique({ where: { id: roomId }, select: { number: true, name: true, type: true } }),
+          prisma.property.findUnique({ where: { id: propertyId }, select: { name: true, phone: true, email: true } }),
+        ]);
+        if (guestRec?.email) {
+          const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86400000));
+          const { bookingConfirmationHtml } = await import('@/lib/email-templates');
+          const { resend } = await import('@/lib/email');
+          await resend.emails.send({
+            from: `amaldives STAY <${process.env.RESEND_FROM_EMAIL}>`,
+            to: guestRec.email,
+            subject: `Booking Confirmed - ${confirmationNumber}`,
+            html: bookingConfirmationHtml({
+              guestName: guestRec.guestProfile?.firstName ?? guestRec.name ?? 'Guest',
+              confirmationNumber,
+              propertyName: propRec?.name ?? 'Property',
+              checkIn: checkIn.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+              checkOut: checkOut.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+              roomName: roomRec?.name ?? String(roomRec?.type ?? 'Room'),
+              roomNumber: roomRec?.number ?? '',
+              nights,
+              totalAmount: computedTotal,
+              currency: 'USD',
+              propertyPhone: propRec?.phone ?? '',
+              propertyEmail: propRec?.email ?? '',
+            }),
+          });
+        }
+      } catch (e) {
+        console.error('Email send failed:', e);
+      }
+    })();
+
     return NextResponse.json({ booking }, { status: 201 });
   } catch (error: any) {
     console.error('Create booking API error:', error);

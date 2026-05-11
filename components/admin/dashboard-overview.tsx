@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Hotel,
@@ -23,6 +24,7 @@ import {
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { OnboardingWizard } from '@/components/admin/onboarding-wizard';
 
 interface DashboardOverviewProps {
   stats: {
@@ -45,6 +47,10 @@ interface DashboardOverviewProps {
   housekeepingTasks: any[];
   pendingTasks: any[];
   user: any;
+  showOnboarding?: boolean;
+  propertySubdomain?: string;
+  propertyName?: string;
+  propertyId?: string;
 }
 
 function StatCard({
@@ -123,7 +129,12 @@ export function DashboardOverview({
   housekeepingTasks,
   pendingTasks,
   user,
+  showOnboarding = false,
+  propertySubdomain = '',
+  propertyName = '',
+  propertyId = '',
 }: DashboardOverviewProps) {
+  const [showWizard, setShowWizard] = useState(showOnboarding);
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const actionItems = [
@@ -159,6 +170,14 @@ export function DashboardOverview({
 
   return (
     <div className="space-y-5">
+      {showWizard && (
+        <OnboardingWizard
+          propertyName={propertyName}
+          subdomain={propertySubdomain}
+          propertyId={propertyId}
+          onComplete={() => setShowWizard(false)}
+        />
+      )}
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -170,10 +189,10 @@ export function DashboardOverview({
 
       {/* Action strip */}
       {actionItems.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {actionItems.map((item) => (
-            <Link key={item.href + item.text} href={item.href}>
-              <div className={`flex items-center gap-2 ${item.bg} rounded-lg px-3 py-2 text-sm font-medium ${item.color} border hover:shadow-sm transition-shadow`}>
+            <Link key={item.href + item.text} href={item.href} className="shrink-0">
+              <div className={`flex items-center gap-2 ${item.bg} rounded-lg px-3 py-2 text-sm font-medium ${item.color} border hover:shadow-sm transition-shadow whitespace-nowrap`}>
                 <item.icon className="h-4 w-4" />
                 {item.text}
                 <ArrowRight className="h-3.5 w-3.5 opacity-60" />

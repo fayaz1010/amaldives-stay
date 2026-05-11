@@ -494,8 +494,8 @@ export function TasksBoard() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="relative">
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+        <div className="relative shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
           <Input
             placeholder="Search tasks…"
@@ -505,7 +505,7 @@ export function TasksBoard() {
           />
         </div>
         <Select value={sourceFilter} onValueChange={setSourceFilter}>
-          <SelectTrigger className="h-8 text-xs w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 text-xs w-40 shrink-0"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Sources</SelectItem>
             <SelectItem value="STAFF">Staff / Bookings</SelectItem>
@@ -515,12 +515,12 @@ export function TasksBoard() {
             <SelectItem value="LOGISTICS">Logistics</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex rounded-md border overflow-hidden text-xs">
+        <div className="flex rounded-md border overflow-hidden text-xs shrink-0">
           {[['open', 'Open'], ['done', 'Done'], ['cancelled', 'Cancelled']].map(([v, l]) => (
             <button
               key={v}
               onClick={() => setStatusGroup(v)}
-              className={`px-3 py-1.5 ${statusGroup === v ? 'bg-teal-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1.5 whitespace-nowrap ${statusGroup === v ? 'bg-teal-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               {l}
             </button>

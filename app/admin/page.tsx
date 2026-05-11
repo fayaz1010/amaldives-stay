@@ -16,7 +16,7 @@ export default async function AdminDashboard() {
   const tenantId = session.user.tenantId;
   const tenantDb = new TenantDb(tenantId);
 
-  const [stats, recentBookings, housekeepingTasks, pendingTasks] = await Promise.all([
+  const [stats, recentBookings, housekeepingTasks, pendingTasks, roomCount, tenant, property] = await Promise.all([
     tenantDb.getDashboardStats(),
     tenantDb.getBookings({ limit: 5 }),
     tenantDb.getHousekeepingTasks({
@@ -28,7 +28,14 @@ export default async function AdminDashboard() {
       orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
       take: 5,
     }),
+    prisma.room.count({ where: { tenantId } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { subdomain: true, settings: true } }),
+    prisma.property.findFirst({ where: { tenantId }, select: { id: true, name: true } }),
   ]);
+
+  const settings = (tenant?.settings as any) ?? null;
+  const onboardingComplete = Boolean(settings?.onboardingComplete);
+  const showOnboarding = roomCount === 0 && !onboardingComplete;
 
   return (
     <DashboardOverview
@@ -37,6 +44,10 @@ export default async function AdminDashboard() {
       housekeepingTasks={housekeepingTasks}
       pendingTasks={pendingTasks}
       user={session.user}
+      showOnboarding={showOnboarding}
+      propertySubdomain={tenant?.subdomain ?? ''}
+      propertyName={property?.name ?? ''}
+      propertyId={property?.id ?? ''}
     />
   );
 }
