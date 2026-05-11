@@ -27,10 +27,13 @@ interface AddTaskModalProps {
 }
 
 const TASK_TYPES = [
-  { value: 'CLEANING', label: 'Cleaning' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'CLEANING',   label: 'Daily Cleaning' },
+  { value: 'TURNOVER',   label: 'Room Ready / Turnover' },
+  { value: 'DEEP_CLEAN', label: 'Deep Clean' },
+  { value: 'LAUNDRY',    label: 'Laundry' },
+  { value: 'MAINTENANCE',label: 'Maintenance' },
   { value: 'INSPECTION', label: 'Inspection' },
-  { value: 'SETUP', label: 'Setup' },
+  { value: 'SETUP',      label: 'Setup' },
 ];
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
