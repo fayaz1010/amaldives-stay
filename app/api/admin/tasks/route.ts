@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
             room: { select: { number: true } },
             service: { select: { name: true, category: true } },
             guest: { select: { name: true } },
+            booking: { select: { room: { select: { number: true } } } },
           },
           orderBy: { createdAt: 'asc' },
         }),
@@ -156,6 +157,7 @@ export async function GET(request: NextRequest) {
 
     // --- Service orders ---
     for (const t of serviceOrders) {
+      const roomNumber = t.room?.number ?? (t as any).booking?.room?.number ?? null;
       // notes may contain JSON (order items) — show item name × qty instead
       let desc = `Qty: ${t.quantity}`;
       if (t.scheduledDate) {
@@ -170,13 +172,13 @@ export async function GET(request: NextRequest) {
         source: 'SERVICE',
         sourceLabel: isRoomSvc ? 'Room Service' : 'Extra Service',
         category: t.service?.category ?? 'SERVICE',
-        title: `${t.service?.name ?? 'Service'} ×${t.quantity} — Room ${t.room?.number ?? '?'}`,
+        title: `${t.service?.name ?? 'Service'} ×${t.quantity} — Room ${roomNumber ?? '?'}`,
         description: desc,
         status: t.status,
         priority: 'MEDIUM',
         dueDate: t.scheduledDate?.toISOString() ?? t.createdAt.toISOString(),
         completedAt: t.completedAt?.toISOString() ?? null,
-        room: t.room?.number ?? null,
+        room: roomNumber,
         assignedTo: null,
         notes: null,
         link: isRoomSvc ? '/admin/room-service' : '/admin/extra-services',
