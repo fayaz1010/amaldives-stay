@@ -213,47 +213,65 @@ export async function POST(request: NextRequest) {
       notes,
     });
 
-    // Auto-create arrival prep tasks for the booking
-    const guestLabel = guestData?.name || 'Guest';
-    const roomLabel = room.id;
-    const checkInLabel = checkIn.toLocaleDateString();
-    await prisma.staffTask.createMany({
-      data: [
-        {
-          tenantId,
-          bookingId: booking.id,
-          source: 'BOOKING',
-          category: 'TRANSFER',
-          title: `Arrange transfer — ${guestLabel} (${checkInLabel})`,
-          description: 'Book and confirm transport from airport to property for arriving guest.',
-          priority: 'HIGH',
-          status: 'PENDING',
-          dueDate: checkIn,
-        },
-        {
-          tenantId,
-          bookingId: booking.id,
-          source: 'BOOKING',
-          category: 'AIRPORT_PICKUP',
-          title: `Airport pickup — ${guestLabel} (${checkInLabel})`,
-          description: 'Confirm who is picking up the guest at the airport and arrange logistics.',
-          priority: 'HIGH',
-          status: 'PENDING',
-          dueDate: checkIn,
-        },
-        {
-          tenantId,
-          bookingId: booking.id,
-          source: 'BOOKING',
-          category: 'ARRIVAL_WELCOME',
-          title: `Arrival welcome — ${guestLabel} (${checkInLabel})`,
-          description: 'Prepare welcome drinks, room key, and check-in materials.',
-          priority: 'MEDIUM',
-          status: 'PENDING',
-          dueDate: checkIn,
-        },
-      ],
-    });
+    // Auto-create arrival prep tasks — fire and forget, never block the booking response
+    try {
+      // Fetch guest name for task titles
+      const guestRecord = await prisma.user.findUnique({
+        where: { id: guestId },
+        select: { name: true, guestProfile: { select: { firstName: true, lastName: true } } },
+      });
+      const profile = guestRecord?.guestProfile;
+      const guestLabel = profile
+        ? `${profile.firstName} ${profile.lastName}`.trim()
+        : (guestRecord?.name ?? guestData?.name ?? 'Guest');
+      const checkInLabel = checkIn.toLocaleDateString();
+      // Get room number
+      const roomRecord = await prisma.room.findUnique({
+        where: { id: roomId },
+        select: { number: true },
+      });
+      const roomLabel = roomRecord?.number ?? '';
+
+      await prisma.staffTask.createMany({
+        data: [
+          {
+            tenantId,
+            bookingId: booking.id,
+            source: 'BOOKING',
+            category: 'TRANSFER',
+            title: `Arrange transfer — ${guestLabel}${roomLabel ? ` Rm ${roomLabel}` : ''} (${checkInLabel})`,
+            description: 'Book and confirm transport from airport to property for arriving guest.',
+            priority: 'HIGH',
+            status: 'PENDING',
+            dueDate: checkIn,
+          },
+          {
+            tenantId,
+            bookingId: booking.id,
+            source: 'BOOKING',
+            category: 'AIRPORT_PICKUP',
+            title: `Airport pickup — ${guestLabel}${roomLabel ? ` Rm ${roomLabel}` : ''} (${checkInLabel})`,
+            description: 'Confirm who is picking up the guest at the airport and arrange logistics.',
+            priority: 'HIGH',
+            status: 'PENDING',
+            dueDate: checkIn,
+          },
+          {
+            tenantId,
+            bookingId: booking.id,
+            source: 'BOOKING',
+            category: 'ARRIVAL_WELCOME',
+            title: `Arrival welcome — ${guestLabel}${roomLabel ? ` Rm ${roomLabel}` : ''} (${checkInLabel})`,
+            description: 'Prepare welcome drinks, room key, and check-in materials.',
+            priority: 'MEDIUM',
+            status: 'PENDING',
+            dueDate: checkIn,
+          },
+        ],
+      });
+    } catch (taskErr) {
+      console.error('Auto-task creation failed (booking still created):', taskErr);
+    }
 
     return NextResponse.json({ booking }, { status: 201 });
   } catch (error: any) {

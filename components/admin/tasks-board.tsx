@@ -12,7 +12,7 @@ import {
   Loader2, RefreshCw, Search, ArrowRight, Clock,
   Sparkles, BedDouble, Wrench, ShoppingBag, Truck,
   User, Plane, Car, Gift, CheckCircle2, Circle,
-  AlertCircle, CalendarClock,
+  AlertCircle, CalendarClock, RefreshCcw,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -211,6 +211,8 @@ export function TasksBoard() {
   const [statusGroup, setStatusGroup] = useState('open');
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'list' | 'kanban'>('list');
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -236,6 +238,23 @@ export function TasksBoard() {
       await load();
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function syncTasks() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/admin/tasks/backfill', { method: 'POST' });
+      const data = await res.json();
+      if (data.created > 0) {
+        setSyncResult(`Synced ${data.created} tasks for ${data.bookings} booking(s)`);
+        await load();
+      } else {
+        setSyncResult('All bookings already have tasks');
+      }
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -290,6 +309,17 @@ export function TasksBoard() {
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={syncTasks}
+            disabled={syncing}
+            className="text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+            title="Create missing tasks for bookings that don't have tasks yet"
+          >
+            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />}
+            Sync Tasks
+          </Button>
           <div className="flex rounded-md border overflow-hidden text-xs">
             {['list', 'kanban'].map((v) => (
               <button
@@ -304,8 +334,16 @@ export function TasksBoard() {
         </div>
       </div>
 
-      {/* Booking arrival quick-tasks banner */}
-      {bookingTasksOpen.length > 0 && (
+      {/* Sync result */}
+      {syncResult && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+          <RefreshCcw className="h-4 w-4 text-blue-500 shrink-0" />
+          <span>{syncResult}</span>
+          <button onClick={() => setSyncResult(null)} className="ml-auto text-blue-500 hover:text-blue-700 text-lg leading-none">×</button>
+        </div>
+      )}
+
+      {/* Booking arrival quick-tasks banner */}      {bookingTasksOpen.length > 0 && (
         <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg">
           <CalendarClock className="h-4 w-4 text-blue-500 shrink-0" />
           <span className="text-sm text-blue-800">
