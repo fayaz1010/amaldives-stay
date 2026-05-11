@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         select: { totalAmount: true, status: true, service: { select: { category: true } } },
       }),
       prisma.logisticsOrderItem.findMany({
-        where: { order: { tenantId }, receivedAt: { gte: start, lt: end } },
+        where: { order: { tenantId }, actualCost: { not: null } },
         select: { actualCost: true, estimatedCost: true },
       }),
       prisma.maintenanceRequest.findMany({

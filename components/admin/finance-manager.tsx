@@ -297,8 +297,10 @@ export function FinanceManager({ exchangeRate = 15.4 }: { exchangeRate?: number 
     try {
       const res = await fetch(`/api/admin/finance/summary?period=${period}`);
       const data = await res.json();
-      setSummary(data);
-    } finally { setSumLoading(false); }
+      if (res.ok && data.breakdown) setSummary(data);
+      else setSummary(null);
+    } catch { setSummary(null); }
+    finally { setSumLoading(false); }
   }, [period]);
 
   const loadTransactions = useCallback(async () => {

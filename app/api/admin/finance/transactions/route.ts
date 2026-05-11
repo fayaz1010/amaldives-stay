@@ -127,14 +127,14 @@ export async function GET(request: NextRequest) {
       const logItems = await prisma.logisticsOrderItem.findMany({
         where: { order: { tenantId }, actualCost: { not: null } },
         include: { order: { select: { title: true } } },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { order: { updatedAt: 'desc' } },
       });
       for (const i of logItems) {
         rows.push({
           id: `logi:${i.id}`, type: 'EXPENSE', category: 'LOGISTICS',
           description: `${i.name} × ${i.quantity}${i.order?.title ? ` (${i.order.title})` : ''}`,
           amount: i.actualCost ?? 0, currency: 'USD', status: 'PAID',
-          method: null, date: i.updatedAt.toISOString(),
+          method: null, date: new Date().toISOString(),
           link: '/admin/logistics',
         });
       }
