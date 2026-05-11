@@ -356,11 +356,12 @@ export function AvailabilityCalendar() {
     return checkDates.every((d) => !room.bookedDates.includes(d));
   }, [selStart, selEnd]);
 
-  // Auto-select available rooms when range is set
+  // Auto-select available rooms when range is set, then open panel
   useEffect(() => {
     if (selStart && selEnd && rooms) {
       const autoSel = new Set(rooms.filter(availableInRange).map((r) => r.id));
       setSelRooms(autoSel);
+      if (autoSel.size > 0) setShowPanel(true);
     }
   }, [selStart, selEnd, rooms, availableInRange]);
 
@@ -385,10 +386,9 @@ export function AvailabilityCalendar() {
       setSelRooms(new Set());
       setShowPanel(false);
     } else {
-      // Set end date
-      if (dateKey === selStart) return; // same date — ignore
+      // Set end date — panel will open via useEffect after rooms are auto-selected
+      if (dateKey === selStart) return;
       setSelEnd(dateKey);
-      setShowPanel(true);
     }
   }
 
@@ -397,16 +397,15 @@ export function AvailabilityCalendar() {
     if (status !== 'AVAILABLE') return;
 
     if (!selStart || (selStart && selEnd)) {
-      // Start new selection at this date, add this room
+      // Start new selection at this date
       setSelStart(dateKey);
       setSelEnd(null);
-      setSelRooms(new Set([room.id]));
+      setSelRooms(new Set());
       setShowPanel(false);
     } else {
-      // Extend range to this date
+      // Extend range to this date — panel will open via useEffect
       if (dateKey !== selStart) {
         setSelEnd(dateKey);
-        setShowPanel(true);
       }
     }
   }
@@ -462,8 +461,8 @@ export function AvailabilityCalendar() {
         <div className="flex items-center gap-2 rounded-lg border border-teal-100 bg-teal-50 px-4 py-2 text-xs text-teal-800">
           <Info className="h-3.5 w-3.5 shrink-0" />
           {selStart
-            ? 'Click another date to set check-out, or click a date column header to set the end of the range.'
-            : 'Click any date header or available cell to start selecting a booking range. Then pick rooms and confirm.'}
+            ? <><strong>Check-in: {formatDateShort(new Date(selStart))} selected.</strong>&nbsp;Now click a second date to set check-out and open the booking panel.</>
+            : 'Click a date column header to set check-in, then click a second date to set check-out. Available rooms will be pre-selected.'}
         </div>
       )}
       {hasSelection && (
