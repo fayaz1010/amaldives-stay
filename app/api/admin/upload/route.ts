@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No files provided' }, { status: 400 });
   }
 
+  // Optional namespace for the upload (e.g. "branding", "rooms", "amenities").
+  // Defaults to "rooms" so existing callers keep working unchanged.
+  const rawKind = (formData.get('kind') as string | null)?.toLowerCase() ?? 'rooms';
+  const kind = /^[a-z0-9-]{1,32}$/.test(rawKind) ? rawKind : 'rooms';
+
   const urls: string[] = [];
   const bucket = process.env.R2_BUCKET_NAME!;
   const publicBase = (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, '');
@@ -53,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const key = `stay/rooms/${session.user.tenantId}/${randomUUID()}.${ext}`;
+    const key = `stay/${kind}/${session.user.tenantId}/${randomUUID()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
     await s3.send(

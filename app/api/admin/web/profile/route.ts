@@ -18,6 +18,7 @@ export async function GET() {
         name: true,
         description: true,
         logo: true,
+        theme: true,
         subdomain: true,
         plan: true,
         amaldivesSlug: true,
@@ -60,6 +61,10 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const {
       tenantName, tenantDescription, tenantLogo,
+      // Branding — stored in Tenant.theme JSON so it is whole-tenant
+      // (sidebar + storefront read the same source). Each field is
+      // optional; only provided keys are merged.
+      primaryColor, accentColor, heroImageUrl, heroImageFocalPoint,
       propertyName, propertyDescription, propertyPhone, propertyEmail,
       propertyWebsite, propertyAddress, propertyCity, propertyCountry,
       amenities, images, tagline, highlights,
@@ -70,6 +75,21 @@ export async function PATCH(request: NextRequest) {
     if (tenantName !== undefined) tenantUpdate.name = tenantName;
     if (tenantDescription !== undefined) tenantUpdate.description = tenantDescription;
     if (tenantLogo !== undefined) tenantUpdate.logo = tenantLogo;
+
+    const themePatch: Record<string, unknown> = {};
+    if (primaryColor !== undefined) themePatch.primaryColor = primaryColor;
+    if (accentColor !== undefined) themePatch.accentColor = accentColor;
+    if (heroImageUrl !== undefined) themePatch.heroImageUrl = heroImageUrl;
+    if (heroImageFocalPoint !== undefined) themePatch.heroImageFocalPoint = heroImageFocalPoint;
+    if (Object.keys(themePatch).length > 0) {
+      const current = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { theme: true },
+      });
+      const existingTheme = (current?.theme as Record<string, unknown> | null) ?? {};
+      tenantUpdate.theme = { ...existingTheme, ...themePatch };
+    }
+
     if (Object.keys(tenantUpdate).length > 0) {
       await prisma.tenant.update({ where: { id: tenantId }, data: tenantUpdate });
     }

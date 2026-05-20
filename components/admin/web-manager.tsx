@@ -132,13 +132,16 @@ export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'pr
   async function uploadPhoto(file: File) {
     setUploading(true);
     try {
+      // /api/admin/upload expects `files` (plural) and an optional `kind`
+      // namespace; this caller used to send `file` (singular) so every
+      // photo upload here silently failed with "No files provided".
       const fd = new FormData();
-      fd.append('file', file);
-      fd.append('folder', 'property');
+      fd.append('files', file);
+      fd.append('kind', 'property');
       const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
       if (res.ok) {
-        const { url } = await res.json();
-        const newPhotos = [...photos, url];
+        const { urls } = await res.json();
+        const newPhotos = [...photos, ...(urls ?? [])];
         setPhotos(newPhotos);
         await fetch('/api/admin/web/profile', {
           method: 'PATCH',
@@ -148,6 +151,54 @@ export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'pr
       }
     } finally {
       setUploading(false);
+    }
+  }
+
+  // Branding state — logo, hero, brand colors live in Tenant.theme JSON.
+  const [branding, setBranding] = useState<{
+    logoUrl: string;
+    primaryColor: string;
+    accentColor: string;
+    heroImageUrl: string;
+  }>(() => {
+    const theme = (tenant?.theme as any) ?? {};
+    return {
+      logoUrl: tenant?.logo ?? '',
+      primaryColor: theme.primaryColor ?? '#0d9488',
+      accentColor: theme.accentColor ?? '#2563eb',
+      heroImageUrl: theme.heroImageUrl ?? '',
+    };
+  });
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [brandingSaved, setBrandingSaved] = useState(false);
+
+  async function uploadBrandingAsset(file: File, kind: 'logo' | 'hero'): Promise<string | null> {
+    const fd = new FormData();
+    fd.append('files', file);
+    fd.append('kind', kind === 'logo' ? 'logos' : 'hero');
+    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+    if (!res.ok) return null;
+    const { urls } = await res.json();
+    return urls?.[0] ?? null;
+  }
+
+  async function saveBranding() {
+    setSavingBranding(true);
+    try {
+      await fetch('/api/admin/web/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantLogo: branding.logoUrl,
+          primaryColor: branding.primaryColor,
+          accentColor: branding.accentColor,
+          heroImageUrl: branding.heroImageUrl,
+        }),
+      });
+      setBrandingSaved(true);
+      setTimeout(() => setBrandingSaved(false), 3000);
+    } finally {
+      setSavingBranding(false);
     }
   }
 
@@ -221,8 +272,9 @@ export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'pr
       </div>
 
       <Tabs defaultValue={defaultTab} className="bg-white rounded-xl border overflow-hidden">
-        <TabsList className="w-full rounded-none border-b bg-gray-50 h-10">
+        <TabsList className="w-full rounded-none border-b bg-gray-50 h-10 flex-wrap">
           <TabsTrigger value="profile" className="flex-1 text-xs">Web Profile</TabsTrigger>
+          <TabsTrigger value="branding" className="flex-1 text-xs">Branding</TabsTrigger>
           <TabsTrigger value="photos" className="flex-1 text-xs">Photos</TabsTrigger>
           <TabsTrigger value="rooms" className="flex-1 text-xs">Rooms & Rates</TabsTrigger>
           <TabsTrigger value="channels" className="flex-1 text-xs">Channel Manager</TabsTrigger>
@@ -334,6 +386,201 @@ export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'pr
             <Button onClick={saveProfile} disabled={saving} className="gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
               {saved ? 'Saved!' : 'Save Profile'}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Branding tab — logo + colors + hero image. Applied on the
+            public storefront and the admin sidebar. */}
+        <TabsContent value="branding" className="m-0 p-5 space-y-6">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">Your brand</h2>
+            <p className="text-xs text-gray-500">
+              These appear on your guest-facing booking page and in your admin sidebar.
+              Defaults preserve the platform colors if you skip a field.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Logo */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700 block">Logo (square, &lt; 1 MB)</label>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-lg border bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
+                  {branding.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={branding.logoUrl} alt="logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <Hotel className="h-6 w-6 text-gray-300" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="text-xs"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const url = await uploadBrandingAsset(f, 'logo');
+                      if (url) setBranding({ ...branding, logoUrl: url });
+                    }}
+                  />
+                  {branding.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setBranding({ ...branding, logoUrl: '' })}
+                      className="text-[11px] text-red-500 hover:underline self-start"
+                    >
+                      Remove logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Hero image */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700 block">Hero banner (wide, &lt; 5 MB)</label>
+              <div className="space-y-1.5">
+                <div className="w-full h-24 rounded-lg border bg-gray-50 overflow-hidden flex items-center justify-center">
+                  {branding.heroImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={branding.heroImageUrl} alt="hero" className="w-full h-full object-cover" />
+                  ) : (
+                    <span
+                      className="w-full h-full flex items-center justify-center text-white text-sm"
+                      style={{
+                        background: `linear-gradient(to right, ${branding.primaryColor}, ${branding.accentColor})`,
+                      }}
+                    >
+                      Default gradient
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="text-xs"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const url = await uploadBrandingAsset(f, 'hero');
+                    if (url) setBranding({ ...branding, heroImageUrl: url });
+                  }}
+                />
+                {branding.heroImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setBranding({ ...branding, heroImageUrl: '' })}
+                    className="text-[11px] text-red-500 hover:underline"
+                  >
+                    Remove hero image
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Primary color */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700 block">
+                Primary color
+                <span className="ml-2 text-[10px] text-gray-400 font-normal">buttons, prices, accents</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={branding.primaryColor}
+                  onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
+                  className="w-12 h-9 rounded border cursor-pointer"
+                />
+                <Input
+                  value={branding.primaryColor}
+                  onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
+                  className="h-9 text-xs font-mono w-28"
+                  placeholder="#0d9488"
+                />
+              </div>
+            </div>
+
+            {/* Accent color */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700 block">
+                Accent color
+                <span className="ml-2 text-[10px] text-gray-400 font-normal">gradient end / highlights</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={branding.accentColor}
+                  onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
+                  className="w-12 h-9 rounded border cursor-pointer"
+                />
+                <Input
+                  value={branding.accentColor}
+                  onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
+                  className="h-9 text-xs font-mono w-28"
+                  placeholder="#2563eb"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">Preview</p>
+            <div className="border rounded-lg overflow-hidden">
+              <div
+                className="h-32 relative flex items-end p-4"
+                style={
+                  branding.heroImageUrl
+                    ? {
+                        backgroundImage: `url(${branding.heroImageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }
+                    : {
+                        backgroundImage: `linear-gradient(to right, ${branding.primaryColor}, ${branding.accentColor})`,
+                      }
+                }
+              >
+                <div className="absolute inset-0 bg-black/25" />
+                <div className="relative flex items-center gap-2 text-white">
+                  {branding.logoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={branding.logoUrl} alt="logo" className="w-8 h-8 rounded object-cover" />
+                  )}
+                  <span className="font-semibold">{profile.tenantName || 'Your guesthouse'}</span>
+                </div>
+              </div>
+              <div className="p-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-xs px-3 py-1.5 rounded text-white"
+                  style={{ backgroundColor: branding.primaryColor }}
+                >
+                  Book Now
+                </button>
+                <span
+                  className="text-xs font-bold"
+                  style={{ color: branding.primaryColor }}
+                >
+                  $85.00/night
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button
+              onClick={saveBranding}
+              disabled={savingBranding}
+              size="sm"
+              className="gap-2"
+              style={{ backgroundColor: branding.primaryColor, color: 'white' }}
+            >
+              {savingBranding ? <Loader2 className="h-4 w-4 animate-spin" /> : brandingSaved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+              {brandingSaved ? 'Saved!' : 'Save Branding'}
             </Button>
           </div>
         </TabsContent>
