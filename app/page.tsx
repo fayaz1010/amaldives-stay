@@ -52,7 +52,26 @@ export default async function HomePage() {
         </div>
       );
     }
-    
+
+    // Draft mode — set by /api/admin/seed/apply, cleared by
+    // /api/admin/seed/publish. Show a "coming soon" splash so guests who
+    // happen onto a draft URL don't see half-finished content.
+    const tenantSettings = (tenant.settings as Record<string, unknown> | null) ?? {};
+    if (tenantSettings.draftMode === true) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-4">
+          <div className="text-center max-w-md">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              {tenant.name}
+            </h1>
+            <p className="text-gray-600 text-base md:text-lg">
+              Our booking page is launching soon. Please check back shortly.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return <GuestHomePage tenant={tenant} />;
   }
   

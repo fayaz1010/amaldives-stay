@@ -25,6 +25,8 @@ import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { OnboardingWizard } from '@/components/admin/onboarding-wizard';
+import { QuickSetupCard } from '@/components/admin/quick-setup-card';
+import { DraftBanner } from '@/components/admin/draft-banner';
 
 interface DashboardOverviewProps {
   stats: {
@@ -48,6 +50,8 @@ interface DashboardOverviewProps {
   pendingTasks: any[];
   user: any;
   showOnboarding?: boolean;
+  showQuickSetup?: boolean;
+  draftMode?: boolean;
   propertySubdomain?: string;
   propertyName?: string;
   propertyId?: string;
@@ -130,11 +134,17 @@ export function DashboardOverview({
   pendingTasks,
   user,
   showOnboarding = false,
+  showQuickSetup = false,
+  draftMode = false,
   propertySubdomain = '',
   propertyName = '',
   propertyId = '',
 }: DashboardOverviewProps) {
-  const [showWizard, setShowWizard] = useState(showOnboarding);
+  // The quick-setup card is shown first when the property is empty. If the
+  // owner skips it, we fall back to the manual wizard. The wizard is also
+  // explicitly invoked from the quick-setup card's "Manual setup" button.
+  const [showWizard, setShowWizard] = useState(showOnboarding && !showQuickSetup);
+  const [showSetup, setShowSetup] = useState(showQuickSetup);
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const actionItems = [
@@ -170,6 +180,23 @@ export function DashboardOverview({
 
   return (
     <div className="space-y-5">
+      {/* Draft-mode banner — shown after a quick-setup seed but before
+          the owner clicks Publish on their freshly imported page. */}
+      {draftMode && <DraftBanner />}
+
+      {/* One-click setup — Hotellook search + auto-seed. Fallback button
+          opens the manual wizard. */}
+      {showSetup && (
+        <QuickSetupCard
+          defaultName={propertyName}
+          onManualSetup={() => {
+            setShowSetup(false);
+            setShowWizard(true);
+          }}
+          onSeeded={() => setShowSetup(false)}
+        />
+      )}
+
       {showWizard && (
         <OnboardingWizard
           propertyName={propertyName}

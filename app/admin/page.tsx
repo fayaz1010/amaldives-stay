@@ -35,6 +35,12 @@ export default async function AdminDashboard() {
 
   const settings = (tenant?.settings as any) ?? null;
   const onboardingComplete = Boolean(settings?.onboardingComplete);
+  const draftMode = Boolean(settings?.draftMode);
+  // Quick-setup card is offered before the manual wizard. We only show it
+  // when the tenant has zero rooms AND hasn't already attempted onboarding
+  // or seed — so it doesn't keep nagging owners who deliberately chose the
+  // manual flow.
+  const showQuickSetup = roomCount === 0 && !onboardingComplete && !settings?.seededFromHotellook;
   const showOnboarding = roomCount === 0 && !onboardingComplete;
 
   return (
@@ -45,6 +51,8 @@ export default async function AdminDashboard() {
       pendingTasks={pendingTasks}
       user={session.user}
       showOnboarding={showOnboarding}
+      showQuickSetup={showQuickSetup}
+      draftMode={draftMode}
       propertySubdomain={tenant?.subdomain ?? ''}
       propertyName={property?.name ?? ''}
       propertyId={property?.id ?? ''}
