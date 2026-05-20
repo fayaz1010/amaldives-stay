@@ -98,10 +98,14 @@ interface Booking {
 }
 
 function grandTotal(b: Booking): number {
+  // The amount the GUEST owes — room nights + service orders. The
+  // platformFee is what stay.amaldives charges the owner (commission)
+  // and must not be added to the guest's bill; it's surfaced separately
+  // on the card so the owner can see their net.
   const n = nights(b.checkInDate, b.checkOutDate);
   const roomCharge = (b.room?.basePrice ?? 0) * n;
   const svcTotal = (b.serviceOrders ?? []).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  return roomCharge + svcTotal + (b.platformFee || 0);
+  return roomCharge + svcTotal;
 }
 
 export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
@@ -274,12 +278,17 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                           </div>
 
                           {/* Amount */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 text-[11px]">
-                              <DollarSign className="h-3 w-3 text-cyan-600" />
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <div className="flex items-center gap-1 text-[11px] min-w-0">
+                              <DollarSign className="h-3 w-3 text-cyan-600 shrink-0" />
                               <span className="font-bold text-cyan-700">${total.toFixed(0)}</span>
                               {b.platformFee > 0 && (
-                                <span className="text-gray-400">(fee ${b.platformFee.toFixed(0)})</span>
+                                <span
+                                  className="text-gray-400"
+                                  title="Commission stay.amaldives charges you — not added to the guest's bill"
+                                >
+                                  (comm ${b.platformFee.toFixed(0)})
+                                </span>
                               )}
                             </div>
                             {balance > 0 && b.status !== 'CHECKED_OUT' ? (
@@ -295,8 +304,11 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                             <p className="text-[10px] text-gray-400">via {b.source}</p>
                           )}
 
-                          {/* Actions */}
-                          <div className="flex gap-1.5 pt-0.5">
+                          {/* Actions — flex-wrap so the row never spills off the
+                              card on phones. Most guesthouse owners only have a
+                              phone; this row used to overflow in CHECKED_IN state
+                              where there are 4 buttons. */}
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
                             {b.status === 'CONFIRMED' && (
                               <Button size="sm" className="h-7 text-xs flex-1 bg-cyan-600 hover:bg-cyan-700"
                                 disabled={busy} onClick={() => quickCheckin(b.id)}>
@@ -339,14 +351,14 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className={`h-7 text-xs gap-1 ${balance > 0 ? 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}`}
+                                  className={`h-7 text-xs gap-1 min-w-0 px-2 ${balance > 0 ? 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}`}
                                   onClick={() => setQuickPayBooking(b)}
                                   title="Record payment"
                                 >
                                   💳 {balance > 0 ? `Pay $${balance.toFixed(0)}` : 'Payment'}
                                 </Button>
                                 <Button size="sm"
-                                  className="h-7 text-xs flex-1 bg-teal-600 hover:bg-teal-700"
+                                  className="h-7 text-xs flex-1 min-w-0 bg-teal-600 hover:bg-teal-700"
                                   onClick={() => setCheckoutId(b.id)}>
                                   <LogOut className="h-3 w-3 mr-1" />Check Out
                                 </Button>
