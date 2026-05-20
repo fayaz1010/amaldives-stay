@@ -477,15 +477,22 @@ export function NewBookingForm({ propertyId, tenantSubdomain }: Props) {
                   </span>
                   <span>${totalAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-500 text-xs">
-                  <span>Platform fee (4%)</span>
-                  <span>${platformFee.toFixed(2)}</span>
+                <div
+                  className="flex items-center justify-between text-gray-500 text-xs"
+                  title="What stay.amaldives charges you — deducted from your payout, not added to the guest's bill"
+                >
+                  <span>Platform commission (4%)</span>
+                  <span>−${platformFee.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between font-semibold text-base pt-1">
-                  <span>Total</span>
+                  <span>Guest pays</span>
                   <span className="text-cyan-700">
-                    ${(totalAmount + platformFee).toFixed(2)}
+                    ${totalAmount.toFixed(2)}
                   </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-emerald-700">
+                  <span>Your payout</span>
+                  <span>${(totalAmount - platformFee).toFixed(2)}</span>
                 </div>
               </div>
             </div>
