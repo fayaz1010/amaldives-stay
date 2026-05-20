@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
             create: {
               tenantId: newTenant.id,
               position: 'Owner',
+              // StaffProfile requires these — Prisma was rejecting the
+              // create() with `Argument department is missing` and the
+              // entire claim flow returned 500. Defaults match what a
+              // self-signed-up owner would represent.
+              department: 'Management',
+              hireDate: new Date(),
             },
           },
         } as any,
