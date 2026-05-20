@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { searchHotels } from '@/lib/hotellook';
+import { searchPlaces } from '@/lib/places-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,9 +9,9 @@ export const dynamic = 'force-dynamic';
  * One-click setup, step 1.
  *
  * Owner types their guesthouse name (or a fragment) on /admin and we hit
- * Hotellook's open lookup endpoint to find matching Maldives properties.
- * We never write anything here — this is a pure search. The owner picks a
- * candidate, then /api/admin/seed/apply does the actual seeding.
+ * the Google Places Text Search API to find matching Maldives lodging.
+ * We never write anything here — this is a pure search. The owner picks
+ * a candidate, then /api/admin/seed/apply does the actual seeding.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,12 +29,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ hits: [] });
     }
 
-    const hits = await searchHotels(query, 5);
-    return NextResponse.json({ hits });
+    const hits = await searchPlaces(query, 5);
+    // The UI shape used to call these "hotellookId" — keep both keys so
+    // we don't have to touch the client component in this hotfix PR.
+    const compatHits = hits.map((h) => ({
+      id: h.placeId,
+      placeId: h.placeId,
+      name: h.name,
+      fullName: `${h.name} (${h.formattedAddress})`,
+      city: h.city,
+      country: h.country,
+      stars: null,
+      rating: h.rating,
+      userRatingsTotal: h.userRatingsTotal,
+      photos: h.photos,
+    }));
+    return NextResponse.json({ hits: compatHits });
   } catch (error) {
     console.error('Seed search error:', error);
     return NextResponse.json(
-      { error: 'Search failed', hits: [] },
+      { error: error instanceof Error ? error.message : 'Search failed', hits: [] },
       { status: 500 }
     );
   }
