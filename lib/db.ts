@@ -197,9 +197,46 @@ export class TenantDb {
   }
 
   async createRoom(data: any) {
+    // Room.propertyId is required. The onboarding wizard sends the payload
+    // without propertyId (it doesn't know the id), and legacy tenants
+    // claimed before fix/onboard-default-property have no Property at all,
+    // so we resolve the property here — and lazily create one if missing —
+    // before delegating to Prisma. Without this, `/api/admin/rooms` POST
+    // 500s for any tenant in that state.
+    let propertyId: string | undefined = data?.propertyId;
+    if (!propertyId) {
+      const existing = await prisma.property.findFirst({
+        where: { tenantId: this.tenantId },
+        select: { id: true },
+      });
+      if (existing) {
+        propertyId = existing.id;
+      } else {
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: this.tenantId },
+          select: { name: true },
+        });
+        const created = await prisma.property.create({
+          data: {
+            tenantId: this.tenantId,
+            name: tenant?.name ?? 'Property 1',
+            address: '—',
+            city: '—',
+            state: '—',
+            country: 'Maldives',
+            zipCode: '—',
+            phone: '—',
+            email: '—',
+          },
+        });
+        propertyId = created.id;
+      }
+    }
+
     return await prisma.room.create({
       data: {
         ...data,
+        propertyId,
         tenantId: this.tenantId,
       },
     });

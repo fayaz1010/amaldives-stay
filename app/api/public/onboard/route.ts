@@ -76,6 +76,25 @@ export async function POST(request: NextRequest) {
         } as any,
       });
 
+      // Every tenant needs at least one Property — admin pages assume one
+      // exists (PATCH /api/admin/settings silently drops city/phone/etc.
+      // when there is no Property to update, and POST /api/admin/rooms
+      // requires a non-nullable propertyId). The onboarding wizard will
+      // overwrite the placeholder fields below in step 2.
+      await tx.property.create({
+        data: {
+          tenantId: newTenant.id,
+          name: resolvedName,
+          address: '—',
+          city: '—',
+          state: '—',
+          country: 'Maldives',
+          zipCode: '—',
+          phone: '—',
+          email,
+        },
+      });
+
       await tx.user.create({
         data: {
           email,
