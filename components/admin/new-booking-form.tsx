@@ -484,7 +484,7 @@ export function NewBookingForm({ propertyId, tenantSubdomain }: Props) {
                 <div className="flex items-center justify-between font-semibold text-base pt-1">
                   <span>Total</span>
                   <span className="text-cyan-700">
-                    ${totalAmount.toFixed(2)}
+                    ${(totalAmount + platformFee).toFixed(2)}
                   </span>
                 </div>
               </div>
