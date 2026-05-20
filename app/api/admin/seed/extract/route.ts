@@ -6,6 +6,47 @@ import { generateJSON } from '@/lib/ai';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Gemini calls can take ~20-30s when grounding
 
+/**
+ * Normalise time-of-day strings to 24h HH:MM. Returns undefined if the
+ * input doesn't parse, so the caller drops the field rather than writes
+ * something nonsensical like "noon" into Property.checkInTime.
+ */
+function normaliseTime(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const s = raw.trim().toLowerCase();
+  if (!s) return undefined;
+  // Already 24h "HH:MM"
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) {
+    const h = Number(m24[1]);
+    const mn = Number(m24[2]);
+    if (h >= 0 && h < 24 && mn >= 0 && mn < 60) return `${String(h).padStart(2, '0')}:${m24[2]}`;
+  }
+  // 12h "h:mm am/pm" or "h am/pm"
+  const m12 = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
+  if (m12) {
+    let h = Number(m12[1]) % 12;
+    if (m12[3].toLowerCase() === 'pm') h += 12;
+    const mn = m12[2] ?? '00';
+    return `${String(h).padStart(2, '0')}:${mn}`;
+  }
+  return undefined;
+}
+
+function dedupe(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of arr) {
+    if (typeof v !== 'string') continue;
+    const key = v.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(v.trim());
+  }
+  return out;
+}
+
 interface ExtractedProperty {
   name: string;
   description: string;
@@ -31,7 +72,7 @@ interface ExtractedProperty {
 }
 
 const EXTRACTION_INSTRUCTIONS = `You are extracting hotel/guesthouse data into structured JSON.
-Return ONLY a single JSON object matching the schema. No commentary, no prose, no markdown.
+Return ONLY a single JSON object matching the schema. No commentary, no prose, no markdown fences.
 
 Schema:
 {
@@ -47,7 +88,7 @@ Schema:
   "rooms": [
     {
       "name": string,              // e.g. "Deluxe Double Room with Sea View"
-      "type": string,              // STANDARD | DELUXE | SUITE | FAMILY | TWIN
+      "type": string,              // STANDARD | DELUXE | SUITE | FAMILY
       "capacity": number,          // max guests
       "beds": string,              // e.g. "1 double bed"
       "description": string,       // 1-2 sentences
@@ -55,20 +96,22 @@ Schema:
       "currency": string           // ISO-4217 e.g. "USD","MVR","EUR"
     }
   ],
-  "photoUrls": string[],           // direct image URLs visible on the page
-  "checkInTime": string,           // "14:00" 24h, if shown
-  "checkOutTime": string           // "12:00" 24h, if shown
+  "photoUrls": string[],           // direct image URLs of the property (see rules)
+  "checkInTime": string,           // "14:00" — strict 24h HH:MM
+  "checkOutTime": string           // "11:00" — strict 24h HH:MM
 }
 
 Rules:
 - Use the listing's own wording for the description; keep it factual.
 - For rooms, prefer the structured room table over the description.
-- For room "type", map names: "Suite" → SUITE, "Twin" → TWIN, "Family" → FAMILY,
-  "Deluxe Double" → DELUXE, anything else → STANDARD.
-- For photoUrls, only include direct .jpg/.webp/.png URLs hosted on the
-  property listing's CDN (skip icons, maps, profile pictures).
+- For room "type", map: Suite→SUITE, Twin/Double/King/Queen→STANDARD,
+  Family/Triple→FAMILY, "Deluxe" prefix→DELUXE, anything else→STANDARD.
+- photoUrls: include every full-resolution image URL you can see on the
+  page. For Booking.com, these are on cf.bstatic.com/xdata/images/hotel/
+  — prefer max1024 over square600. Include up to 12 URLs.
+- Times: always 24-hour HH:MM (e.g. "12:00 PM" → "12:00", "11:00 AM" → "11:00").
 - If a field is unknown, use null (not "unknown" or empty string).
-- Return an empty array for rooms[] if you can't determine any.`;
+- Return an empty array for rooms[]/amenities[]/photoUrls[] if you can't determine any.`;
 
 /**
  * One-click setup, step 1b (alternative to /api/admin/seed/search).
@@ -158,6 +201,17 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(extracted.rooms)) extracted.rooms = [];
     if (!Array.isArray(extracted.amenities)) extracted.amenities = [];
     if (!Array.isArray(extracted.photoUrls)) extracted.photoUrls = [];
+
+    // Times — Gemini sometimes returns "12:00 PM" / "noon" / "11 AM" even
+    // though we asked for 24h. Normalise to HH:MM and drop anything we
+    // can't parse so the Property update doesn't write garbage strings.
+    extracted.checkInTime = normaliseTime(extracted.checkInTime);
+    extracted.checkOutTime = normaliseTime(extracted.checkOutTime);
+
+    // Dedupe amenities and photoUrls case-insensitively. Gemini often
+    // emits the same facility twice from different page sections.
+    extracted.amenities = dedupe(extracted.amenities);
+    extracted.photoUrls = dedupe(extracted.photoUrls).slice(0, 12);
 
     return NextResponse.json({
       success: true,
