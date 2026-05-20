@@ -86,17 +86,25 @@ export async function generateJSON<T = unknown>(
   const key = await getGeminiKey();
   const url = `${GEMINI_BASE}/models/${MODEL}:generateContent?key=${key}`;
 
+  // Gemini disallows `responseMimeType: application/json` while `tools` is
+  // set (the API returns 400 INVALID_ARGUMENT: "Tool use with a response
+  // mime type: 'application/json' is unsupported"). Strip the JSON mime
+  // when grounding is on and rely on the prompt-side JSON instructions +
+  // the salvage regex below to parse the response.
+  const useGrounding = !!options.useSearchGrounding;
+  const generationConfig: Record<string, unknown> = {
+    temperature: options.temperature ?? 0.2,
+    maxOutputTokens: options.maxTokens ?? 4096,
+  };
+  if (!useGrounding) {
+    generationConfig.responseMimeType = 'application/json';
+    if (options.jsonSchema) generationConfig.responseSchema = options.jsonSchema;
+  }
   const body: Record<string, unknown> = {
     contents: [{ role: 'user', parts }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: options.temperature ?? 0.2,
-      maxOutputTokens: options.maxTokens ?? 4096,
-      ...(options.jsonSchema ? { responseSchema: options.jsonSchema } : {}),
-    },
+    generationConfig,
   };
-
-  if (options.useSearchGrounding) {
+  if (useGrounding) {
     // Lets Gemini fetch live URLs via Google Search. Required for the
     // booking.com URL extraction path because Booking.com blocks raw fetches.
     body.tools = [{ google_search: {} }];
