@@ -72,7 +72,10 @@ export function OnboardingWizard({ propertyName, subdomain, propertyId, onComple
   // Step 3 fields
   const [roomTypes, setRoomTypes] = useState<RoomTypeDraft[]>([emptyRoomType()]);
 
-  const bookingUrl = `https://stay.amaldives.com/book/${subdomain}`;
+  // Public storefront is the tenant subdomain root — there is no /book/[slug]
+  // page on the apex. Use the same origin guests reach when they scan the QR
+  // code or follow the WhatsApp share, otherwise they hit a 404.
+  const bookingUrl = `https://${subdomain}.stay.amaldives.com/`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
     bookingUrl
   )}`;
