@@ -61,6 +61,11 @@ interface AdminLayoutProps {
   user: any;
   tenantPlan?: string;
   tenantSubdomain?: string;
+  // Branding — used to render the sidebar header. All optional; defaults
+  // preserve the platform-wide look.
+  tenantName?: string;
+  tenantLogo?: string | null;
+  primaryColor?: string | null;
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -141,11 +146,17 @@ const NAV_GROUPS: NavGroup[] = [
 function SidebarContent({
   pathname,
   tenantPlan,
+  tenantName,
+  tenantLogo,
+  primaryColor,
   onClose,
   onNavClick,
 }: {
   pathname: string;
   tenantPlan: string;
+  tenantName?: string;
+  tenantLogo?: string | null;
+  primaryColor?: string | null;
   onClose?: () => void;
   onNavClick?: () => void;
 }) {
@@ -186,13 +197,29 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo */}
+      {/* Logo — falls back to platform branding when the tenant hasn't
+          uploaded their own logo. Property name is truncated so a long
+          guesthouse name can't push the close-button off-screen. */}
       <div className="flex items-center justify-between h-14 px-4 border-b shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center">
-            <Hotel className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-bold text-gray-900 text-sm">amaldives STAY</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {tenantLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tenantLogo}
+              alt={tenantName || 'Property logo'}
+              className="w-7 h-7 rounded-lg object-cover shrink-0"
+            />
+          ) : (
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ backgroundColor: primaryColor || '#0d9488' }}
+            >
+              <Hotel className="h-4 w-4 text-white" />
+            </div>
+          )}
+          <span className="font-bold text-gray-900 text-sm truncate">
+            {tenantName || 'amaldives STAY'}
+          </span>
         </div>
         {onClose && (
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
@@ -264,7 +291,15 @@ function SidebarContent({
   );
 }
 
-export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdomain = '' }: AdminLayoutProps) {
+export function AdminLayout({
+  children,
+  user,
+  tenantPlan = 'basic',
+  tenantSubdomain = '',
+  tenantName,
+  tenantLogo,
+  primaryColor,
+}: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const pathname = usePathname();
@@ -299,6 +334,9 @@ export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdom
             <SidebarContent
               pathname={pathname}
               tenantPlan={tenantPlan}
+              tenantName={tenantName}
+              tenantLogo={tenantLogo}
+              primaryColor={primaryColor}
               onNavClick={handleNavClick}
               onClose={() => setSidebarOpen(false)}
             />
@@ -308,7 +346,14 @@ export function AdminLayout({ children, user, tenantPlan = 'basic', tenantSubdom
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col border-r border-gray-200 bg-white">
-        <SidebarContent pathname={pathname} tenantPlan={tenantPlan} onNavClick={handleNavClick} />
+        <SidebarContent
+          pathname={pathname}
+          tenantPlan={tenantPlan}
+          tenantName={tenantName}
+          tenantLogo={tenantLogo}
+          primaryColor={primaryColor}
+          onNavClick={handleNavClick}
+        />
       </div>
 
       {/* Main content */}

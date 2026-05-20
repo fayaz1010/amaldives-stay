@@ -40,6 +40,19 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
   const rooms = property?.rooms || [];
   const availableRooms = rooms.filter((room: any) => room.status === 'AVAILABLE');
 
+  // Branding — defaults match the existing teal/blue palette so untouched
+  // tenants look identical. Any of these can be overridden in /admin/web.
+  const theme = (tenant.theme ?? {}) as {
+    primaryColor?: string;
+    accentColor?: string;
+    heroImageUrl?: string;
+    heroImageFocalPoint?: string;
+  };
+  const primary = theme.primaryColor || '#0d9488'; // teal-600
+  const accent = theme.accentColor || '#2563eb';   // blue-600
+  const heroImage = theme.heroImageUrl;
+  const heroFocal = theme.heroImageFocalPoint || 'center';
+
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement booking logic
@@ -73,13 +86,23 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
               <h1 className="text-2xl font-bold text-gray-900">{tenant.name}</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
-              <a href="#rooms" className="text-gray-600 hover:text-teal-600 transition-colors">
+              <a
+                href="#rooms"
+                className="text-gray-600 transition-colors hover:opacity-80"
+                style={{ ['--hover' as any]: primary }}
+              >
                 Rooms
               </a>
-              <a href="#amenities" className="text-gray-600 hover:text-teal-600 transition-colors">
+              <a
+                href="#amenities"
+                className="text-gray-600 transition-colors hover:opacity-80"
+              >
                 Amenities
               </a>
-              <a href="#contact" className="text-gray-600 hover:text-teal-600 transition-colors">
+              <a
+                href="#contact"
+                className="text-gray-600 transition-colors hover:opacity-80"
+              >
                 Contact
               </a>
             </nav>
@@ -87,7 +110,7 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
               <Button variant="outline" size="sm">
                 Sign In
               </Button>
-              <Button size="sm" className="bg-teal-600 hover:bg-teal-700">
+              <Button size="sm" style={{ backgroundColor: primary, color: 'white' }}>
                 Book Now
               </Button>
             </div>
@@ -95,8 +118,16 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative h-[600px] bg-gradient-to-r from-teal-600 to-blue-600">
+      {/* Hero Section — uses uploaded image if present, otherwise the branded
+          gradient. Black overlay keeps text legible over busy photos. */}
+      <section
+        className="relative h-[600px] bg-cover bg-no-repeat"
+        style={
+          heroImage
+            ? { backgroundImage: `url(${heroImage})`, backgroundPosition: heroFocal }
+            : { backgroundImage: `linear-gradient(to right, ${primary}, ${accent})` }
+        }
+      >
         <div className="absolute inset-0 bg-black/30"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
           <div className="text-center text-white max-w-3xl mx-auto">
@@ -152,7 +183,11 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                         />
                       </div>
                     </div>
-                    <Button type="submit" size="lg" className="bg-teal-600 hover:bg-teal-700">
+                    <Button
+                      type="submit"
+                      size="lg"
+                      style={{ backgroundColor: primary, color: 'white' }}
+                    >
                       Check Availability
                     </Button>
                   </form>
@@ -219,7 +254,7 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                         <span className="text-sm text-gray-600">Up to {room.capacity} guests</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-2xl font-bold text-teal-600">
+                        <span className="text-2xl font-bold" style={{ color: primary }}>
                           {formatCurrency(room.basePrice)}
                         </span>
                         <span className="text-sm text-gray-500">/night</span>
@@ -243,7 +278,10 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                       </div>
                     )}
                     
-                    <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                    <Button
+                      className="w-full"
+                      style={{ backgroundColor: primary, color: 'white' }}
+                    >
                       Select Room
                     </Button>
                   </CardContent>
@@ -280,8 +318,11 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                 transition={{ duration: 0.8, delay: index * 0.1 }}
                 className="text-center"
               >
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <amenity.icon className="h-8 w-8 text-teal-600" />
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: `${primary}1a` /* 10% alpha */ }}
+                >
+                  <amenity.icon className="h-8 w-8" style={{ color: primary }} />
                 </div>
                 <h3 className="font-semibold text-gray-900">{amenity.name}</h3>
               </motion.div>
@@ -311,21 +352,21 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Contact Information</h3>
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-teal-600" />
+                  <MapPin className="h-5 w-5" style={{ color: primary }} />
                   <span className="text-gray-600">
                     {property?.address}, {property?.city}, {property?.state} {property?.zipCode}
                   </span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-teal-600" />
+                  <Phone className="h-5 w-5" style={{ color: primary }} />
                   <span className="text-gray-600">{property?.phone}</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-teal-600" />
+                  <Mail className="h-5 w-5" style={{ color: primary }} />
                   <span className="text-gray-600">{property?.email}</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Clock className="h-5 w-5 text-teal-600" />
+                  <Clock className="h-5 w-5" style={{ color: primary }} />
                   <span className="text-gray-600">
                     Check-in: {property?.checkInTime} | Check-out: {property?.checkOutTime}
                   </span>
@@ -365,7 +406,11 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                       placeholder="How can we help you?"
                     />
                   </div>
-                  <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700">
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    style={{ backgroundColor: primary, color: 'white' }}
+                  >
                     Send Message
                   </Button>
                 </form>

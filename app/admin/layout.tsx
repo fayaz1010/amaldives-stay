@@ -19,16 +19,26 @@ export default async function AdminLayoutWrapper({
     redirect('/unauthorized');
   }
 
-  // Fetch tenant plan for feature gating
+  // Fetch tenant plan + branding for feature gating and sidebar display.
   const tenant = session.user.tenantId
     ? await prisma.tenant.findUnique({
         where: { id: session.user.tenantId },
-        select: { plan: true, name: true, subdomain: true },
+        select: { plan: true, name: true, subdomain: true, logo: true, theme: true },
       })
     : null;
 
+  const theme = (tenant?.theme as Record<string, unknown> | null) ?? {};
+  const primaryColor = typeof theme.primaryColor === 'string' ? theme.primaryColor : null;
+
   return (
-    <AdminLayout user={session.user} tenantPlan={tenant?.plan ?? 'basic'} tenantSubdomain={tenant?.subdomain ?? ''}>
+    <AdminLayout
+      user={session.user}
+      tenantPlan={tenant?.plan ?? 'basic'}
+      tenantSubdomain={tenant?.subdomain ?? ''}
+      tenantName={tenant?.name ?? ''}
+      tenantLogo={tenant?.logo ?? null}
+      primaryColor={primaryColor}
+    >
       {children}
     </AdminLayout>
   );
