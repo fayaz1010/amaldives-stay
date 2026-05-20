@@ -8,12 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Sparkles, Search, Check, ExternalLink } from 'lucide-react';
 
 interface Hit {
-  id: number;
+  // Stable string id from Google Places (we used to use a numeric Hotellook id).
+  id: string;
+  placeId?: string;
   name: string;
   fullName: string;
   city: string;
   country: string;
-  stars?: number | null;
+  rating?: number | null;
+  userRatingsTotal?: number | null;
   photos: string[];
 }
 
@@ -37,7 +40,7 @@ export function QuickSetupCard({ defaultName = '', onManualSetup, onSeeded }: Pr
   const [searching, setSearching] = useState(false);
   const [hits, setHits] = useState<Hit[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [applying, setApplying] = useState<number | null>(null);
+  const [applying, setApplying] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
   async function search() {
@@ -70,10 +73,11 @@ export function QuickSetupCard({ defaultName = '', onManualSetup, onSeeded }: Pr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          hotellookId: hit.id,
+          placeId: hit.placeId ?? hit.id,
           name: hit.name,
           city: hit.city,
           country: hit.country,
+          photos: hit.photos,
           starterRoomCount: 4,
           starterRoomPrice: 85,
         }),
@@ -157,9 +161,10 @@ export function QuickSetupCard({ defaultName = '', onManualSetup, onSeeded }: Pr
                         (e.target as HTMLImageElement).style.opacity = '0.2';
                       }}
                     />
-                    {hit.stars ? (
+                    {hit.rating ? (
                       <span className="absolute top-2 right-2 text-[10px] bg-white/90 px-1.5 py-0.5 rounded font-medium">
-                        {hit.stars}★
+                        {hit.rating.toFixed(1)}★
+                        {hit.userRatingsTotal ? ` · ${hit.userRatingsTotal}` : ''}
                       </span>
                     ) : null}
                   </div>
