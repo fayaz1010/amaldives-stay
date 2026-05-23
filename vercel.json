@@ -1,4 +1,10 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma generate && npx next build"
+  "buildCommand": "npx prisma generate && npx next build",
+  "crons": [
+    {
+      "path": "/api/cron/ical-sync",
+      "schedule": "*/15 * * * *"
+    }
+  ]
 }

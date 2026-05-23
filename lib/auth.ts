@@ -71,10 +71,46 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
+        // On initial signin, capture role + active tenantId.
         token.role = user.role;
         token.tenantId = user.tenantId || undefined;
+      }
+
+      // Hydrate memberships into the JWT. Re-fetched every 60s and on
+      // explicit session update() calls so the switcher reflects the
+      // current tenantId / newly added tenants without re-login.
+      const now = Date.now();
+      const stale = !token.membershipsRefreshedAt || now - token.membershipsRefreshedAt > 60_000;
+      const userId = (user?.id as string | undefined) || (token.sub as string | undefined);
+      if (userId && (stale || trigger === 'update')) {
+        try {
+          const rows = await prisma.tenantMembership.findMany({
+            where: { userId },
+            include: { tenant: { select: { id: true, name: true, subdomain: true, status: true } } },
+          });
+          const activeRows = rows.filter((r) => r.tenant.status === 'ACTIVE');
+          token.memberships = activeRows.map((r) => ({
+            tenantId: r.tenantId,
+            tenantName: r.tenant.name,
+            subdomain: r.tenant.subdomain,
+            role: r.role,
+            isDefault: r.isDefault,
+          }));
+          token.membershipsRefreshedAt = now;
+          // If User.tenantId points at a tenant this user no longer has
+          // access to, fall back to the default membership.
+          const currentValid = token.tenantId && activeRows.some((r) => r.tenantId === token.tenantId);
+          if (!currentValid) {
+            const fallback = activeRows.find((r) => r.isDefault) ?? activeRows[0];
+            token.tenantId = fallback?.tenantId;
+          }
+        } catch (err) {
+          // Don't fail the session over a membership read error — just
+          // keep the cached value.
+          console.warn('[auth] memberships hydration failed', err);
+        }
       }
       return token;
     },
@@ -83,6 +119,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!;
         session.user.role = token.role as string;
         session.user.tenantId = token.tenantId as string | undefined;
+        session.user.memberships = token.memberships;
       }
       return session;
     },

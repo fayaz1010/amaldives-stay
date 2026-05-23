@@ -81,8 +81,25 @@ export async function GET(
       },
     });
 
+    // External (iCal) blocks for the same window. If any feed covers a
+    // room — directly or tenant-wide — exclude that room from the
+    // availability response so a guest can't double-book a date that's
+    // already taken on Booking.com or Airbnb.
+    const externalBlocks = await prisma.externalCalendarBlock.findMany({
+      where: {
+        tenantId: tenant.id,
+        startDate: { lt: checkOut },
+        endDate: { gt: checkIn },
+      },
+      select: { roomId: true },
+    });
+    const blockedRoomIds = new Set<string>();
+    const tenantWideBlock = externalBlocks.some((b) => !b.roomId);
+    for (const b of externalBlocks) if (b.roomId) blockedRoomIds.add(b.roomId);
+
     const availableRooms = rooms
       .filter((room) => room.bookings.length === 0)
+      .filter((room) => !tenantWideBlock && !blockedRoomIds.has(room.id))
       .map((room) => ({
         id: room.id,
         number: room.number,

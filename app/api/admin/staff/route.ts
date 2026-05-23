@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { generateInviteToken } from '@/lib/staff-invite';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,44 +91,94 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = session.user.tenantId;
-    const hashedPassword = await bcrypt.hash('Welcome@2024', 10);
+    const finalRole = (role || 'FRONT_DESK') as
+      | 'TENANT_ADMIN'
+      | 'MANAGER'
+      | 'FRONT_DESK'
+      | 'HOUSEKEEPING'
+      | 'MAINTENANCE';
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role || 'FRONT_DESK',
-        tenantId,
-      },
+    // Generate a random temp password. The invite link includes a signed
+    // token that lets the staff member set their own password before
+    // first sign-in — so this temp value is just a non-empty placeholder
+    // that meets the hashed-password schema constraint.
+    const tempPassword = crypto.randomBytes(24).toString('base64url');
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    // Create User + StaffProfile + TenantMembership in one transaction.
+    // The membership row is critical: without it the multi-tenant session
+    // hydration in lib/auth.ts won't recognise the staff member's tenant
+    // and they'll bounce to /unauthorized after signin.
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: finalRole,
+          tenantId,
+        },
+      });
+
+      const staffProfile = await tx.staffProfile.create({
+        data: {
+          userId: user.id,
+          tenantId,
+          department,
+          position,
+          employeeId: employeeId || null,
+          salary: typeof salary === 'number' ? salary : salary ? Number(salary) : null,
+          hireDate: new Date(hireDate),
+        },
+      });
+
+      await tx.tenantMembership.create({
+        data: {
+          userId: user.id,
+          tenantId,
+          role: finalRole,
+          isDefault: true,
+        },
+      });
+
+      return { user, staffProfile };
     });
 
-    const staffProfile = await prisma.staffProfile.create({
-      data: {
-        userId: user.id,
-        tenantId,
-        department,
-        position,
-        employeeId: employeeId || null,
-        salary: typeof salary === 'number' ? salary : salary ? Number(salary) : null,
-        hireDate: new Date(hireDate),
-      },
+    // Generate a 7-day invite token (signed with NEXTAUTH_SECRET; no DB
+    // table required). Staff member uses /auth/invite/[token] to set
+    // their own password.
+    const inviteToken = generateInviteToken({
+      userId: created.user.id,
+      email,
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     });
+
+    // Build the absolute invite URL using the current request's host so
+    // the link works on the tenant's subdomain (e.g.,
+    // reef-view-stay.stay.amaldives.com/auth/invite/...).
+    const origin = request.headers.get('origin') ?? `https://${request.headers.get('host') ?? 'stay.amaldives.com'}`;
+    const inviteUrl = `${origin}/auth/invite/${inviteToken}`;
 
     return NextResponse.json(
       {
         user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive,
+          id: created.user.id,
+          name: created.user.name,
+          email: created.user.email,
+          role: created.user.role,
+          isActive: created.user.isActive,
         },
         staffProfile: {
-          ...staffProfile,
-          hireDate: staffProfile.hireDate.toISOString(),
-          createdAt: staffProfile.createdAt.toISOString(),
-          updatedAt: staffProfile.updatedAt.toISOString(),
+          ...created.staffProfile,
+          hireDate: created.staffProfile.hireDate.toISOString(),
+          createdAt: created.staffProfile.createdAt.toISOString(),
+          updatedAt: created.staffProfile.updatedAt.toISOString(),
+        },
+        // Admin shows this to the staff member so they can set their own
+        // password. Expires in 7 days.
+        invite: {
+          url: inviteUrl,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
       },
       { status: 201 }
