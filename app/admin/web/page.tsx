@@ -59,12 +59,21 @@ export default async function WebAdminPage({ searchParams }: WebPageProps) {
 
   const property = tenant.properties[0] ?? null;
 
+  // Full room list (one row per physical unit) for the Channels tab —
+  // owner picks which Room each external iCal feed maps to.
+  const allRooms = await prisma.room.findMany({
+    where: { tenantId: tenant.id },
+    select: { id: true, number: true, name: true, type: true },
+    orderBy: { number: 'asc' },
+  });
+
   return (
     <WebManager
       tenant={tenant}
       property={property}
       subdomain={tenant.subdomain}
       plan={tenant.plan}
+      allRooms={allRooms}
       defaultTab={searchParams.tab ?? 'profile'}
     />
   );

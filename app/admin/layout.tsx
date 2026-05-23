@@ -38,6 +38,8 @@ export default async function AdminLayoutWrapper({
       tenantName={tenant?.name ?? ''}
       tenantLogo={tenant?.logo ?? null}
       primaryColor={primaryColor}
+      memberships={session.user.memberships}
+      activeTenantId={session.user.tenantId}
     >
       {children}
     </AdminLayout>

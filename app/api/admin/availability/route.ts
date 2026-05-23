@@ -78,9 +78,36 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // External (Booking.com / Airbnb / iCal) blocks for the same window.
+    // We pull them per-tenant in one query and then bucket by roomId so
+    // we don't make a query per room. Feeds with roomId=null block every
+    // room in the tenant — those are surfaced under a sentinel key below.
+    const externalBlocks = await prisma.externalCalendarBlock.findMany({
+      where: {
+        tenantId: session.user.tenantId,
+        startDate: { lt: rangeEndExclusive },
+        endDate: { gt: startDate },
+      },
+      select: { roomId: true, startDate: true, endDate: true, source: true },
+    });
+    const blocksByRoom: Record<string, typeof externalBlocks> = {};
+    const tenantWideBlocks: typeof externalBlocks = [];
+    for (const b of externalBlocks) {
+      if (b.roomId) {
+        (blocksByRoom[b.roomId] ||= []).push(b);
+      } else {
+        tenantWideBlocks.push(b);
+      }
+    }
+
+    const externalSourcesByRoom: Record<string, Set<string>> = {};
+
     const result = rooms.map((room) => {
       const bookedSet = new Set<string>();
+      const externalSources = new Set<string>();
+      externalSourcesByRoom[room.id] = externalSources;
 
+      // Internal bookings first.
       for (const b of room.bookings) {
         // Iterate each occupied night from checkIn (inclusive) up to checkOut (exclusive)
         const cursor = new Date(
@@ -106,6 +133,32 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // External blocks for this specific room + any tenant-wide blocks.
+      const roomBlocks = [...(blocksByRoom[room.id] ?? []), ...tenantWideBlocks];
+      for (const b of roomBlocks) {
+        const cursor = new Date(
+          Date.UTC(
+            b.startDate.getUTCFullYear(),
+            b.startDate.getUTCMonth(),
+            b.startDate.getUTCDate()
+          )
+        );
+        const stop = new Date(
+          Date.UTC(
+            b.endDate.getUTCFullYear(),
+            b.endDate.getUTCMonth(),
+            b.endDate.getUTCDate()
+          )
+        );
+        while (cursor < stop) {
+          if (cursor >= startDate && cursor <= endDate) {
+            bookedSet.add(toDateKey(cursor));
+          }
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+        externalSources.add(b.source);
+      }
+
       return {
         id: room.id,
         number: room.number,
@@ -114,6 +167,7 @@ export async function GET(request: NextRequest) {
         basePrice: room.basePrice,
         status: room.status,
         bookedDates: Array.from(bookedSet).sort(),
+        externalSources: Array.from(externalSources),
       };
     });
 

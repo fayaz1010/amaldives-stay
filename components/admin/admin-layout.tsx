@@ -40,6 +40,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TenantSwitcher } from '@/components/admin/tenant-switcher';
 
 interface NavItem {
   name: string;
@@ -66,6 +67,16 @@ interface AdminLayoutProps {
   tenantName?: string;
   tenantLogo?: string | null;
   primaryColor?: string | null;
+  /** Memberships passed through to the sidebar tenant switcher. */
+  memberships?: Array<{
+    tenantId: string;
+    tenantName: string;
+    subdomain: string;
+    role: string;
+    isDefault: boolean;
+  }>;
+  /** Active tenant id (drives which membership the switcher highlights). */
+  activeTenantId?: string;
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -149,6 +160,8 @@ function SidebarContent({
   tenantName,
   tenantLogo,
   primaryColor,
+  memberships,
+  activeTenantId,
   onClose,
   onNavClick,
 }: {
@@ -157,6 +170,8 @@ function SidebarContent({
   tenantName?: string;
   tenantLogo?: string | null;
   primaryColor?: string | null;
+  memberships?: AdminLayoutProps['memberships'];
+  activeTenantId?: string;
   onClose?: () => void;
   onNavClick?: () => void;
 }) {
@@ -197,32 +212,43 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo — falls back to platform branding when the tenant hasn't
-          uploaded their own logo. Property name is truncated so a long
-          guesthouse name can't push the close-button off-screen. */}
+      {/* Tenant switcher — renders a plain label when the user belongs to
+          one tenant, or a dropdown with all their accounts + "Add another
+          business" when they belong to more than one. */}
       <div className="flex items-center justify-between h-14 px-4 border-b shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          {tenantLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={tenantLogo}
-              alt={tenantName || 'Property logo'}
-              className="w-7 h-7 rounded-lg object-cover shrink-0"
-            />
-          ) : (
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ backgroundColor: primaryColor || '#0d9488' }}
-            >
-              <Hotel className="h-4 w-4 text-white" />
-            </div>
-          )}
-          <span className="font-bold text-gray-900 text-sm truncate">
-            {tenantName || 'amaldives STAY'}
-          </span>
-        </div>
+        {memberships && memberships.length > 0 && activeTenantId ? (
+          <TenantSwitcher
+            activeTenantId={activeTenantId}
+            memberships={memberships}
+            activeLogo={tenantLogo}
+            accentColor={primaryColor ?? undefined}
+          />
+        ) : (
+          // Fallback for sessions where memberships haven't loaded yet
+          // (first render after a fresh signin, before the JWT hydrates).
+          <div className="flex items-center gap-2 min-w-0">
+            {tenantLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tenantLogo}
+                alt={tenantName || 'Property logo'}
+                className="w-7 h-7 rounded-lg object-cover shrink-0"
+              />
+            ) : (
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ backgroundColor: primaryColor || '#0d9488' }}
+              >
+                <Hotel className="h-4 w-4 text-white" />
+              </div>
+            )}
+            <span className="font-bold text-gray-900 text-sm truncate">
+              {tenantName || 'amaldives STAY'}
+            </span>
+          </div>
+        )}
         {onClose && (
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         )}
@@ -299,6 +325,8 @@ export function AdminLayout({
   tenantName,
   tenantLogo,
   primaryColor,
+  memberships,
+  activeTenantId,
 }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
@@ -337,6 +365,8 @@ export function AdminLayout({
               tenantName={tenantName}
               tenantLogo={tenantLogo}
               primaryColor={primaryColor}
+              memberships={memberships}
+              activeTenantId={activeTenantId}
               onNavClick={handleNavClick}
               onClose={() => setSidebarOpen(false)}
             />
@@ -352,6 +382,8 @@ export function AdminLayout({
           tenantName={tenantName}
           tenantLogo={tenantLogo}
           primaryColor={primaryColor}
+          memberships={memberships}
+          activeTenantId={activeTenantId}
           onNavClick={handleNavClick}
         />
       </div>

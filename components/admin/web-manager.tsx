@@ -31,6 +31,10 @@ interface WebManagerProps {
   property: any;
   subdomain: string;
   plan: string;
+  /** All Rooms for the tenant — used by the Channels tab to bind an
+   *  iCal feed to a specific room. Optional so callers that don't show
+   *  the channels tab don't have to fetch them. */
+  allRooms?: Array<{ id: string; number: string; name: string | null; type: string }>;
   defaultTab?: string;
 }
 
@@ -82,7 +86,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'profile' }: WebManagerProps) {
+export function WebManager({ tenant, property, subdomain, plan, allRooms = [], defaultTab = 'profile' }: WebManagerProps) {
   const isLocked = plan === 'basic';
   const icalUrl = `https://stay.amaldives.com/api/public/${subdomain}/calendar.ics`;
   const amaldivesUrl = `https://www.amaldives.com/guesthouses/${tenant?.amaldivesSlug ?? subdomain}`;
@@ -153,6 +157,97 @@ export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'pr
       setUploading(false);
     }
   }
+
+  // ── Inbound iCal feeds (Booking.com / Airbnb / Vrbo subscriptions) ──
+  // The Channels tab lets owners paste their per-room iCal URL so we
+  // poll it every 15min via /api/cron/ical-sync and block those dates
+  // in the availability calendar. Server keeps the source of truth;
+  // this list is hydrated on demand.
+  interface ExternalFeed {
+    id: string;
+    icalUrl: string;
+    label: string;
+    source: string;
+    roomId: string | null;
+    room?: { id: string; number: string; name: string | null } | null;
+    isActive: boolean;
+    lastSyncedAt: string | null;
+    lastError: string | null;
+    lastEventCount: number;
+  }
+  const [feeds, setFeeds] = useState<ExternalFeed[]>([]);
+  const [feedsLoaded, setFeedsLoaded] = useState(false);
+  const [newFeed, setNewFeed] = useState({ icalUrl: '', label: '', source: 'BOOKING_COM', roomId: '' });
+  const [addingFeed, setAddingFeed] = useState(false);
+  const [feedActionId, setFeedActionId] = useState<string | null>(null);
+  const [feedError, setFeedError] = useState<string | null>(null);
+
+  async function loadFeeds() {
+    try {
+      const res = await fetch('/api/admin/channels');
+      if (res.ok) {
+        const j = await res.json();
+        setFeeds(j.feeds || []);
+      }
+    } finally {
+      setFeedsLoaded(true);
+    }
+  }
+
+  async function addFeed() {
+    if (!newFeed.icalUrl.trim()) return;
+    setAddingFeed(true);
+    setFeedError(null);
+    try {
+      const res = await fetch('/api/admin/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          icalUrl: newFeed.icalUrl.trim(),
+          label: newFeed.label.trim() || `${newFeed.source.replace('_', '.')} calendar`,
+          source: newFeed.source,
+          roomId: newFeed.roomId || null,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || 'Add failed');
+      setNewFeed({ icalUrl: '', label: '', source: 'BOOKING_COM', roomId: '' });
+      await loadFeeds();
+    } catch (e: any) {
+      setFeedError(e?.message || 'Could not add feed');
+    } finally {
+      setAddingFeed(false);
+    }
+  }
+
+  async function resyncFeed(id: string) {
+    setFeedActionId(id);
+    try {
+      await fetch(`/api/admin/channels/${id}`, { method: 'PATCH' });
+      await loadFeeds();
+    } finally {
+      setFeedActionId(null);
+    }
+  }
+
+  async function removeFeed(id: string) {
+    if (!confirm('Remove this feed? Blocks imported from it will be deleted.')) return;
+    setFeedActionId(id);
+    try {
+      await fetch(`/api/admin/channels/${id}`, { method: 'DELETE' });
+      await loadFeeds();
+    } finally {
+      setFeedActionId(null);
+    }
+  }
+
+  // Lazy-load on first render of the Channels tab. We don't gate on the
+  // tab being active so the count is fresh whenever the owner lands on
+  // /admin/web?tab=channels from elsewhere.
+  useEffect(() => {
+    if (!feedsLoaded) loadFeeds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Branding state — logo, hero, brand colors live in Tenant.theme JSON.
   const [branding, setBranding] = useState<{
@@ -777,9 +872,159 @@ export function WebManager({ tenant, property, subdomain, plan, defaultTab = 'pr
             ))}
           </div>
 
-          {/* Note on 2-way sync */}
-          <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
-            <strong>Note:</strong> iCal export is one-way — bookings from OTAs won't automatically appear in Stay. To prevent double-bookings, close availability manually in Stay whenever you accept a booking from Booking.com or Airbnb. Full 2-way sync (Channel Manager Plus) is coming in a future update.
+          {/* Inbound iCal feeds — Booking.com / Airbnb URLs the owner
+              gives us so we block dates from external bookings. Polled
+              every 15 min by /api/cron/ical-sync. */}
+          <div className="rounded-xl border bg-white p-4 md:p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-teal-600" />
+                  Block dates from Booking.com / Airbnb
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Paste the iCal URL each OTA gives you. We refresh every
+                  15 minutes so guests can&apos;t double-book a date that&apos;s
+                  already taken on Booking.com.
+                </p>
+              </div>
+            </div>
+
+            {/* Existing feeds */}
+            {feeds.length > 0 ? (
+              <div className="space-y-2">
+                {feeds.map((f) => (
+                  <div
+                    key={f.id}
+                    className="border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-xs"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-gray-900 truncate">
+                        {f.label}
+                      </div>
+                      <div className="text-[11px] text-gray-500 truncate">
+                        {f.source.replace('_', '.')} →{' '}
+                        {f.room
+                          ? `Room ${f.room.number}${f.room.name ? ` (${f.room.name})` : ''}`
+                          : 'All rooms'}
+                      </div>
+                      <div className="text-[11px] text-gray-400 mt-0.5">
+                        {f.lastSyncedAt
+                          ? `Last sync: ${new Date(f.lastSyncedAt).toLocaleString()} · ${f.lastEventCount} block${f.lastEventCount === 1 ? '' : 's'}`
+                          : 'Not yet synced'}
+                        {f.lastError ? (
+                          <span className="text-red-500"> · {f.lastError}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[11px]"
+                        disabled={feedActionId === f.id}
+                        onClick={() => resyncFeed(f.id)}
+                      >
+                        {feedActionId === f.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          'Sync now'
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[11px] text-red-600 hover:bg-red-50"
+                        disabled={feedActionId === f.id}
+                        onClick={() => removeFeed(f.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              feedsLoaded && (
+                <p className="text-xs text-gray-500 italic">
+                  No external feeds yet. Add one below to start blocking
+                  Booking.com dates automatically.
+                </p>
+              )
+            )}
+
+            {/* Add new feed */}
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-[11px] font-medium text-gray-700">
+                Add an iCal feed
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select
+                  value={newFeed.source}
+                  onChange={(e) =>
+                    setNewFeed({ ...newFeed, source: e.target.value })
+                  }
+                  className="border rounded px-2 py-1.5 text-xs h-9 bg-white"
+                >
+                  <option value="BOOKING_COM">Booking.com</option>
+                  <option value="AIRBNB">Airbnb</option>
+                  <option value="VRBO">Vrbo</option>
+                  <option value="OTHER">Other</option>
+                </select>
+                <select
+                  value={newFeed.roomId}
+                  onChange={(e) =>
+                    setNewFeed({ ...newFeed, roomId: e.target.value })
+                  }
+                  className="border rounded px-2 py-1.5 text-xs h-9 bg-white"
+                >
+                  <option value="">All rooms (property-wide)</option>
+                  {allRooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      Room {r.number}
+                      {r.name ? ` — ${r.name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input
+                placeholder="https://ical.booking.com/v1/export?t=…"
+                value={newFeed.icalUrl}
+                onChange={(e) =>
+                  setNewFeed({ ...newFeed, icalUrl: e.target.value })
+                }
+                className="text-xs"
+              />
+              <Input
+                placeholder='Label, e.g. "Booking.com — Deluxe Sea View"'
+                value={newFeed.label}
+                onChange={(e) =>
+                  setNewFeed({ ...newFeed, label: e.target.value })
+                }
+                className="text-xs"
+              />
+              {feedError && (
+                <div className="text-xs text-red-600">{feedError}</div>
+              )}
+              <Button
+                size="sm"
+                onClick={addFeed}
+                disabled={addingFeed || !newFeed.icalUrl.trim()}
+                className="bg-teal-600 hover:bg-teal-700 text-xs gap-1.5"
+              >
+                {addingFeed ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-3.5 w-3.5" />
+                )}
+                {addingFeed ? 'Adding…' : 'Add feed'}
+              </Button>
+              <p className="text-[10px] text-gray-400">
+                On Booking.com: Calendar → Sync calendars → Export.
+                On Airbnb: Listing → Calendar → Availability settings →
+                Export calendar.
+              </p>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

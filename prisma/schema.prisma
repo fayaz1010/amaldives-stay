@@ -65,7 +65,13 @@ model User {
   reportedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceReporter")
   assignedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceAssignee")
   arrivalPickups              ArrivalRecord[]      @relation("ArrivalPickupStaff")
-  
+
+  // Multi-tenant membership. User.tenantId still points at the user's
+  // currently-active tenant (so the entire existing query layer keeps
+  // working) — `memberships` is the authoritative list of every tenant
+  // this user can access.
+  memberships   TenantMembership[]
+
   @@index([tenantId])
   @@index([email])
 }
@@ -116,9 +122,37 @@ model Tenant {
   payrollEntries    PayrollEntry[]
   groupBookings     GroupBooking[]
   ratePlans         RatePlan[]
-  
+  externalCalendarFeeds  ExternalCalendarFeed[]
+  externalCalendarBlocks ExternalCalendarBlock[]
+  memberships            TenantMembership[]
+
   @@index([subdomain])
   @@index([status])
+}
+
+/// Junction table linking Users → Tenants with a role per tenant.
+/// One user can be a member of many tenants (e.g. an owner who runs
+/// two guesthouses on different islands, or a manager invited to a
+/// second property). The active tenant for a session is still tracked
+/// via User.tenantId — switching active tenant just updates that FK.
+///
+/// Exactly one membership per user should carry isDefault=true; this
+/// is enforced in application code (not in the DB).
+model TenantMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  role      UserRole
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([userId])
+  @@index([tenantId])
 }
 
 model Property {
@@ -180,11 +214,63 @@ model Room {
   maintenanceRequests MaintenanceRequest[]
   minIBarUsages MinIBarUsage[]
   serviceOrders ServiceOrder[]
-  
+  externalCalendarFeeds  ExternalCalendarFeed[]
+  externalCalendarBlocks ExternalCalendarBlock[]
+
   @@unique([tenantId, propertyId, number])
   @@index([tenantId])
   @@index([propertyId])
   @@index([status])
+}
+
+// External calendar sync — owner pastes an iCal URL exposed by their
+// Booking.com / Airbnb / Vrbo listing. We poll the URL every 15 min via
+// /api/cron/ical-sync and write the parsed VEVENT date ranges to
+// ExternalCalendarBlock so the availability calendar and public room
+// search treat those dates as unavailable.
+model ExternalCalendarFeed {
+  id             String   @id @default(cuid())
+  tenantId       String
+  roomId         String?  // null = applies to all rooms in the tenant
+  label          String   // owner-supplied, e.g. "Booking.com — Deluxe Sea View"
+  source         String   // BOOKING_COM | AIRBNB | VRBO | OTHER
+  icalUrl        String
+  isActive       Boolean  @default(true)
+  lastSyncedAt   DateTime?
+  lastError      String?
+  lastEventCount Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  room   Room?  @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  blocks ExternalCalendarBlock[]
+
+  @@unique([tenantId, icalUrl])
+  @@index([tenantId])
+  @@index([roomId])
+}
+
+model ExternalCalendarBlock {
+  id        String   @id @default(cuid())
+  feedId    String
+  tenantId  String
+  roomId    String?
+  uid       String   // iCal UID — used to upsert idempotently per feed
+  summary   String?  // optional VEVENT SUMMARY ("CLOSED - Not available")
+  startDate DateTime // inclusive (start of stay)
+  endDate   DateTime // exclusive (departure date — iCal convention)
+  source    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  feed   ExternalCalendarFeed @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  room   Room?  @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@unique([feedId, uid])
+  @@index([tenantId, startDate, endDate])
+  @@index([roomId, startDate, endDate])
 }
 
 // Booking System
