@@ -40,9 +40,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Booking has no `currency` field of its own — currency lives on Property.
+    // Pull it through the property relation so the Payment row matches the
+    // property's configured currency.
     const booking = await prisma.booking.findFirst({
       where: { id: data.bookingId, tenantId: session.user.tenantId },
-      select: { id: true, totalAmount: true, paidAmount: true, currency: true },
+      select: {
+        id: true,
+        totalAmount: true,
+        paidAmount: true,
+        property: { select: { currency: true } },
+      },
     });
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
@@ -59,7 +67,7 @@ export async function POST(request: NextRequest) {
         tenantId: session.user.tenantId,
         bookingId: data.bookingId,
         amount,
-        currency: data.currency ?? booking.currency ?? 'USD',
+        currency: data.currency ?? booking.property?.currency ?? 'USD',
         method: data.method,
         status: 'COMPLETED',
         transactionId: data.transactionId ?? null,

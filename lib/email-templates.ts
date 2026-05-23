@@ -21,6 +21,17 @@ type ArrivalReminderParams = {
   propertyPhone: string;
 };
 
+type StaffInviteParams = {
+  recipientName: string;
+  tenantName: string;
+  inviterName: string;
+  role: string;
+  position: string;
+  department: string;
+  inviteUrl: string;
+  expiresIn: string; // e.g., "7 days"
+};
+
 const TEAL = '#14B8A6';
 const TEAL_DARK = '#0F766E';
 const BORDER = '#E5E7EB';
@@ -223,6 +234,86 @@ export function arrivalReminderHtml(params: ArrivalReminderParams): string {
           <tr>
             <td style="padding:20px 32px;background:${BG};border-top:1px solid ${BORDER};text-align:center;">
               <div style="font-size:12px;color:${MUTED};">Powered by <strong style="color:${TEAL_DARK};">amaldives STAY</strong></div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function staffInviteHtml(params: StaffInviteParams): string {
+  const {
+    recipientName,
+    tenantName,
+    inviterName,
+    role,
+    position,
+    department,
+    inviteUrl,
+    expiresIn,
+  } = params;
+  const safeName = escapeHtml(recipientName);
+  const safeTenant = escapeHtml(tenantName);
+  const safeInviter = escapeHtml(inviterName);
+  const safeRole = escapeHtml(role.replace(/_/g, ' ').toLowerCase());
+  const safePosition = escapeHtml(position);
+  const safeDepartment = escapeHtml(department);
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>You're invited to ${safeTenant}</title>
+</head>
+<body style="margin:0;padding:0;background:${BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${TEXT};">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${BG};padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#ffffff;border:1px solid ${BORDER};border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 32px;background:linear-gradient(135deg,${TEAL} 0%,${TEAL_DARK} 100%);color:#ffffff;">
+              <div style="font-size:13px;letter-spacing:1px;text-transform:uppercase;opacity:0.85;">amaldives STAY</div>
+              <h1 style="margin:6px 0 0;font-size:22px;font-weight:700;">You're invited to join ${safeTenant}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;">
+              <p style="margin:0 0 12px;font-size:16px;">Hi ${safeName},</p>
+              <p style="margin:0 0 16px;font-size:14px;color:${TEXT};line-height:1.55;">
+                <strong>${safeInviter}</strong> has invited you to join <strong>${safeTenant}</strong>
+                on amaldives STAY as the <strong>${safePosition}</strong> in the
+                <strong>${safeDepartment}</strong> team (role: <em>${safeRole}</em>).
+              </p>
+              <p style="margin:0 0 20px;font-size:14px;color:${TEXT};line-height:1.55;">
+                Click the button below to set your password and get started.
+                The link expires in <strong>${expiresIn}</strong>.
+              </p>
+              <p style="margin:0 0 20px;text-align:center;">
+                <a href="${inviteUrl}" style="display:inline-block;background:${TEAL_DARK};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:8px;">
+                  Set your password &amp; sign in
+                </a>
+              </p>
+              <p style="margin:0 0 8px;font-size:12px;color:${MUTED};line-height:1.55;">
+                If the button doesn't work, copy and paste this link into your browser:
+              </p>
+              <p style="margin:0 0 16px;font-size:12px;color:${MUTED};word-break:break-all;font-family:Menlo,monospace;background:${BG};padding:8px 10px;border-radius:6px;border:1px solid ${BORDER};">
+                ${escapeHtml(inviteUrl)}
+              </p>
+              <p style="margin:16px 0 0;font-size:12px;color:${MUTED};line-height:1.55;">
+                Not expecting this invitation? You can safely ignore this email.
+                Your team admin can re-send the invite if needed.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;background:${BG};border-top:1px solid ${BORDER};text-align:center;">
+              <div style="font-size:12px;color:${MUTED};">
+                Sent by <strong style="color:${TEAL_DARK};">${safeTenant}</strong> ·
+                Powered by <strong style="color:${TEAL_DARK};">amaldives STAY</strong>
+              </div>
             </td>
           </tr>
         </table>

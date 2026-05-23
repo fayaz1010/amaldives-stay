@@ -53,7 +53,7 @@ export async function GET(
       },
       select: {
         id: true,
-        bookingReference: true,
+        confirmationNumber: true,
         checkInDate: true,
         checkOutDate: true,
         updatedAt: true,
@@ -85,7 +85,7 @@ export async function GET(
       lines.push(`DTSTAMP:${dtstamp}`);
       lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
       lines.push(`DTEND;VALUE=DATE:${dtEnd}`);
-      lines.push(foldLine(`SUMMARY:BLOCKED – ${b.bookingReference ?? b.id.slice(-6)}`));
+      lines.push(foldLine(`SUMMARY:BLOCKED – ${b.confirmationNumber ?? b.id.slice(-6)}`));
       lines.push('STATUS:CONFIRMED');
       lines.push('TRANSP:OPAQUE');
       lines.push('END:VEVENT');

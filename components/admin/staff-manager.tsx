@@ -781,6 +781,15 @@ function AddStaffModal({
   const [role, setRole] = useState('FRONT_DESK');
   const [salary, setSalary] = useState('');
   const [hireDate, setHireDate] = useState(new Date().toISOString().slice(0, 10));
+  // Success state with the invite URL — shown after the API responds 201.
+  const [invite, setInvite] = useState<{
+    url: string;
+    emailSent: boolean;
+    emailReason?: string | null;
+    recipientName: string;
+    recipientEmail: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   function reset() {
     setName('');
@@ -791,6 +800,8 @@ function AddStaffModal({
     setRole('FRONT_DESK');
     setSalary('');
     setHireDate(new Date().toISOString().slice(0, 10));
+    setInvite(null);
+    setCopied(false);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -815,14 +826,37 @@ function AddStaffModal({
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Create failed');
       }
-      reset();
-      onOpenChange(false);
+      const data = await res.json();
+      setInvite({
+        url: data?.invite?.url ?? '',
+        emailSent: Boolean(data?.invite?.emailSent),
+        emailReason: data?.invite?.emailReason ?? null,
+        recipientName: name,
+        recipientEmail: email,
+      });
       onSaved();
     } catch (err: any) {
       alert(err.message || 'Failed to add staff');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function copyInvite() {
+    if (!invite) return;
+    try {
+      await navigator.clipboard.writeText(invite.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Older browsers — fallback to a prompt the admin can copy from.
+      window.prompt('Copy this invite URL', invite.url);
+    }
+  }
+
+  function closeAndReset() {
+    reset();
+    onOpenChange(false);
   }
 
   return (
@@ -921,22 +955,61 @@ function AddStaffModal({
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            Default password is <code>Welcome@2024</code>. Staff should change it on first login.
+            They&apos;ll get an emailed invite link with a 7-day expiry to set
+            their own password. If email isn&apos;t configured we&apos;ll show you the
+            link to share manually.
           </p>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={closeAndReset}
               disabled={submitting}
             >
               Cancel
             </Button>
             <Button type="submit" disabled={submitting} className="bg-teal-600 hover:bg-teal-700">
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send invite'}
             </Button>
           </DialogFooter>
         </form>
+        {invite && (
+          <div className="mt-4 border-t pt-4 space-y-3">
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
+              <strong>{invite.recipientName}</strong> ({invite.recipientEmail}) added.{' '}
+              {invite.emailSent
+                ? 'We emailed them the invite link.'
+                : 'Email delivery is not configured yet — copy the link below and share it directly.'}
+            </div>
+            <div>
+              <Label className="text-xs">Invite link (expires in 7 days)</Label>
+              <div className="mt-1 flex gap-2">
+                <Input
+                  readOnly
+                  value={invite.url}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  onClick={copyInvite}
+                  variant="outline"
+                  className="shrink-0"
+                >
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Send via WhatsApp, Slack, or SMS if email didn&apos;t reach them.
+              </p>
+            </div>
+            <div className="flex justify-end pt-1">
+              <Button onClick={closeAndReset} className="bg-teal-600 hover:bg-teal-700">
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

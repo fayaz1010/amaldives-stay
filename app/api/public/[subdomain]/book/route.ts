@@ -98,15 +98,25 @@ export async function POST(
       const tempPassword = randomUUID();
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
+      // Split "First Last" → firstName / lastName for the GuestProfile.
+      // Both fields are non-nullable; we fall back to '—' for missing parts
+      // so the create doesn't blow up on a single-word name.
+      const parts = (guestName as string).trim().split(/\s+/);
+      const firstName = parts[0] || '—';
+      const lastName = parts.slice(1).join(' ') || '—';
+
       guest = await prisma.user.create({
         data: {
           email: guestEmail,
           name: guestName,
-          phone: guestPhone,
           password: hashedPassword,
           role: 'GUEST',
           guestProfile: {
-            create: {},
+            create: {
+              firstName,
+              lastName,
+              phone: guestPhone ?? null,
+            },
           },
         },
       });

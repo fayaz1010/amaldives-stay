@@ -27,6 +27,8 @@ interface ServiceOrder {
   completedAt?: string | Date | null;
   createdAt: string | Date;
   service?: { name: string; category: string } | null;
+  /** Direct room link (set when an order is placed without a booking). */
+  room?: { number: string } | null;
   booking?: { id: string; room?: { number: string } | null } | null;
   guest?: { name: string | null } | null;
 }

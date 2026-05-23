@@ -78,9 +78,20 @@ export function TenantSwitcher({
             <Building2 className="h-4 w-4 text-white" />
           </div>
         )}
-        <span className="font-bold text-gray-900 text-sm truncate">
+        <span className="font-bold text-gray-900 text-sm truncate flex-1">
           {active?.tenantName || 'amaldives STAY'}
         </span>
+        {/* Add another business — discoverable from day 1, even for owners
+            who only have one tenant today. Sits inline with the tenant
+            name so it's hard to miss but easy to ignore. */}
+        <Link
+          href="/account/add-business"
+          aria-label="Add another business"
+          title="Add another business"
+          className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Link>
       </div>
     );
   }

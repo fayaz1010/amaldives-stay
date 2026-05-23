@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateInviteToken } from '@/lib/staff-invite';
+import { sendStaffInviteEmail } from '@/lib/send-staff-invite';
 
 export const dynamic = 'force-dynamic';
 
@@ -158,6 +159,26 @@ export async function POST(request: NextRequest) {
     // reef-view-stay.stay.amaldives.com/auth/invite/...).
     const origin = request.headers.get('origin') ?? `https://${request.headers.get('host') ?? 'stay.amaldives.com'}`;
     const inviteUrl = `${origin}/auth/invite/${inviteToken}`;
+    const ttlMs = 7 * 24 * 60 * 60 * 1000;
+
+    // Fire-and-await the invite email. If RESEND_API_KEY isn't configured
+    // (yet) the helper returns { sent: false } — the admin still sees the
+    // invite URL in the response and can share it manually.
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true },
+    });
+    const emailResult = await sendStaffInviteEmail({
+      to: email,
+      recipientName: name,
+      tenantName: tenant?.name ?? 'your team',
+      inviterName: session.user.name ?? session.user.email ?? 'A team admin',
+      role: finalRole,
+      position,
+      department,
+      inviteUrl,
+      ttlMs,
+    });
 
     return NextResponse.json(
       {
@@ -175,10 +196,15 @@ export async function POST(request: NextRequest) {
           updatedAt: created.staffProfile.updatedAt.toISOString(),
         },
         // Admin shows this to the staff member so they can set their own
-        // password. Expires in 7 days.
+        // password. Expires in 7 days. `emailSent` lets the UI decide
+        // whether to surface "We've emailed Aisha" vs "Copy this link to
+        // your new team member" (when the email send failed or wasn't
+        // attempted because the API key isn't configured).
         invite: {
           url: inviteUrl,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          expiresAt: new Date(Date.now() + ttlMs).toISOString(),
+          emailSent: emailResult.sent,
+          emailReason: emailResult.sent ? null : emailResult.reason,
         },
       },
       { status: 201 }
