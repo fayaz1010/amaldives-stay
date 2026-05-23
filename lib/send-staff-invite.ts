@@ -6,7 +6,7 @@
  * { sent: false, reason }. The API caller still gets the invite URL in
  * the JSON response so they can copy-paste it manually.
  */
-import { resend } from '@/lib/email';
+import { getResend } from '@/lib/email';
 import { staffInviteHtml } from '@/lib/email-templates';
 
 interface Args {
@@ -46,8 +46,13 @@ export async function sendStaffInviteEmail(args: Args): Promise<SendResult> {
     return { sent: false, reason: 'no_from_email' };
   }
 
+  const client = getResend();
+  if (!client) {
+    return { sent: false, reason: 'no_api_key' };
+  }
+
   try {
-    const result = await resend.emails.send({
+    const result = await client.emails.send({
       from: `amaldives STAY <${from}>`,
       to: args.to,
       subject: `You're invited to ${args.tenantName} on amaldives STAY`,
