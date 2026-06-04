@@ -8,11 +8,13 @@ import { WelcomePage } from '@/components/welcome-page';
 export default async function HomePage() {
   const headersList = headers();
   const subdomain = headersList.get('X-Tenant-Subdomain');
-  
-  if (subdomain) {
-    // This is a tenant site
-    const tenant = await prisma.tenant.findUnique({
-      where: { subdomain },
+  const customDomain = headersList.get('X-Tenant-Domain');
+
+  if (subdomain || customDomain) {
+    // This is a tenant site — resolved by stay subdomain OR the guesthouse's
+    // own custom domain (Tenant.domain), so the same site serves on both.
+    const tenant = await prisma.tenant.findFirst({
+      where: subdomain ? { subdomain } : { domain: customDomain! },
       include: {
         properties: {
           include: {

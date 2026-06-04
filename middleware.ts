@@ -16,6 +16,19 @@ export async function middleware(request: NextRequest) {
     hostname.endsWith(`.${ROOT_DOMAIN}`) && hostname !== ROOT_DOMAIN;
   const subdomain = isTenantSubdomain ? hostname.replace(`.${ROOT_DOMAIN}`, '') : null;
 
+  // A guesthouse's OWN domain pointed at this project. Anything that isn't the
+  // platform root, a tenant subdomain, a Vercel preview URL, or localhost is
+  // treated as a custom tenant domain — the public site resolves the tenant by
+  // matching Tenant.domain to this host (see app/page.tsx).
+  const bareHost = hostname.split(':')[0];
+  const isPlatformHost =
+    bareHost === ROOT_DOMAIN ||
+    bareHost.endsWith('.vercel.app') ||
+    bareHost === 'localhost' ||
+    bareHost.startsWith('127.0.0.1');
+  const customDomain =
+    !isTenantSubdomain && !isPlatformHost && bareHost.includes('.') ? bareHost : null;
+
   // Get the token to check authentication
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
@@ -66,18 +79,20 @@ export async function middleware(request: NextRequest) {
         }
       }
     }
-    if (subdomain) {
+    if (subdomain || customDomain) {
       const response = NextResponse.next();
-      response.headers.set('X-Tenant-Subdomain', subdomain);
+      if (subdomain) response.headers.set('X-Tenant-Subdomain', subdomain);
+      if (customDomain) response.headers.set('X-Tenant-Domain', customDomain);
       return response;
     }
     return NextResponse.next();
   }
 
-  // Pass tenant subdomain via header for tenant sites
-  if (subdomain) {
+  // Pass tenant subdomain / custom domain via header for tenant sites
+  if (subdomain || customDomain) {
     const response = NextResponse.next();
-    response.headers.set('X-Tenant-Subdomain', subdomain);
+    if (subdomain) response.headers.set('X-Tenant-Subdomain', subdomain);
+    if (customDomain) response.headers.set('X-Tenant-Domain', customDomain);
     return response;
   }
 
