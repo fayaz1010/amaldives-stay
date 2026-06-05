@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { TenantDb } from '@/lib/db';
+import { getActiveProperty } from '@/lib/active-property';
 import { DashboardOverview } from '@/components/admin/dashboard-overview';
 
 export const dynamic = 'force-dynamic';
@@ -14,9 +15,12 @@ export default async function AdminDashboard() {
   if (!session.user?.tenantId) redirect('/unauthorized');
 
   const tenantId = session.user.tenantId;
-  const tenantDb = new TenantDb(tenantId);
+  // Active property scopes the whole dashboard for multi-property operators.
+  const property = await getActiveProperty(tenantId);
+  const activePropertyId = property?.id;
+  const tenantDb = new TenantDb(tenantId, activePropertyId);
 
-  const [stats, recentBookings, housekeepingTasks, pendingTasks, roomCount, tenant, property] = await Promise.all([
+  const [stats, recentBookings, housekeepingTasks, pendingTasks, roomCount, tenant] = await Promise.all([
     tenantDb.getDashboardStats(),
     tenantDb.getBookings({ limit: 5 }),
     tenantDb.getHousekeepingTasks({
@@ -28,9 +32,8 @@ export default async function AdminDashboard() {
       orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
       take: 5,
     }),
-    prisma.room.count({ where: { tenantId } }),
+    prisma.room.count({ where: { tenantId, ...(activePropertyId ? { propertyId: activePropertyId } : {}) } }),
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { subdomain: true, settings: true } }),
-    prisma.property.findFirst({ where: { tenantId }, select: { id: true, name: true } }),
   ]);
 
   const settings = (tenant?.settings as any) ?? null;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { TenantDb, prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,12 @@ export async function GET(request: NextRequest) {
 
     if (limit) {
       filters.limit = parseInt(limit);
+    }
+
+    // Scope to the active property for multi-property operators.
+    const activePropertyId = await getActivePropertyId(session.user.tenantId);
+    if (activePropertyId) {
+      filters.propertyId = activePropertyId;
     }
 
     const bookings = await tenantDb.getBookings(filters);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,8 +60,15 @@ export async function GET(request: NextRequest) {
     const rangeEndExclusive = new Date(endDate);
     rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
 
+    // Scope to the active property so a multi-property operator sees one
+    // property's calendar at a time (and never cross-property availability).
+    const activePropertyId = await getActivePropertyId(session.user.tenantId);
+
     const rooms = await prisma.room.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: {
+        tenantId: session.user.tenantId,
+        ...(activePropertyId ? { propertyId: activePropertyId } : {}),
+      },
       orderBy: { number: 'asc' },
       include: {
         bookings: {

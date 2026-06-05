@@ -44,15 +44,28 @@ export async function getTenantBySubdomain(subdomain: string) {
 // Multi-tenant query wrapper
 export class TenantDb {
   private tenantId: string;
+  private propertyId?: string;
 
-  constructor(tenantId: string) {
+  /**
+   * @param tenantId   the operator account
+   * @param propertyId optional active property — when set, the property-scoped
+   *                   getters (bookings, rooms, dashboard stats) filter to it.
+   *                   Omit for tenant-wide (single-property tenants / account views).
+   */
+  constructor(tenantId: string, propertyId?: string | null) {
     this.tenantId = tenantId;
+    this.propertyId = propertyId ?? undefined;
+  }
+
+  /** Spread helper: `{ propertyId }` when scoped, else `{}`. */
+  private get propScope(): { propertyId?: string } {
+    return this.propertyId ? { propertyId: this.propertyId } : {};
   }
 
   // Booking queries
   async getBookings(filters?: any) {
     const { limit, ...rest } = filters || {};
-    const where = { tenantId: this.tenantId, ...rest };
+    const where = { tenantId: this.tenantId, ...this.propScope, ...rest };
     return await prisma.booking.findMany({
       where,
       ...(limit ? { take: limit } : {}),
@@ -143,7 +156,7 @@ export class TenantDb {
   // Room queries
   async getRooms(filters?: any) {
     const { limit, ...rest } = filters || {};
-    const where = { tenantId: this.tenantId, ...rest };
+    const where = { tenantId: this.tenantId, ...this.propScope, ...rest };
     return await prisma.room.findMany({
       where,
       include: {
@@ -409,14 +422,18 @@ export class TenantDb {
 
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
+    // Property scope applied to room/booking/payment metrics (all have propertyId).
+    // staffTask has no propertyId yet, so the pending-tasks count stays account-wide.
+    const ps = this.propScope;
     const [rooms, bookings, monthlyPaid, todayCheckIns, todayCheckOuts, pendingTasksCount, openBookings] = await Promise.all([
       prisma.room.findMany({
-        where: { tenantId: this.tenantId },
+        where: { tenantId: this.tenantId, ...ps },
         select: { status: true },
       }),
       prisma.booking.findMany({
         where: {
           tenantId: this.tenantId,
+          ...ps,
           status: { in: ['CONFIRMED', 'CHECKED_IN'] },
         },
         select: { totalAmount: true, paidAmount: true, status: true },
@@ -425,6 +442,7 @@ export class TenantDb {
       prisma.payment.aggregate({
         where: {
           tenantId: this.tenantId,
+          ...ps,
           status: 'COMPLETED',
           processedAt: { gte: monthStart },
         },
@@ -433,12 +451,14 @@ export class TenantDb {
       prisma.booking.count({
         where: {
           tenantId: this.tenantId,
+          ...ps,
           checkInDate: { gte: today, lt: tomorrow },
         },
       }),
       prisma.booking.count({
         where: {
           tenantId: this.tenantId,
+          ...ps,
           checkOutDate: { gte: today, lt: tomorrow },
         },
       }),
@@ -452,6 +472,7 @@ export class TenantDb {
       prisma.booking.findMany({
         where: {
           tenantId: this.tenantId,
+          ...ps,
           status: { in: ['CONFIRMED', 'CHECKED_IN'] },
         },
         select: { totalAmount: true, paidAmount: true },

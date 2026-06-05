@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { TenantDb } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
     }
 
     const tenantDb = new TenantDb(session.user.tenantId);
-    const rooms = await tenantDb.getRooms();
+    const activePropertyId = await getActivePropertyId(session.user.tenantId);
+    const rooms = await tenantDb.getRooms(activePropertyId ? { propertyId: activePropertyId } : undefined);
 
     return NextResponse.json({ rooms });
   } catch (error) {
