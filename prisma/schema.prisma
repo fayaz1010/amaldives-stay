@@ -347,6 +347,7 @@ model GroupBooking {
 model RatePlan {
   id          String   @id @default(cuid())
   tenantId    String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name        String
   description String?
   startDate   DateTime
@@ -359,6 +360,7 @@ model RatePlan {
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
   @@index([startDate, endDate])
+  @@index([propertyId])
 }
 
 // Guest Management
@@ -480,6 +482,7 @@ model MaintenanceRequest {
 model Service {
   id          String    @id @default(cuid())
   tenantId    String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name        String
   description String?
   category    String
@@ -496,6 +499,7 @@ model Service {
   
   @@index([tenantId])
   @@index([category])
+  @@index([propertyId])
 }
 
 model ServiceOrder {
@@ -534,6 +538,7 @@ model ServiceOrder {
 model InventoryItem {
   id          String    @id @default(cuid())
   tenantId    String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name        String
   category    String
   description String?
@@ -554,6 +559,7 @@ model InventoryItem {
   @@index([tenantId])
   @@index([category])
   @@index([currentStock])
+  @@index([propertyId])
 }
 
 // Financial Management
@@ -773,6 +779,7 @@ model ArrivalRecord {
 model TransportOption {
   id            String        @id @default(cuid())
   tenantId      String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   type          TransportType
   name          String        // e.g. "Maldivian MH123", "Island Ferry Hulhumale", "Sea Star Dhoni"
   operator      String?       // company / operator name
@@ -796,6 +803,7 @@ model TransportOption {
 
   @@index([tenantId])
   @@index([type])
+  @@index([propertyId])
 }
 
 enum TransportType {
@@ -885,6 +893,7 @@ model DepartureRecord {
 model MinIBarItem {
   id          String   @id @default(cuid())
   tenantId    String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name        String
   category    String
   isFree      Boolean  @default(false)
@@ -896,6 +905,7 @@ model MinIBarItem {
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   usages      MinIBarUsage[]
   @@index([tenantId])
+  @@index([propertyId])
 }
 
 model MinIBarUsage {
@@ -1033,6 +1043,7 @@ model LogisticsOrderItem {
 model LogisticsInventoryItem {
   id           String   @id @default(cuid())
   tenantId     String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name         String
   category     String   @default("general")
   unit         String   @default("pcs")
@@ -1047,6 +1058,7 @@ model LogisticsInventoryItem {
   stockMovements LogisticsStockMovement[]
   orderItems   LogisticsOrderItem[]
   @@index([tenantId])
+  @@index([propertyId])
 }
 
 model LogisticsStockMovement {
@@ -1089,6 +1101,7 @@ enum StockMovementType {
 model LogisticsAsset {
   id             String         @id @default(cuid())
   tenantId       String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name           String
   category       String         @default("equipment")
   assetTag       String?
@@ -1105,6 +1118,7 @@ model LogisticsAsset {
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
   @@index([condition])
+  @@index([propertyId])
 }
 
 enum AssetCondition {
@@ -1121,6 +1135,7 @@ enum AssetCondition {
 model FnBOutlet {
   id           String        @id @default(cuid())
   tenantId     String
+  propertyId  String?       // null = shared across properties; set = scoped to one
   name         String
   description  String?
   outletType   FnBOutletType @default(RESTAURANT)
@@ -1134,6 +1149,7 @@ model FnBOutlet {
   bills        FnBBill[]
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
+  @@index([propertyId])
 }
 
 model FnBMenuItem {

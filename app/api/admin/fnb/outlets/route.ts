@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
+import { getSharing, categoryWhere, categoryCreatePropertyId } from '@/lib/property-sharing';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +16,12 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const outlets = await prisma.fnBOutlet.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: { tenantId: session.user.tenantId, ...categoryWhere('fnb', sharing, activePropertyId) },
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
       include: {
         _count: {
@@ -46,9 +52,14 @@ export async function POST(request: NextRequest) {
       ? data.outletType
       : 'RESTAURANT';
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const outlet = await prisma.fnBOutlet.create({
       data: {
         tenantId: session.user.tenantId,
+        propertyId: categoryCreatePropertyId('fnb', sharing, activePropertyId),
         name: data.name.trim(),
         description: data.description?.trim() ?? null,
         outletType,
