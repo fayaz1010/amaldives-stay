@@ -111,6 +111,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Reservations', href: '/admin/reservations', icon: Calendar },
       { name: 'Availability', href: '/admin/availability', icon: CalendarDays },
       { name: 'Arrivals & Departures', href: '/admin/arrivals', icon: PlaneLanding },
+      { name: 'Flight arrivals (MLE)', href: '/admin/arrivals/flights', icon: PlaneLanding },
     ],
   },
   {
