@@ -22,6 +22,14 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
         ],
       },
+      {
+        // The embeddable assistant/booking widgets must load inside an iframe on
+        // the guesthouse's OWN website (any domain). Allow framing everywhere.
+        source: '/embed/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+        ],
+      },
     ];
   },
 };
