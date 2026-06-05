@@ -26,12 +26,17 @@ export function WelcomePage() {
     {
       icon: Hotel,
       title: 'Property Management',
-      description: 'Comprehensive room and property management with real-time availability tracking.',
+      description: 'Rooms, rates, housekeeping, staff, finance — everything in one dashboard built for Maldivian guesthouses.',
     },
     {
       icon: Calendar,
-      title: 'Smart Booking System',
-      description: 'Integrated booking engine with multi-channel distribution and automated confirmations.',
+      title: 'Direct Booking Engine',
+      description: 'Book on amaldives.com, your stay.amaldives.com page, or one line of code on any website or social bio.',
+    },
+    {
+      icon: Globe,
+      title: 'OTA Calendar Sync',
+      description: 'Two-way iCal with Booking.com, Airbnb & more — every 5 minutes, with AI guest detail extraction.',
     },
     {
       icon: Users,
@@ -176,15 +181,21 @@ export function WelcomePage() {
               The free property management system for Maldives guesthouses. Accept direct bookings from amaldives.com — no OTA commissions.
             </p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link href="/auth/signin">
+              <Link href="/claim">
                 <Button size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-white px-8 py-3">
                   Claim Your Free Account
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="px-8 py-3">
-                Schedule Demo
-              </Button>
+              <Link href="#pricing">
+                <Button size="lg" variant="outline" className="px-8 py-3">
+                  View plans
+                </Button>
+              </Link>
             </div>
+            <p className="text-sm text-gray-500 mt-6 max-w-xl mx-auto">
+              Already on amaldives.com? Use your listing link — we&apos;ll connect your page automatically.
+              Add bookings to Facebook or your website with one copy-paste line. Pay with Stripe, Maya, BML, or at check-in.
+            </p>
           </motion.div>
         </div>
       </section>
@@ -332,18 +343,49 @@ export function WelcomePage() {
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className={`w-full mt-6 ${
-                        plan.badge
-                          ? 'bg-cyan-600 hover:bg-cyan-700'
-                          : 'bg-gray-900 hover:bg-gray-800'
-                      }`}
-                    >
-                      Get Started
-                    </Button>
+                    <Link href={plan.name === 'Free' ? '/claim' : '/claim'} className="block">
+                      <Button
+                        className={`w-full mt-6 ${
+                          plan.badge
+                            ? 'bg-cyan-600 hover:bg-cyan-700'
+                            : 'bg-gray-900 hover:bg-gray-800'
+                        }`}
+                      >
+                        {plan.name === 'Free' ? 'Claim free account' : 'Start free, upgrade later'}
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Enterprise / integrations */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Built for local owners</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              No technical team required. Copy a link, paste one line on your website, or share on WhatsApp — guests book direct while OTAs stay in sync.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+            {[
+              { title: 'amaldives.com', desc: 'Guests discover you and book direct from your listing.' },
+              { title: 'Your stay page', desc: '{name}.stay.amaldives.com with full booking & pay.' },
+              { title: 'Website embed', desc: 'One script tag — floating Book button on any site.' },
+              { title: 'Payments', desc: 'Stripe cards, Maya, BML Connect, or pay at property.' },
+            ].map((item) => (
+              <Card key={item.title}>
+                <CardHeader>
+                  <CardTitle className="text-lg">{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">{item.desc}</p>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>

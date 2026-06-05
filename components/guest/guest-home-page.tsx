@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,18 +23,13 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
+import { BookingEngine } from '@/components/booking/booking-engine';
 
 interface GuestHomePageProps {
   tenant: any;
 }
 
 export function GuestHomePage({ tenant }: GuestHomePageProps) {
-  const [bookingData, setBookingData] = useState({
-    checkIn: '',
-    checkOut: '',
-    guests: 1,
-  });
-
   const property = tenant.properties?.[0];
   const rooms = property?.rooms || [];
   const availableRooms = rooms.filter((room: any) => room.status === 'AVAILABLE');
@@ -52,12 +46,6 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
   const accent = theme.accentColor || '#2563eb';   // blue-600
   const heroImage = theme.heroImageUrl;
   const heroFocal = theme.heroImageFocalPoint || 'center';
-
-  const handleBookingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement booking logic
-    console.log('Booking submitted:', bookingData);
-  };
 
   const amenities = [
     { icon: Wifi, name: 'Free Wi-Fi' },
@@ -143,56 +131,15 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                 {tenant.description || 'Experience comfortable and memorable stays with us'}
               </p>
               
-              {/* Booking Widget */}
-              <Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <form onSubmit={handleBookingSubmit} className="flex flex-col md:flex-row gap-4 items-end">
-                    <div className="flex-1">
-                      <Label htmlFor="checkIn" className="text-gray-700">Check-in</Label>
-                      <Input
-                        id="checkIn"
-                        type="date"
-                        value={bookingData.checkIn}
-                        onChange={(e) => setBookingData({...bookingData, checkIn: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor="checkOut" className="text-gray-700">Check-out</Label>
-                      <Input
-                        id="checkOut"
-                        type="date"
-                        value={bookingData.checkOut}
-                        onChange={(e) => setBookingData({...bookingData, checkOut: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor="guests" className="text-gray-700">Guests</Label>
-                      <div className="relative">
-                        <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="guests"
-                          type="number"
-                          min="1"
-                          max="10"
-                          value={bookingData.guests}
-                          onChange={(e) => setBookingData({...bookingData, guests: parseInt(e.target.value)})}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      size="lg"
-                      style={{ backgroundColor: primary, color: 'white' }}
-                    >
-                      Check Availability
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+              <div className="max-w-4xl mx-auto text-left">
+                <BookingEngine
+                  subdomain={tenant.subdomain}
+                  tenantName={tenant.name}
+                  primaryColor={primary}
+                  source="stay_subdomain"
+                  compact
+                />
+              </div>
             </motion.div>
           </div>
         </div>

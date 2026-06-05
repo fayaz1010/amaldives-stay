@@ -98,6 +98,8 @@ model Tenant {
   commissionRate Float    @default(0.04)
   isVerifiedDirect Boolean @default(false)
   amaldivesSlug String?   @unique
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?
   status      TenantStatus @default(ACTIVE)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -258,6 +260,10 @@ model ExternalCalendarBlock {
   roomId    String?
   uid       String   // iCal UID — used to upsert idempotently per feed
   summary   String?  // optional VEVENT SUMMARY ("CLOSED - Not available")
+  description String? @db.Text
+  guestName   String?
+  guestEmail  String?
+  guestPhone  String?
   startDate DateTime // inclusive (start of stay)
   endDate   DateTime // exclusive (departure date — iCal convention)
   source    String
@@ -294,6 +300,7 @@ model Booking {
   specialRequests String?
   groupBookingId String?
   guestToken    String?       @unique
+  stripeCheckoutSessionId String? @unique
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

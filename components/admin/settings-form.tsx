@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, CheckCircle, Copy, Check, RefreshCw, Terminal } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, CheckCircle, Copy, Check, RefreshCw, Terminal, CreditCard } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -246,6 +247,28 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
           </Button>
         </div>
       </form>
+
+      {/* ── Online payments (Stripe / Maya / BML) ───────── */}
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-cyan-600" />
+              <CardTitle>Guest booking payments</CardTitle>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              Stripe, Maya, BML Connect, and pay-at-property — configured on a simple form, no JSON editing.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/settings/payments">
+              <Button type="button" variant="outline" className="border-cyan-200 text-cyan-800 hover:bg-cyan-50">
+                Open payment settings →
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* ── FPOS Integration ─────────────────────────────── */}
       <div className="mt-8">

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getPaymentsConfig } from '@/lib/tenant-settings';
+import { isStripeConfigured } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,14 +16,19 @@ export async function GET(
       return NextResponse.json({ error: 'Subdomain is required' }, { status: 400 });
     }
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { subdomain, status: 'ACTIVE' },
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        status: 'ACTIVE',
+        OR: [{ subdomain }, { amaldivesSlug: subdomain }],
+      },
       select: {
         id: true,
         name: true,
         description: true,
         logo: true,
         subdomain: true,
+        amaldivesSlug: true,
+        settings: true,
         plan: true,
         isVerifiedDirect: true,
         properties: {
@@ -65,6 +72,14 @@ export async function GET(
 
     const property = tenant.properties[0] ?? null;
     const webProfile = (property?.settings as any)?.webProfile ?? {};
+    const payments = getPaymentsConfig(tenant.settings);
+    const stripeOk = isStripeConfigured();
+    const enabledPayments = payments.enabledProviders.filter((p) => {
+      if (p === 'stripe') return stripeOk;
+      if (p === 'maya') return Boolean(payments.maya?.merchantId);
+      if (p === 'bml_connect') return false;
+      return true;
+    });
 
     return NextResponse.json({
       tenant: {
@@ -72,8 +87,15 @@ export async function GET(
         description: tenant.description,
         logo: tenant.logo,
         subdomain: tenant.subdomain,
+        amaldivesSlug: tenant.amaldivesSlug,
         plan: tenant.plan,
         isVerifiedDirect: tenant.isVerifiedDirect,
+        bookUrl: `https://${tenant.subdomain}.stay.amaldives.com/book`,
+        payments: {
+          currency: payments.currency,
+          enabledProviders: enabledPayments,
+          defaultProvider: payments.defaultProvider,
+        },
       },
       property: property
         ? {

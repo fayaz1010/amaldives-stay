@@ -44,8 +44,11 @@ export async function GET(
       (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { subdomain, status: 'ACTIVE' },
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        status: 'ACTIVE',
+        OR: [{ subdomain }, { amaldivesSlug: subdomain }],
+      },
       select: { id: true },
     });
 

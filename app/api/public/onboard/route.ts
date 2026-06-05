@@ -31,6 +31,9 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedSubdomain = String(subdomain).toLowerCase().trim();
+    const resolvedAmaldivesSlug =
+      amaldivesSlug ||
+      (normalizedSubdomain.length >= 3 ? normalizedSubdomain : undefined);
 
     if (!/^[a-z0-9-]+$/.test(normalizedSubdomain)) {
       return NextResponse.json(
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
           status: 'ACTIVE',
           commissionRate: 0.04,
           isVerifiedDirect: true,
-          amaldivesSlug,
+          amaldivesSlug: resolvedAmaldivesSlug,
         } as any,
       });
 
@@ -126,6 +129,10 @@ export async function POST(request: NextRequest) {
         tenantId: tenant.id,
         subdomain: tenant.subdomain,
         loginUrl: `https://${tenant.subdomain}.stay.amaldives.com/auth/signin`,
+        amaldivesUrl: resolvedAmaldivesSlug
+          ? `https://www.amaldives.com/guesthouses/${resolvedAmaldivesSlug}`
+          : null,
+        stayUrl: `https://${tenant.subdomain}.stay.amaldives.com`,
       },
       { status: 201 }
     );

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { parseIcal } from '@/lib/ical-parse';
+import { extractGuestFromIcalText, extractGuestWithAi } from '@/lib/ical-guest-extract';
 
 interface SyncResult {
   feedId: string;
@@ -37,32 +38,44 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
     // Upsert each event. Booking.com / Airbnb both emit stable UIDs, so
     // an existing block whose dates changed gets updated rather than
     // duplicated.
-    await prisma.$transaction(async (tx) => {
-      for (const e of events) {
-        await tx.externalCalendarBlock.upsert({
-          where: { feedId_uid: { feedId: feed.id, uid: e.uid } },
-          update: {
-            startDate: e.startDate,
-            endDate: e.endDate,
-            summary: e.summary ?? null,
-            roomId: feed.roomId,
-          },
-          create: {
-            feedId: feed.id,
-            tenantId: feed.tenantId,
-            roomId: feed.roomId,
-            uid: e.uid,
-            summary: e.summary ?? null,
-            startDate: e.startDate,
-            endDate: e.endDate,
-            source: feed.source,
-          },
-        });
+    for (const e of events) {
+      let guest = extractGuestFromIcalText(e.summary, e.description);
+      if (guest.confidence === 'none' && (e.summary || e.description)) {
+        guest = await extractGuestWithAi(e.summary, e.description, feed.source, feed.tenantId);
       }
 
-      // Drop blocks whose UIDs are no longer in the feed — that's how OTAs
-      // signal cancellations (Booking.com removes the VEVENT outright).
+      await prisma.externalCalendarBlock.upsert({
+        where: { feedId_uid: { feedId: feed.id, uid: e.uid } },
+        update: {
+          startDate: e.startDate,
+          endDate: e.endDate,
+          summary: e.summary ?? null,
+          description: e.description ?? null,
+          guestName: guest.guestName ?? null,
+          guestEmail: guest.guestEmail ?? null,
+          guestPhone: guest.guestPhone ?? null,
+          roomId: feed.roomId,
+        },
+        create: {
+          feedId: feed.id,
+          tenantId: feed.tenantId,
+          roomId: feed.roomId,
+          uid: e.uid,
+          summary: e.summary ?? null,
+          description: e.description ?? null,
+          guestName: guest.guestName ?? null,
+          guestEmail: guest.guestEmail ?? null,
+          guestPhone: guest.guestPhone ?? null,
+          startDate: e.startDate,
+          endDate: e.endDate,
+          source: feed.source,
+        },
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
       const seenUids = events.map((e) => e.uid);
+
       if (seenUids.length > 0) {
         await tx.externalCalendarBlock.deleteMany({
           where: {

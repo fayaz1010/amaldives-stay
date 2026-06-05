@@ -884,8 +884,8 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Paste the iCal URL each OTA gives you. We refresh every
-                  15 minutes so guests can&apos;t double-book a date that&apos;s
-                  already taken on Booking.com.
+                  5 minutes (fastest practical iCal sync) and use AI to extract
+                  guest names and contacts when OTAs include them in the feed.
                 </p>
               </div>
             </div>

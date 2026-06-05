@@ -4,7 +4,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Hotel, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Hotel, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,20 +29,40 @@ function humanize(slug: string): string {
 
 function ClaimForm() {
   const searchParams = useSearchParams();
-  const guesthouseParam = searchParams?.get('guesthouse') ?? '';
+  const guesthouseParam = searchParams?.get('guesthouse') ?? searchParams?.get('slug') ?? '';
 
-  const initialName = useMemo(() => humanize(guesthouseParam), [guesthouseParam]);
   const initialSubdomain = useMemo(() => slugify(guesthouseParam), [guesthouseParam]);
+  const initialName = useMemo(() => humanize(guesthouseParam), [guesthouseParam]);
 
   const [guesthouseName, setGuesthouseName] = useState(initialName);
   const [subdomain, setSubdomain] = useState(initialSubdomain);
+  const [amaldivesUrl, setAmaldivesUrl] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successUrl, setSuccessUrl] = useState('');
+  const [success, setSuccess] = useState<{
+    stayUrl: string;
+    amaldivesUrl?: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!guesthouseParam) return;
+    fetch(`/api/public/claim/lookup?slug=${encodeURIComponent(guesthouseParam)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.claimed) {
+          setError(`This guesthouse is already claimed. Sign in at ${data.stayUrl}`);
+          return;
+        }
+        if (data.name) setGuesthouseName(data.name);
+        if (data.suggestedSubdomain) setSubdomain(data.suggestedSubdomain);
+        if (data.amaldivesUrl) setAmaldivesUrl(data.amaldivesUrl);
+      })
+      .catch(() => {});
+  }, [guesthouseParam]);
 
   useEffect(() => {
     setGuesthouseName(initialName);
@@ -83,24 +103,28 @@ function ClaimForm() {
           email,
           name: ownerName || email.split('@')[0],
           password,
+          amaldivesSlug: guesthouseParam || finalSubdomain,
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.message || 'Unable to claim account. Please try again.');
+        setError(data?.error || 'Unable to claim account. Please try again.');
         return;
       }
 
-      setSuccessUrl(`https://${finalSubdomain}.stay.amaldives.com`);
-    } catch (err) {
+      setSuccess({
+        stayUrl: data.stayUrl ?? `https://${finalSubdomain}.stay.amaldives.com`,
+        amaldivesUrl: data.amaldivesUrl,
+      });
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (successUrl) {
+  if (success) {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -109,25 +133,30 @@ function ClaimForm() {
               <CheckCircle2 className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">You're all set!</CardTitle>
+          <CardTitle className="text-2xl font-bold">You&apos;re all set!</CardTitle>
           <CardDescription>
-            Your amaldives STAY account is ready.
+            Your account is linked to amaldives.com and ready for direct bookings.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-center">
-            <p className="text-sm text-gray-600 mb-1">Sign in at</p>
-            <a
-              href={successUrl}
-              className="text-cyan-700 font-semibold break-all hover:underline"
-            >
-              {successUrl}
+            <p className="text-sm text-gray-600 mb-1">Manage bookings at</p>
+            <a href={success.stayUrl} className="text-cyan-700 font-semibold break-all hover:underline">
+              {success.stayUrl}
             </a>
           </div>
+          {success.amaldivesUrl && (
+            <a
+              href={success.amaldivesUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 text-sm text-cyan-700 hover:underline"
+            >
+              View your amaldives.com listing <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
           <Link href="/auth/signin" className="block">
-            <Button className="w-full bg-cyan-600 hover:bg-cyan-700">
-              Go to sign in
-            </Button>
+            <Button className="w-full bg-cyan-600 hover:bg-cyan-700">Sign in to dashboard</Button>
           </Link>
         </CardContent>
       </Card>
@@ -142,13 +171,24 @@ function ClaimForm() {
             <Hotel className="h-8 w-8 text-white" />
           </div>
         </div>
-        <CardTitle className="text-2xl font-bold">
-          Claim Your Free amaldives STAY Account
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold">Claim Your Free amaldives STAY Account</CardTitle>
         <CardDescription>
-          {guesthouseName
-            ? `Your guesthouse ${guesthouseName} is listed on amaldives.com. Claim your account to accept direct bookings.`
-            : 'Your guesthouse is listed on amaldives.com. Claim your account to accept direct bookings.'}
+          {guesthouseParam ? (
+            <>
+              Your listing on{' '}
+              <a
+                href={amaldivesUrl || `https://www.amaldives.com/guesthouses/${guesthouseParam}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-700 hover:underline"
+              >
+                amaldives.com
+              </a>{' '}
+              will connect to direct bookings automatically.
+            </>
+          ) : (
+            'Link your amaldives.com guesthouse and start accepting commission-free bookings.'
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -170,7 +210,7 @@ function ClaimForm() {
               required
             />
             <p className="text-xs text-gray-500">
-              Your URL will be{' '}
+              Your URL:{' '}
               <span className="font-medium text-cyan-700">
                 {slugify(subdomain || guesthouseName) || 'your-guesthouse'}.stay.amaldives.com
               </span>
@@ -224,17 +264,13 @@ function ClaimForm() {
             />
           </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-cyan-600 hover:bg-cyan-700"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
             {loading ? 'Claiming…' : 'Claim Free Account'}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-xs text-gray-500">
-          By claiming, you agree to keep 96% of every direct booking. We collect a 4% platform fee to cover hosting and listing costs.
+          By claiming, you agree to keep 96% of every direct booking. We collect a 4% platform fee.
         </p>
       </CardContent>
     </Card>

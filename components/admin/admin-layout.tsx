@@ -38,6 +38,9 @@ import {
   Wifi,
   Home,
   Tag,
+  MousePointerClick,
+  CreditCard,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TenantSwitcher } from '@/components/admin/tenant-switcher';
@@ -142,6 +145,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { name: 'amaldives Page', href: '/admin/web', icon: Globe },
       { name: 'Channel Manager', href: '/admin/web?tab=channels', icon: Wifi },
+      { name: 'Website embed', href: '/admin/embed', icon: MousePointerClick },
     ],
   },
   {
@@ -150,6 +154,8 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Settings,
     items: [
       { name: 'Settings', href: '/admin/settings', icon: Settings },
+      { name: 'Payments', href: '/admin/settings/payments', icon: Banknote },
+      { name: 'Billing', href: '/admin/settings/billing', icon: CreditCard },
     ],
   },
 ];

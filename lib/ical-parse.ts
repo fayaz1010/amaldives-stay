@@ -20,6 +20,7 @@ export interface IcalEvent {
   startDate: Date;
   endDate: Date;
   summary?: string;
+  description?: string;
 }
 
 export function parseIcal(raw: string): IcalEvent[] {
@@ -48,6 +49,7 @@ export function parseIcal(raw: string): IcalEvent[] {
           startDate: current.startDate,
           endDate: current.endDate,
           summary: current.summary,
+          description: current.description,
         });
       }
       inEvent = false;
@@ -70,6 +72,9 @@ export function parseIcal(raw: string): IcalEvent[] {
         break;
       case 'SUMMARY':
         current.summary = unescapeIcalText(value);
+        break;
+      case 'DESCRIPTION':
+        current.description = unescapeIcalText(value);
         break;
       case 'DTSTART':
         current.startDate = parseIcalDate(value) ?? current.startDate;
