@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { addDomain } from '@/lib/vercel-domains';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await tx.user.create({
+      const owner = await tx.user.create({
         data: {
           email,
           name: resolvedOwnerName,
@@ -120,8 +121,30 @@ export async function POST(request: NextRequest) {
         } as any,
       });
 
+      // CRITICAL: create the TenantMembership too. Without it, the JWT callback
+      // (which validates token.tenantId against the user's memberships and falls
+      // back to undefined when none exist) wipes the active tenant on first
+      // sign-in — locking the brand-new owner out of /admin (/unauthorized).
+      await tx.tenantMembership.create({
+        data: { userId: owner.id, tenantId: newTenant.id, role: 'TENANT_ADMIN', isDefault: true },
+      });
+
       return newTenant;
     });
+
+    // Register the new subdomain on this Vercel project so it gets a TLS cert.
+    // DNS already wildcard-CNAMEs *.stay.amaldives.com → cname.vercel-dns.com,
+    // so verification is instant and the cert provisions in ~30-60s. Without
+    // this the freshly minted loginUrl below fails TLS until added by hand.
+    // Non-fatal: a Vercel API hiccup must not fail an otherwise-complete signup.
+    try {
+      await addDomain(`${tenant.subdomain}.stay.amaldives.com`);
+    } catch (domainError) {
+      console.error(
+        `Failed to register Vercel domain for ${tenant.subdomain}.stay.amaldives.com:`,
+        domainError
+      );
+    }
 
     return NextResponse.json(
       {
