@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Plus, Loader2, Check, BedDouble, CalendarCheck } from 'lucide-react';
+import { MapPin, Plus, Loader2, Check, BedDouble, CalendarCheck, Receipt, ChevronDown } from 'lucide-react';
 
 interface PropertyRow {
   id: string;
@@ -10,6 +10,10 @@ interface PropertyRow {
   city: string;
   address: string;
   isActive: boolean;
+  taxTin: string | null;
+  tgstRate: number | null;
+  greenTaxUsdPerNight: number | null;
+  serviceChargeRate: number | null;
   _count: { rooms: number; bookings: number };
 }
 
@@ -24,6 +28,7 @@ export function PropertiesManager({ properties, activePropertyId, canManage }: P
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [taxOpenId, setTaxOpenId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', island: '', atoll: '', phone: '', email: '' });
   const [error, setError] = useState<string | null>(null);
 
@@ -169,46 +174,130 @@ export function PropertiesManager({ properties, activePropertyId, canManage }: P
       <ul className="space-y-2">
         {properties.map((p) => {
           const isActive = p.id === activePropertyId;
+          const taxOpen = taxOpenId === p.id;
           return (
             <li
               key={p.id}
-              className={`flex items-center gap-3 rounded-xl border p-4 ${
-                isActive ? 'border-teal-300 bg-teal-50' : 'border-gray-200 bg-white'
-              }`}
+              className={`rounded-xl border ${isActive ? 'border-teal-300 bg-teal-50' : 'border-gray-200 bg-white'}`}
             >
-              <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                <MapPin className="h-4 w-4 text-gray-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 truncate">
-                  {p.name}
-                  {isActive && (
-                    <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-teal-700">
-                      <Check className="h-3 w-3" /> active
-                    </span>
+              <div className="flex items-center gap-3 p-4">
+                <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                  <MapPin className="h-4 w-4 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">
+                    {p.name}
+                    {isActive && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-teal-700">
+                        <Check className="h-3 w-3" /> active
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{p.city || 'No location set'}</p>
+                  <p className="mt-1 flex items-center gap-3 text-[11px] text-gray-400">
+                    <span className="inline-flex items-center gap-1"><BedDouble className="h-3 w-3" />{p._count.rooms} rooms</span>
+                    <span className="inline-flex items-center gap-1"><CalendarCheck className="h-3 w-3" />{p._count.bookings} bookings</span>
+                    {p.taxTin && <span className="inline-flex items-center gap-1"><Receipt className="h-3 w-3" />TIN set</span>}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {!isActive && (
+                    <button
+                      onClick={() => switchTo(p.id)}
+                      disabled={switching !== null}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {switching === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Switch to'}
+                    </button>
                   )}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {p.city || 'No location set'}
-                </p>
-                <p className="mt-1 flex items-center gap-3 text-[11px] text-gray-400">
-                  <span className="inline-flex items-center gap-1"><BedDouble className="h-3 w-3" />{p._count.rooms} rooms</span>
-                  <span className="inline-flex items-center gap-1"><CalendarCheck className="h-3 w-3" />{p._count.bookings} bookings</span>
-                </p>
+                  {canManage && (
+                    <button
+                      onClick={() => setTaxOpenId(taxOpen ? null : p.id)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50"
+                    >
+                      <Receipt className="h-3.5 w-3.5" /> Tax / MIRA
+                      <ChevronDown className={`h-3 w-3 transition-transform ${taxOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
+                </div>
               </div>
-              {!isActive && (
-                <button
-                  onClick={() => switchTo(p.id)}
-                  disabled={switching !== null}
-                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {switching === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Switch to'}
-                </button>
+              {taxOpen && canManage && (
+                <TaxEditor property={p} onSaved={() => { setTaxOpenId(null); router.refresh(); }} />
               )}
             </li>
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+function TaxEditor({ property, onSaved }: { property: PropertyRow; onSaved: () => void }) {
+  const [tin, setTin] = useState(property.taxTin ?? '');
+  const [tgst, setTgst] = useState(property.tgstRate != null ? String(property.tgstRate * 100) : '');
+  const [green, setGreen] = useState(property.greenTaxUsdPerNight != null ? String(property.greenTaxUsdPerNight) : '');
+  const [svc, setSvc] = useState(property.serviceChargeRate != null ? String(property.serviceChargeRate * 100) : '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setErr(null);
+    const pct = (v: string) => (v.trim() === '' ? null : Number(v) / 100);
+    const num = (v: string) => (v.trim() === '' ? null : Number(v));
+    try {
+      const res = await fetch(`/api/admin/properties/${property.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taxTin: tin,
+          tgstRate: pct(tgst),
+          greenTaxUsdPerNight: num(green),
+          serviceChargeRate: pct(svc),
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(j?.error || 'Save failed'); setBusy(false); return; }
+      onSaved();
+    } catch {
+      setErr('Network error');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-gray-200 px-4 py-3 bg-gray-50/60 space-y-3">
+      <p className="text-xs text-gray-500">
+        This property files its <strong>own</strong> MIRA return. Leave a rate blank to use the
+        Maldives default (TGST 17%, Green Tax $6 ≤50 rooms / $12 above, service charge 10%).
+      </p>
+      {err && <p className="text-xs text-red-600">{err}</p>}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <label className="block">
+          <span className="text-[11px] font-medium text-gray-600">MIRA TIN</span>
+          <input value={tin} onChange={(e) => setTin(e.target.value)} placeholder="e.g. 1009XXXGST" className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-medium text-gray-600">TGST %</span>
+          <input value={tgst} onChange={(e) => setTgst(e.target.value)} placeholder="17" inputMode="decimal" className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-medium text-gray-600">Green Tax $/night</span>
+          <input value={green} onChange={(e) => setGreen(e.target.value)} placeholder="6" inputMode="decimal" className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-medium text-gray-600">Service charge %</span>
+          <input value={svc} onChange={(e) => setSvc(e.target.value)} placeholder="10" inputMode="decimal" className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+        </label>
+      </div>
+      <button
+        onClick={save}
+        disabled={busy}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+        Save tax settings
+      </button>
     </div>
   );
 }

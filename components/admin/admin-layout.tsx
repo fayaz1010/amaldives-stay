@@ -41,6 +41,8 @@ import {
   MousePointerClick,
   CreditCard,
   Banknote,
+  Receipt,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TenantSwitcher } from '@/components/admin/tenant-switcher';
@@ -96,6 +98,8 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
       { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
       { name: 'Finance', href: '/admin/finance', icon: DollarSign },
+      { name: 'MIRA / Tax', href: '/admin/finance/mira', icon: Receipt },
+      { name: 'Properties', href: '/admin/properties', icon: MapPin },
       { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     ],
   },

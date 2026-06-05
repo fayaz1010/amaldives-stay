@@ -17,6 +17,7 @@ export default async function PropertiesPage() {
       orderBy: { createdAt: 'asc' },
       select: {
         id: true, name: true, city: true, address: true, isActive: true,
+        taxTin: true, tgstRate: true, greenTaxUsdPerNight: true, serviceChargeRate: true,
         _count: { select: { rooms: true, bookings: true } },
       },
     }),

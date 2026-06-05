@@ -416,6 +416,7 @@ model StaffProfile {
 model HousekeepingTask {
   id          String     @id @default(cuid())
   tenantId    String
+  propertyId  String?       // per-property scoping (multi-property)
   roomId      String
   assignedTo  String?
   taskType    TaskType
@@ -440,12 +441,14 @@ model HousekeepingTask {
   @@index([assignedTo])
   @@index([status])
   @@index([scheduledDate])
+  @@index([propertyId])
 }
 
 // Maintenance Management
 model MaintenanceRequest {
   id          String            @id @default(cuid())
   tenantId    String
+  propertyId  String?       // per-property scoping (multi-property)
   roomId      String?
   reportedBy  String
   title       String
@@ -470,6 +473,7 @@ model MaintenanceRequest {
   @@index([roomId])
   @@index([status])
   @@index([priority])
+  @@index([propertyId])
 }
 
 // Service Management
@@ -497,6 +501,7 @@ model Service {
 model ServiceOrder {
   id          String           @id @default(cuid())
   tenantId    String
+  propertyId  String?       // per-property scoping (multi-property)
   bookingId   String?
   serviceId   String
   guestId     String
@@ -522,6 +527,7 @@ model ServiceOrder {
   @@index([tenantId])
   @@index([bookingId])
   @@index([status])
+  @@index([propertyId])
 }
 
 // Inventory Management
@@ -707,6 +713,7 @@ enum ReportType {
 model ArrivalRecord {
   id                  String        @id @default(cuid())
   tenantId            String
+  propertyId  String?       // per-property scoping (multi-property)
   bookingId           String        @unique
 
   // Transport
@@ -760,6 +767,7 @@ model ArrivalRecord {
 
   @@index([tenantId])
   @@index([status])
+  @@index([propertyId])
 }
 
 model TransportOption {
@@ -824,6 +832,7 @@ enum DepartureStatus {
 model DepartureRecord {
   id                  String          @id @default(cuid())
   tenantId            String
+  propertyId  String?       // per-property scoping (multi-property)
   bookingId           String          @unique
 
   // Outbound transport
@@ -868,6 +877,7 @@ model DepartureRecord {
 
   @@index([tenantId])
   @@index([status])
+  @@index([propertyId])
 }
 
 // @@@ Mini Bar @@@
@@ -891,6 +901,7 @@ model MinIBarItem {
 model MinIBarUsage {
   id          String        @id @default(cuid())
   tenantId    String
+  propertyId  String?       // per-property scoping (multi-property)
   bookingId   String?
   roomId      String
   itemId      String
@@ -909,6 +920,7 @@ model MinIBarUsage {
   @@index([bookingId])
   @@index([roomId])
   @@index([status])
+  @@index([propertyId])
 }
 
 enum MinIBarStatus {
@@ -923,6 +935,7 @@ enum MinIBarStatus {
 model StaffClockRecord {
   id           String       @id @default(cuid())
   tenantId     String
+  propertyId  String?       // per-property scoping (multi-property)
   staffId      String
   clockIn      DateTime
   clockOut     DateTime?
@@ -933,11 +946,13 @@ model StaffClockRecord {
   staff        StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
   @@index([tenantId])
   @@index([staffId])
+  @@index([propertyId])
 }
 
 model StaffTask {
   id          String        @id @default(cuid())
   tenantId    String
+  propertyId  String?       // per-property scoping (multi-property)
   staffId     String?
   bookingId   String?
   source      String?       // BOOKING | MANUAL | SYSTEM
@@ -957,6 +972,7 @@ model StaffTask {
   @@index([staffId])
   @@index([bookingId])
   @@index([status])
+  @@index([propertyId])
 }
 
 model StaffSOP {
