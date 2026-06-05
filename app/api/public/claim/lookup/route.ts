@@ -17,12 +17,16 @@ export async function GET(request: NextRequest) {
     where: {
       OR: [{ amaldivesSlug: slug }, { subdomain: slug }],
     },
-    select: { subdomain: true, name: true },
+    select: { subdomain: true, name: true, settings: true },
   });
 
   if (existing) {
+    const claimable = (existing.settings as Record<string, unknown> | null)?.claimable === true;
     return NextResponse.json({
-      claimed: true,
+      // Pre-provisioned by us (properties/sharing/tax already set up) → owner
+      // just creates a login. Otherwise it's already owned → sign in.
+      provisioned: claimable,
+      claimed: !claimable,
       subdomain: existing.subdomain,
       name: existing.name,
       stayUrl: `https://${existing.subdomain}.stay.amaldives.com`,

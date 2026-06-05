@@ -43,6 +43,8 @@ function ClaimForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Pre-provisioned tenant (we set it up already) → owner just creates a login.
+  const [provisioned, setProvisioned] = useState(false);
   const [success, setSuccess] = useState<{
     stayUrl: string;
     amaldivesUrl?: string | null;
@@ -53,6 +55,14 @@ function ClaimForm() {
     fetch(`/api/public/claim/lookup?slug=${encodeURIComponent(guesthouseParam)}`)
       .then((r) => r.json())
       .then((data) => {
+        if (data.provisioned) {
+          // Already set up by us — just create a login.
+          setProvisioned(true);
+          if (data.name) setGuesthouseName(data.name);
+          if (data.subdomain) setSubdomain(data.subdomain);
+          if (data.amaldivesUrl) setAmaldivesUrl(data.amaldivesUrl);
+          return;
+        }
         if (data.claimed) {
           setError(`This guesthouse is already claimed. Sign in at ${data.stayUrl}`);
           return;
@@ -94,18 +104,26 @@ function ClaimForm() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/public/onboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guesthouseName,
-          subdomain: finalSubdomain,
-          email,
-          name: ownerName || email.split('@')[0],
-          password,
-          amaldivesSlug: guesthouseParam || finalSubdomain,
-        }),
-      });
+      // Provisioned tenant → just attach a login (claim/complete).
+      // New guesthouse → create the whole tenant (onboard).
+      const res = provisioned
+        ? await fetch('/api/public/claim/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subdomain: finalSubdomain, email, password, ownerName }),
+          })
+        : await fetch('/api/public/onboard', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guesthouseName,
+              subdomain: finalSubdomain,
+              email,
+              name: ownerName || email.split('@')[0],
+              password,
+              amaldivesSlug: guesthouseParam || finalSubdomain,
+            }),
+          });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -171,9 +189,13 @@ function ClaimForm() {
             <Hotel className="h-8 w-8 text-white" />
           </div>
         </div>
-        <CardTitle className="text-2xl font-bold">Claim Your Free amaldives STAY Account</CardTitle>
+        <CardTitle className="text-2xl font-bold">
+          {provisioned ? 'Your property is ready — create your login' : 'Claim Your Free amaldives STAY Account'}
+        </CardTitle>
         <CardDescription>
-          {guesthouseParam ? (
+          {provisioned ? (
+            <>We&apos;ve already set up <strong>{guesthouseName}</strong> with your properties. Just create a login, then add your rooms, photos &amp; rates.</>
+          ) : guesthouseParam ? (
             <>
               Your listing on{' '}
               <a
@@ -265,7 +287,7 @@ function ClaimForm() {
           </div>
 
           <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
-            {loading ? 'Claiming…' : 'Claim Free Account'}
+            {loading ? (provisioned ? 'Creating…' : 'Claiming…') : provisioned ? 'Create my login' : 'Claim Free Account'}
           </Button>
         </form>
 
