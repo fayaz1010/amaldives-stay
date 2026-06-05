@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { AdminLayout } from '@/components/admin/admin-layout';
+import { listTenantProperties, getActivePropertyId } from '@/lib/active-property';
 
 export default async function AdminLayoutWrapper({
   children,
@@ -30,6 +31,12 @@ export default async function AdminLayoutWrapper({
   const theme = (tenant?.theme as Record<string, unknown> | null) ?? {};
   const primaryColor = typeof theme.primaryColor === 'string' ? theme.primaryColor : null;
 
+  // Multi-property context for the sidebar switcher (self-hides if ≤1).
+  const tenantId = session.user.tenantId;
+  const [properties, activePropertyId] = tenantId
+    ? await Promise.all([listTenantProperties(tenantId), getActivePropertyId(tenantId)])
+    : [[], null];
+
   return (
     <AdminLayout
       user={session.user}
@@ -40,6 +47,8 @@ export default async function AdminLayoutWrapper({
       primaryColor={primaryColor}
       memberships={session.user.memberships}
       activeTenantId={session.user.tenantId}
+      properties={properties}
+      activePropertyId={activePropertyId}
     >
       {children}
     </AdminLayout>
