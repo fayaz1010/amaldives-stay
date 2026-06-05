@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
+import { getSharing, categoryWhere, categoryCreatePropertyId } from '@/lib/property-sharing';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +12,12 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session?.user?.tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const items = await prisma.logisticsInventoryItem.findMany({
-      where: { tenantId: session.user.tenantId, isActive: true },
+      where: { tenantId: session.user.tenantId, ...categoryWhere('inventory', sharing, activePropertyId), isActive: true },
       include: {
         stockMovements: {
           orderBy: { recordedAt: 'desc' },
@@ -37,9 +43,14 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     if (!data.name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 });
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const item = await prisma.logisticsInventoryItem.create({
       data: {
         tenantId: session.user.tenantId,
+        propertyId: categoryCreatePropertyId('inventory', sharing, activePropertyId),
         name: data.name.trim(),
         category: data.category?.trim() || 'general',
         unit: data.unit?.trim() || 'pcs',

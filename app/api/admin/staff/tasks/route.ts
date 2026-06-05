@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const date = searchParams.get('date');
 
+    const activePropertyId = await getActivePropertyId(tenantId);
     const where: any = { tenantId };
+    if (activePropertyId) where.propertyId = activePropertyId;
     if (staffId) where.staffId = staffId;
     if (status) where.status = status;
     if (date) {
@@ -95,6 +98,7 @@ export async function POST(request: NextRequest) {
     const created = await prisma.staffTask.create({
       data: {
         tenantId,
+        propertyId: await getActivePropertyId(tenantId),
         staffId: staffId || null,
         title,
         description: description || null,

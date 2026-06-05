@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
+import { getSharing, categoryWhere, categoryCreatePropertyId } from '@/lib/property-sharing';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,9 +23,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const services = await prisma.service.findMany({
       where: {
         tenantId: session.user.tenantId,
+        ...categoryWhere('services', sharing, activePropertyId),
         category: { in: EXTRA_CATEGORIES },
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
@@ -60,9 +67,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const service = await prisma.service.create({
       data: {
         tenantId: session.user.tenantId,
+        propertyId: categoryCreatePropertyId('services', sharing, activePropertyId),
         name: name.trim(),
         category,
         price: Number(price),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +23,11 @@ export async function GET() {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
+    const activePropertyId = await getActivePropertyId(tenantId);
     const records = await prisma.staffClockRecord.findMany({
       where: {
         tenantId,
+        ...(activePropertyId ? { propertyId: activePropertyId } : {}),
         clockIn: { gte: todayStart, lte: todayEnd },
       },
       include: {
@@ -89,6 +92,7 @@ export async function POST(request: NextRequest) {
     const record = await prisma.staffClockRecord.create({
       data: {
         tenantId,
+        propertyId: await getActivePropertyId(tenantId),
         staffId,
         clockIn: new Date(),
       },

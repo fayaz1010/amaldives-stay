@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,8 +24,12 @@ export async function GET(_req: NextRequest) {
     if (!session?.user?.tenantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const activePropertyId = await getActivePropertyId(session.user.tenantId);
     const arrivals = await prisma.arrivalRecord.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: {
+        tenantId: session.user.tenantId,
+        ...(activePropertyId ? { propertyId: activePropertyId } : {}),
+      },
       include: ARRIVAL_INCLUDE,
       orderBy: { scheduledArrival: 'asc' },
     });
@@ -57,6 +62,7 @@ export async function POST(request: NextRequest) {
     const arrival = await prisma.arrivalRecord.create({
       data: {
         tenantId: session.user.tenantId,
+        propertyId: booking.propertyId,
         bookingId: data.bookingId,
         transportType: data.transportType ?? 'SPEEDBOAT',
         transportRef: data.transportRef ?? null,

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
+import { getSharing, categoryWhere, categoryCreatePropertyId } from '@/lib/property-sharing';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +17,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('all') === '1';
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const items = await prisma.minIBarItem.findMany({
       where: {
         tenantId: session.user.tenantId,
+        ...categoryWhere('minibar', sharing, activePropertyId),
         ...(includeInactive ? {} : { isActive: true }),
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
@@ -48,9 +55,14 @@ export async function POST(request: NextRequest) {
     const isFree = Boolean(data.isFree);
     const price = isFree ? 0 : Number(data.price ?? 0);
 
+    const [sharing, activePropertyId] = await Promise.all([
+      getSharing(session.user.tenantId),
+      getActivePropertyId(session.user.tenantId),
+    ]);
     const item = await prisma.minIBarItem.create({
       data: {
         tenantId: session.user.tenantId,
+        propertyId: categoryCreatePropertyId('minibar', sharing, activePropertyId),
         name: data.name.trim(),
         category: data.category.trim(),
         isFree,

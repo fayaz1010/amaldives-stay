@@ -41,9 +41,12 @@ import {
   MousePointerClick,
   CreditCard,
   Banknote,
+  Receipt,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TenantSwitcher } from '@/components/admin/tenant-switcher';
+import { PropertySwitcher } from '@/components/admin/property-switcher';
 
 interface NavItem {
   name: string;
@@ -80,6 +83,10 @@ interface AdminLayoutProps {
   }>;
   /** Active tenant id (drives which membership the switcher highlights). */
   activeTenantId?: string;
+  /** Properties for the active tenant (drives the property switcher). */
+  properties?: Array<{ id: string; name: string }>;
+  /** Active property id within the tenant. */
+  activePropertyId?: string | null;
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -91,6 +98,8 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
       { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
       { name: 'Finance', href: '/admin/finance', icon: DollarSign },
+      { name: 'MIRA / Tax', href: '/admin/finance/mira', icon: Receipt },
+      { name: 'Properties', href: '/admin/properties', icon: MapPin },
       { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     ],
   },
@@ -168,6 +177,8 @@ function SidebarContent({
   primaryColor,
   memberships,
   activeTenantId,
+  properties,
+  activePropertyId,
   onClose,
   onNavClick,
 }: {
@@ -178,6 +189,8 @@ function SidebarContent({
   primaryColor?: string | null;
   memberships?: AdminLayoutProps['memberships'];
   activeTenantId?: string;
+  properties?: Array<{ id: string; name: string }>;
+  activePropertyId?: string | null;
   onClose?: () => void;
   onNavClick?: () => void;
 }) {
@@ -260,6 +273,14 @@ function SidebarContent({
         )}
       </div>
 
+      {/* Property switcher — only renders for multi-property tenants. Picks
+          which property within the current business you're operating on. */}
+      {properties && properties.length > 1 && (
+        <div className="px-3 py-2 border-b shrink-0 bg-gray-50/60">
+          <PropertySwitcher activePropertyId={activePropertyId ?? null} properties={properties} />
+        </div>
+      )}
+
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto py-2 px-2">
         {visibleGroups.map((group) => {
@@ -333,6 +354,8 @@ export function AdminLayout({
   primaryColor,
   memberships,
   activeTenantId,
+  properties,
+  activePropertyId,
 }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
@@ -373,6 +396,8 @@ export function AdminLayout({
               primaryColor={primaryColor}
               memberships={memberships}
               activeTenantId={activeTenantId}
+              properties={properties}
+              activePropertyId={activePropertyId}
               onNavClick={handleNavClick}
               onClose={() => setSidebarOpen(false)}
             />
@@ -390,6 +415,8 @@ export function AdminLayout({
           primaryColor={primaryColor}
           memberships={memberships}
           activeTenantId={activeTenantId}
+          properties={properties}
+          activePropertyId={activePropertyId}
           onNavClick={handleNavClick}
         />
       </div>
