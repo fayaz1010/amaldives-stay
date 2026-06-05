@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { TenantDb } from '@/lib/db';
+import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No tenant associated' }, { status: 403 });
     }
 
-    const tenantDb = new TenantDb(session.user.tenantId);
+    const activePropertyId = await getActivePropertyId(session.user.tenantId);
+    const tenantDb = new TenantDb(session.user.tenantId, activePropertyId);
     const requests = await tenantDb.getMaintenanceRequests({});
 
     return NextResponse.json({ requests });
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (data.roomId) payload.roomId = data.roomId;
+    payload.propertyId = await getActivePropertyId(session.user.tenantId);
 
     const tenantDb = new TenantDb(session.user.tenantId);
     const requestRecord = await tenantDb.createMaintenanceRequest(payload);

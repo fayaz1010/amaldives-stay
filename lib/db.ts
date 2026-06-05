@@ -296,7 +296,7 @@ export class TenantDb {
   // Housekeeping queries
   async getHousekeepingTasks(filters?: any) {
     const { limit, ...rest } = filters || {};
-    const where = { tenantId: this.tenantId, ...rest };
+    const where = { tenantId: this.tenantId, ...this.propScope, ...rest };
     return await prisma.housekeepingTask.findMany({
       where,
       ...(limit ? { take: limit } : {}),
@@ -331,7 +331,7 @@ export class TenantDb {
   // Maintenance queries
   async getMaintenanceRequests(filters?: any) {
     const { limit, ...rest } = filters || {};
-    const where = { tenantId: this.tenantId, ...rest };
+    const where = { tenantId: this.tenantId, ...this.propScope, ...rest };
     return await prisma.maintenanceRequest.findMany({
       where,
       include: {
