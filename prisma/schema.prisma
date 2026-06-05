@@ -178,6 +178,14 @@ model Property {
   amenities   String[]
   policies    Json?
   settings    Json?
+  // Per-property MIRA / tax configuration (Maldives). All nullable + configurable
+  // because rates change and each property files its OWN MIRA return (separate TIN).
+  // null on a rate = fall back to the platform default in lib/tax.
+  taxTin              String?  // MIRA Taxpayer Identification Number (per property)
+  tgstRate            Float?   // e.g. 0.17 (TGST since 1 Jul 2025)
+  greenTaxUsdPerNight Float?   // 6 (<=50 rooms guesthouse) or 12 (>50 rooms / resort)
+  serviceChargeRate   Float?   // e.g. 0.10 distributed to staff
+  taxSettings         Json?    // filing frequency, GST registration flags, MIRAconnect notes
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -185,7 +193,7 @@ model Property {
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rooms       Room[]
   bookings    Booking[]
-  
+
   @@index([tenantId])
 }
 
@@ -546,6 +554,7 @@ model InventoryItem {
 model Payment {
   id          String        @id @default(cuid())
   tenantId    String
+  propertyId  String?       // denormalised from booking for per-property revenue/MIRA
   bookingId   String
   amount      Float
   currency    String        @default("USD")
@@ -559,8 +568,9 @@ model Payment {
   updatedAt   DateTime      @updatedAt
 
   booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  
+
   @@index([tenantId])
+  @@index([propertyId])
   @@index([bookingId])
   @@index([status])
 }
@@ -569,6 +579,7 @@ model Payment {
 model Report {
   id          String     @id @default(cuid())
   tenantId    String
+  propertyId  String?    // null = consolidated (all properties); set = single-property report
   title       String
   type        ReportType
   parameters  Json?
@@ -577,8 +588,9 @@ model Report {
   createdAt   DateTime   @default(now())
 
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
+
   @@index([tenantId])
+  @@index([propertyId])
   @@index([type])
   @@index([createdAt])
 }
@@ -1205,6 +1217,7 @@ enum FnBBillStatus {
 model Expense {
   id          String          @id @default(cuid())
   tenantId    String
+  propertyId  String?         // per-property attribution for separate MIRA filing
   category    ExpenseCategory
   title       String
   description String?
@@ -1223,6 +1236,7 @@ model Expense {
   updatedAt   DateTime        @updatedAt
   tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
+  @@index([propertyId])
   @@index([status])
   @@index([category])
 }
@@ -1230,6 +1244,7 @@ model Expense {
 model PayrollEntry {
   id           String        @id @default(cuid())
   tenantId     String
+  propertyId   String?       // optional per-property attribution (shared staff split)
   staffId      String
   period       String
   baseSalary   Float
@@ -1247,6 +1262,7 @@ model PayrollEntry {
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@unique([tenantId, staffId, period])
   @@index([tenantId])
+  @@index([propertyId])
   @@index([staffId])
   @@index([period])
 }
