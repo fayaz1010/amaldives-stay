@@ -74,7 +74,28 @@ export default async function HomePage() {
       );
     }
 
-    return <GuestHomePage tenant={tenant} />;
+    // Pull "activities near the hotel" from amaldives' operator directory so the
+    // site has rich, locally-relevant content + backlinks. Cached 1h; best-effort
+    // (never blocks the page if amaldives is slow/unreachable).
+    const island = (tenant.properties?.[0]?.city || '').trim();
+    const islandSlug = island.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    let nearbyOperators: any[] = [];
+    let nearbyScoped = false;
+    try {
+      const r = await fetch(
+        `https://amaldives.com/api/public/operators?limit=6${islandSlug ? `&island=${islandSlug}` : ''}`,
+        { next: { revalidate: 3600 } },
+      );
+      if (r.ok) {
+        const j = await r.json();
+        nearbyOperators = Array.isArray(j.operators) ? j.operators : [];
+        nearbyScoped = !!j.scoped;
+      }
+    } catch {
+      // ignore — falls back to the static category links
+    }
+
+    return <GuestHomePage tenant={tenant} nearbyOperators={nearbyOperators} nearbyScoped={nearbyScoped} />;
   }
   
   // Main platform page

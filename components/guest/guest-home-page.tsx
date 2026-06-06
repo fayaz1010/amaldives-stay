@@ -22,14 +22,28 @@ import {
   Heart
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { BookingEngine } from '@/components/booking/booking-engine';
 
+interface NearbyOperator {
+  name: string;
+  slug: string;
+  category: string;
+  categoryLabel: string;
+  island: string | null;
+  rating: number | null;
+  reviewCount: number | null;
+  photo: string | null;
+  url: string;
+}
 interface GuestHomePageProps {
   tenant: any;
+  nearbyOperators?: NearbyOperator[];
+  nearbyScoped?: boolean;
 }
 
-export function GuestHomePage({ tenant }: GuestHomePageProps) {
+export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = false }: GuestHomePageProps) {
   const property = tenant.properties?.[0];
   const rooms = property?.rooms || [];
   const availableRooms = rooms.filter((room: any) => room.status === 'AVAILABLE');
@@ -193,13 +207,13 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
                 <Card className="h-full hover:shadow-lg transition-shadow overflow-hidden">
-                  <div className="aspect-video bg-gray-200 relative">
+                  <Link href={`/rooms/${room.id}`} className="block aspect-video bg-gray-200 relative group">
                     {room.images?.[0] ? (
                       <Image
                         src={room.images[0]}
                         alt={room.name}
                         fill
-                        className="object-cover"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full bg-gray-100">
@@ -211,9 +225,11 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                         {room.type}
                       </Badge>
                     </div>
-                  </div>
+                  </Link>
                   <CardHeader>
-                    <CardTitle className="text-xl">{room.name}</CardTitle>
+                    <CardTitle className="text-xl">
+                      <Link href={`/rooms/${room.id}`} className="hover:opacity-80 transition-opacity">{room.name}</Link>
+                    </CardTitle>
                     <CardDescription>{room.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -247,12 +263,13 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                       </div>
                     )}
                     
-                    <Button
-                      className="w-full"
-                      style={{ backgroundColor: primary, color: 'white' }}
+                    <Link
+                      href={`/rooms/${room.id}`}
+                      className="block w-full text-center rounded-md py-2 font-medium text-white transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: primary }}
                     >
-                      Select Room
-                    </Button>
+                      View Room &amp; Book
+                    </Link>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -309,10 +326,48 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               {island
-                ? `Dive centres, water sports, fishing charters and island excursions around ${island}, curated by our friends at amaldives.com.`
+                ? `Dive centres, water sports, fishing charters and island excursions on ${island}, curated by our friends at amaldives.com.`
                 : 'Dive centres, water sports, fishing charters and island excursions, curated by amaldives.com.'}
             </p>
           </div>
+
+          {/* Live, island-scoped operators from amaldives (real cards) */}
+          {nearbyScoped && nearbyOperators.length > 0 && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+              {nearbyOperators.map((op) => (
+                <a
+                  key={op.slug}
+                  href={op.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="group block rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                >
+                  <div className="relative h-40 bg-gray-100">
+                    {op.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={op.photo} alt={op.name} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-3xl">🌊</div>
+                    )}
+                    <span className="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/90 text-gray-800">
+                      {op.categoryLabel}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2">{op.name}</h3>
+                    <div className="mt-2 flex items-center justify-between text-sm">
+                      {op.rating != null ? (
+                        <span className="font-medium text-amber-600">★ {op.rating} <span className="text-gray-400 font-normal">({op.reviewCount || 0})</span></span>
+                      ) : <span className="text-gray-400">{op.island}</span>}
+                      <span className="font-medium" style={{ color: primary }}>View →</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Category quick-links to the full amaldives directory (scoped to island) */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {nearby.map((n) => (
               <a
