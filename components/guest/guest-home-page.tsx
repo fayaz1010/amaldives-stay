@@ -47,6 +47,22 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
   const heroImage = theme.heroImageUrl;
   const heroFocal = theme.heroImageFocalPoint || 'center';
 
+  // "Experiences & Activities Near Us" — contextual links to amaldives.com's
+  // local-island operator directory + guides. This is intentional: it adds real
+  // value for guests AND sends a genuine, topically-relevant backlink from the
+  // guesthouse's own domain to amaldives (links are contextual + vary by
+  // island/category, so no sitewide-footprint risk). Followed links (no nofollow).
+  const AM = 'https://amaldives.com';
+  const island = (property?.city || '').trim();
+  const islandSlug = island.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const islandQ = islandSlug ? `&island=${islandSlug}` : '';
+  const nearby = [
+    { emoji: '🤿', label: 'Dive Centres', cat: 'dive', blurb: `PADI & SSI dive schools and house-reef dives near ${island || 'the island'}` },
+    { emoji: '🌊', label: 'Water Sports', cat: 'watersports', blurb: 'Jet ski, parasailing, kayaks & paddleboards' },
+    { emoji: '🎣', label: 'Big-Game Fishing', cat: 'fishing', blurb: 'Sunset, night & sport-fishing charters' },
+    { emoji: '⛵', label: 'Excursions & Tours', cat: 'excursions', blurb: 'Sandbank, dolphin, manta & snorkel trips' },
+  ];
+
   const amenities = [
     { icon: Wifi, name: 'Free Wi-Fi' },
     { icon: Car, name: 'Parking' },
@@ -86,6 +102,12 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
                 className="text-gray-600 transition-colors hover:opacity-80"
               >
                 Amenities
+              </a>
+              <a
+                href="#experiences"
+                className="text-gray-600 transition-colors hover:opacity-80"
+              >
+                Experiences
               </a>
               <a
                 href="#contact"
@@ -278,6 +300,53 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
         </div>
       </section>
 
+      {/* Experiences & Activities Nearby — backlinks to amaldives directory */}
+      <section id="experiences" className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Experiences &amp; Activities {island ? `Near ${tenant.name}` : 'Nearby'}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {island
+                ? `Dive centres, water sports, fishing charters and island excursions around ${island}, curated by our friends at amaldives.com.`
+                : 'Dive centres, water sports, fishing charters and island excursions, curated by amaldives.com.'}
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {nearby.map((n) => (
+              <a
+                key={n.cat}
+                href={`${AM}/operators?category=${n.cat}${islandQ}`}
+                target="_blank"
+                rel="noopener"
+                className="group block rounded-2xl border border-gray-100 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="text-4xl mb-3">{n.emoji}</div>
+                <h3 className="font-semibold text-gray-900 mb-1">{n.label}</h3>
+                <p className="text-sm text-gray-600 leading-snug">{n.blurb}</p>
+                <span className="mt-3 inline-block text-sm font-medium" style={{ color: primary }}>
+                  Browse on amaldives →
+                </span>
+              </a>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-gray-600">
+            {islandSlug && (
+              <a href={`${AM}/islands/${islandSlug}`} target="_blank" rel="noopener" className="hover:text-gray-900 underline-offset-2 hover:underline">
+                {island} island guide
+              </a>
+            )}
+            <a href={`${AM}/plan-your-trip/maldives-flights-transfers-guide`} target="_blank" rel="noopener" className="hover:text-gray-900 underline-offset-2 hover:underline">
+              Getting here &amp; transfers
+            </a>
+            <a href={`${AM}/plan-your-trip`} target="_blank" rel="noopener" className="hover:text-gray-900 underline-offset-2 hover:underline">
+              Plan your Maldives trip
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Contact Section */}
       <section id="contact" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -379,7 +448,11 @@ export function GuestHomePage({ tenant }: GuestHomePageProps) {
               <div className="flex items-center space-x-2">
                 <Heart className="h-4 w-4 text-teal-400" />
                 <span className="text-sm text-gray-300">
-                  Powered by amaldives STAY
+                  Powered by{' '}
+                  <a href="https://amaldives.com" target="_blank" rel="noopener" className="text-gray-200 hover:text-white underline-offset-2 hover:underline">
+                    amaldives
+                  </a>{' '}
+                  STAY
                 </span>
               </div>
             </div>
