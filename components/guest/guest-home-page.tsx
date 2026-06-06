@@ -68,7 +68,13 @@ export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = fal
   // island/category, so no sitewide-footprint risk). Followed links (no nofollow).
   const AM = 'https://amaldives.com';
   const island = (property?.city || '').trim();
-  const islandSlug = island.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  // Strip diacritics BEFORE slugifying so "Hulhumalé" → "hulhumale" (not "hulhumal").
+  const islandSlug = island
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   const islandQ = islandSlug ? `&island=${islandSlug}` : '';
   const nearby = [
     { emoji: '🤿', label: 'Dive Centres', cat: 'dive', blurb: `PADI & SSI dive schools and house-reef dives near ${island || 'the island'}` },

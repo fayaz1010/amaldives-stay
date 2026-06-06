@@ -78,7 +78,13 @@ export default async function HomePage() {
     // site has rich, locally-relevant content + backlinks. Cached 1h; best-effort
     // (never blocks the page if amaldives is slow/unreachable).
     const island = (tenant.properties?.[0]?.city || '').trim();
-    const islandSlug = island.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    // Strip diacritics BEFORE slugifying so "Hulhumalé" → "hulhumale" (not "hulhumal").
+    const islandSlug = island
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
     let nearbyOperators: any[] = [];
     let nearbyScoped = false;
     try {
