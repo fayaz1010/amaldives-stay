@@ -1,92 +1,77 @@
-/**
- * POST /api/public/claim/complete
- *
- * Claim a PRE-PROVISIONED tenant — one we set up in advance (properties,
- * sharing, tax config already in place) and flagged `settings.claimable = true`.
- * The owner just creates their login; everything is already there. They then
- * update rooms / photos / rates themselves.
- *
- * Body: { subdomain, email, password, ownerName? }
- * Distinct from /api/public/onboard, which creates a brand-new tenant.
- */
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/db';
+import { verifyClaimToken } from '@/lib/claim-token';
+import { ensureGuesthouseProvisioned } from '@/lib/auto-provision-guesthouse';
+import { emailMatchesClaimPolicy, normalizeEmail } from '@/lib/claim-policy';
+import { finalizeTenantClaim } from '@/lib/claim-owner';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * POST /api/public/claim/complete
+ * Body: { token, password, ownerName? }
+ *
+ * Completes a verified claim — requires a valid email verification token.
+ */
 export async function POST(request: NextRequest) {
-  let body: { subdomain?: string; email?: string; password?: string; ownerName?: string };
+  let body: { token?: string; password?: string; ownerName?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const subdomain = String(body.subdomain || '').toLowerCase().trim();
-  const email = String(body.email || '').toLowerCase().trim();
+  const token = String(body.token || '').trim();
   const password = String(body.password || '');
-  const ownerName = body.ownerName?.trim() || email.split('@')[0];
+  const ownerName = body.ownerName?.trim();
 
-  if (!subdomain || !email || !password) {
-    return NextResponse.json({ error: 'subdomain, email and password are required' }, { status: 400 });
-  }
-  if (password.length < 8) {
-    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+  if (!token || !password) {
+    return NextResponse.json({ error: 'token and password are required' }, { status: 400 });
   }
 
-  // Must be an existing, claimable tenant.
-  const tenant = await prisma.tenant.findFirst({
-    where: { OR: [{ subdomain }, { amaldivesSlug: subdomain }] },
-    select: { id: true, subdomain: true, name: true, settings: true, status: true },
-  });
-  if (!tenant) {
-    return NextResponse.json({ error: 'No pre-provisioned property found for this name' }, { status: 404 });
-  }
-  const settings = (tenant.settings as Record<string, unknown> | null) ?? {};
-  if (settings.claimable !== true) {
+  const verdict = verifyClaimToken(token);
+  if (!verdict.ok) {
     return NextResponse.json(
-      { error: 'This property is already claimed. Please sign in instead.' },
-      { status: 409 },
+      { error: 'Verification link is invalid or expired. Request a new one.' },
+      { status: 400 }
     );
   }
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 });
+  const { slug, email } = verdict.payload;
+  const normalizedEmail = normalizeEmail(email);
+
+  const provision = await ensureGuesthouseProvisioned(slug);
+  if (!provision.ok) {
+    if (provision.reason === 'already_claimed') {
+      return NextResponse.json(
+        { error: 'This property is already claimed. Please sign in instead.' },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({ error: 'Property is not available to claim' }, { status: 409 });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  if (!emailMatchesClaimPolicy(normalizedEmail, provision.claimPolicy)) {
+    return NextResponse.json({ error: 'Email no longer authorized for this property' }, { status: 403 });
+  }
 
-  await prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({
-      data: {
-        email,
-        name: ownerName,
-        password: hashedPassword,
-        role: 'TENANT_ADMIN',
-        tenantId: tenant.id,
-        staffProfile: {
-          create: { tenantId: tenant.id, department: 'Management', position: 'Owner', hireDate: new Date(), permissions: [] },
-        },
-      },
+  try {
+    const result = await finalizeTenantClaim({
+      tenantId: provision.tenantId,
+      email: normalizedEmail,
+      password,
+      ownerName: ownerName || normalizedEmail.split('@')[0],
     });
-    await tx.tenantMembership.upsert({
-      where: { userId_tenantId: { userId: user.id, tenantId: tenant.id } },
-      update: { role: 'TENANT_ADMIN', isDefault: true },
-      create: { userId: user.id, tenantId: tenant.id, role: 'TENANT_ADMIN', isDefault: true },
-    });
-    // Mark claimed so it can't be claimed twice.
-    await tx.tenant.update({
-      where: { id: tenant.id },
-      data: { settings: { ...settings, claimable: false, claimedAt: new Date().toISOString() } as any },
-    });
-  });
 
-  return NextResponse.json({
-    success: true,
-    subdomain: tenant.subdomain,
-    stayUrl: `https://${tenant.subdomain}.stay.amaldives.com`,
-    loginUrl: `https://${tenant.subdomain}.stay.amaldives.com/auth/signin`,
-  });
+    return NextResponse.json({
+      success: true,
+      subdomain: result.subdomain,
+      stayUrl: result.stayUrl,
+      loginUrl: result.loginUrl,
+      amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unable to complete claim';
+    const status = msg.includes('already') ? 409 : msg.includes('exists') ? 409 : 400;
+    return NextResponse.json({ error: msg }, { status });
+  }
 }

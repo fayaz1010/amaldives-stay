@@ -5,6 +5,10 @@
     {
       "path": "/api/cron/ical-sync",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/provision-guesthouses",
+      "schedule": "0 4 * * *"
     }
   ]
 }

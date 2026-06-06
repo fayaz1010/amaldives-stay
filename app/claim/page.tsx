@@ -4,137 +4,98 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Hotel, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Hotel, AlertCircle, CheckCircle2, ExternalLink, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function humanize(slug: string): string {
-  return slug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
+type Step = 'email' | 'sent' | 'password' | 'success' | 'blocked';
 
 function ClaimForm() {
   const searchParams = useSearchParams();
   const guesthouseParam = searchParams?.get('guesthouse') ?? searchParams?.get('slug') ?? '';
+  const tokenParam = searchParams?.get('token') ?? '';
 
-  const initialSubdomain = useMemo(() => slugify(guesthouseParam), [guesthouseParam]);
-  const initialName = useMemo(() => humanize(guesthouseParam), [guesthouseParam]);
-
-  const [guesthouseName, setGuesthouseName] = useState(initialName);
-  const [subdomain, setSubdomain] = useState(initialSubdomain);
+  const [guesthouseName, setGuesthouseName] = useState('');
+  const [subdomain, setSubdomain] = useState('');
   const [amaldivesUrl, setAmaldivesUrl] = useState('');
-  const [ownerName, setOwnerName] = useState('');
+  const [emailHint, setEmailHint] = useState('');
+  const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
+  const [verifiedEmail, setVerifiedEmail] = useState('');
+  const [claimToken, setClaimToken] = useState('');
+  const [ownerName, setOwnerName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // Pre-provisioned tenant (we set it up already) → owner just creates a login.
-  const [provisioned, setProvisioned] = useState(false);
-  const [success, setSuccess] = useState<{
-    stayUrl: string;
-    amaldivesUrl?: string | null;
-  } | null>(null);
+  const [success, setSuccess] = useState<{ stayUrl: string; amaldivesUrl?: string | null } | null>(null);
 
   useEffect(() => {
     if (!guesthouseParam) return;
     fetch(`/api/public/claim/lookup?slug=${encodeURIComponent(guesthouseParam)}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.provisioned) {
-          // Already set up by us — just create a login.
-          setProvisioned(true);
-          if (data.name) setGuesthouseName(data.name);
-          if (data.subdomain) setSubdomain(data.subdomain);
-          if (data.amaldivesUrl) setAmaldivesUrl(data.amaldivesUrl);
-          return;
-        }
-        if (data.claimed) {
-          setError(`This guesthouse is already claimed. Sign in at ${data.stayUrl}`);
-          return;
-        }
         if (data.name) setGuesthouseName(data.name);
-        if (data.suggestedSubdomain) setSubdomain(data.suggestedSubdomain);
+        if (data.subdomain) setSubdomain(data.subdomain);
         if (data.amaldivesUrl) setAmaldivesUrl(data.amaldivesUrl);
+        if (data.emailHint) setEmailHint(data.emailHint);
+        if (data.claimed) {
+          setError(`Already claimed — sign in at ${data.stayUrl}`);
+          setStep('blocked');
+        } else if (data.canClaim === false && data.error) {
+          setError(data.error);
+          setStep('blocked');
+        }
       })
       .catch(() => {});
   }, [guesthouseParam]);
 
   useEffect(() => {
-    setGuesthouseName(initialName);
-    setSubdomain(initialSubdomain);
-  }, [initialName, initialSubdomain]);
+    if (!tokenParam || !guesthouseParam) return;
+    setLoading(true);
+    fetch(`/api/public/claim/verify?token=${encodeURIComponent(tokenParam)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.valid) {
+          setError(data.error || 'Invalid verification link');
+          setStep('email');
+          return;
+        }
+        setVerifiedEmail(data.email);
+        setEmail(data.email);
+        setGuesthouseName(data.guesthouseName || guesthouseName);
+        setSubdomain(data.subdomain || subdomain);
+        setClaimToken(tokenParam);
+        setStep('password');
+      })
+      .catch(() => setError('Could not verify link'))
+      .finally(() => setLoading(false));
+  }, [tokenParam, guesthouseParam]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRequestEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!guesthouseName.trim()) {
-      setError('Guesthouse name is required');
+    if (!guesthouseParam) {
+      setError('Missing guesthouse — use the link from your amaldives.com listing');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    const finalSubdomain = slugify(subdomain || guesthouseName);
-    if (!finalSubdomain) {
-      setError('Could not derive a subdomain from the guesthouse name');
-      return;
-    }
-
     setLoading(true);
     try {
-      // Provisioned tenant → just attach a login (claim/complete).
-      // New guesthouse → create the whole tenant (onboard).
-      const res = provisioned
-        ? await fetch('/api/public/claim/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subdomain: finalSubdomain, email, password, ownerName }),
-          })
-        : await fetch('/api/public/onboard', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              guesthouseName,
-              subdomain: finalSubdomain,
-              email,
-              name: ownerName || email.split('@')[0],
-              password,
-              amaldivesSlug: guesthouseParam || finalSubdomain,
-            }),
-          });
-
+      const res = await fetch('/api/public/claim/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: guesthouseParam, email }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Unable to claim account. Please try again.');
+        setError(data?.error || 'Could not send verification email');
+        if (data?.hint) setEmailHint(data.hint);
         return;
       }
-
-      setSuccess({
-        stayUrl: data.stayUrl ?? `https://${finalSubdomain}.stay.amaldives.com`,
-        amaldivesUrl: data.amaldivesUrl,
-      });
+      setStep('sent');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -142,7 +103,46 @@ function ClaimForm() {
     }
   };
 
-  if (success) {
+  const handleComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/public/claim/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: claimToken,
+          password,
+          ownerName: ownerName || verifiedEmail.split('@')[0],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Unable to complete claim');
+        return;
+      }
+      setSuccess({
+        stayUrl: data.stayUrl,
+        amaldivesUrl: data.amaldivesUrl,
+      });
+      setStep('success');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (step === 'success' && success) {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -153,7 +153,7 @@ function ClaimForm() {
           </div>
           <CardTitle className="text-2xl font-bold">You&apos;re all set!</CardTitle>
           <CardDescription>
-            Your account is linked to amaldives.com and ready for direct bookings.
+            Your verified account is linked to amaldives.com and ready for direct bookings.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -181,6 +181,90 @@ function ClaimForm() {
     );
   }
 
+  if (step === 'sent') {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-cyan-600 rounded-full flex items-center justify-center">
+              <Mail className="h-8 w-8 text-white" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
+          <CardDescription>
+            We sent a verification link to <strong>{email}</strong>. Click it to set your password and
+            activate admin access for <strong>{guesthouseName}</strong>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 text-center mb-4">
+            The link expires in 24 hours. Check spam if you don&apos;t see it within a few minutes.
+          </p>
+          <Button variant="outline" className="w-full" onClick={() => setStep('email')}>
+            Use a different email
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (step === 'password') {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Email verified</CardTitle>
+          <CardDescription>
+            Set a password for <strong>{verifiedEmail}</strong> to finish claiming{' '}
+            <strong>{guesthouseName}</strong>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleComplete} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="ownerName">Your name</Label>
+              <Input
+                id="ownerName"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="Full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
+              {loading ? 'Creating account…' : 'Activate admin access'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
@@ -190,14 +274,12 @@ function ClaimForm() {
           </div>
         </div>
         <CardTitle className="text-2xl font-bold">
-          {provisioned ? 'Your property is ready — create your login' : 'Claim Your Free amaldives STAY Account'}
+          {guesthouseName ? `Claim ${guesthouseName}` : 'Claim your guesthouse'}
         </CardTitle>
         <CardDescription>
-          {provisioned ? (
-            <>We&apos;ve already set up <strong>{guesthouseName}</strong> with your properties. Just create a login, then add your rooms, photos &amp; rates.</>
-          ) : guesthouseParam ? (
+          {guesthouseParam ? (
             <>
-              Your listing on{' '}
+              Verify ownership with your business email. We auto-set up your STAY account from your{' '}
               <a
                 href={amaldivesUrl || `https://www.amaldives.com/guesthouses/${guesthouseParam}`}
                 target="_blank"
@@ -206,90 +288,60 @@ function ClaimForm() {
               >
                 amaldives.com
               </a>{' '}
-              will connect to direct bookings automatically.
+              listing — no manual approval needed.
             </>
           ) : (
-            'Link your amaldives.com guesthouse and start accepting commission-free bookings.'
+            'Open this page from your amaldives.com listing to claim automatically.'
           )}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+        {step === 'blocked' ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : (
+          <form onSubmit={handleRequestEmail} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="guesthouseName">Guesthouse name</Label>
-            <Input
-              id="guesthouseName"
-              type="text"
-              value={guesthouseName}
-              onChange={(e) => setGuesthouseName(e.target.value)}
-              required
-            />
-            <p className="text-xs text-gray-500">
-              Your URL:{' '}
-              <span className="font-medium text-cyan-700">
-                {slugify(subdomain || guesthouseName) || 'your-guesthouse'}.stay.amaldives.com
-              </span>
-            </p>
-          </div>
+            {emailHint && (
+              <p className="text-sm text-cyan-800 bg-cyan-50 border border-cyan-200 rounded-lg px-3 py-2">
+                {emailHint}
+              </p>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="ownerName">Your name</Label>
-            <Input
-              id="ownerName"
-              type="text"
-              placeholder="Full name"
-              value={ownerName}
-              onChange={(e) => setOwnerName(e.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Business email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@yourguesthouse.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={!guesthouseParam}
+              />
+              <p className="text-xs text-gray-500">
+                Must match your guesthouse website domain (e.g. @rivethibeach.mv). Gmail and other
+                personal emails are not accepted unless that exact address is on file.
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Owner email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="At least 8 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="Re-enter your password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
-            {loading ? (provisioned ? 'Creating…' : 'Claiming…') : provisioned ? 'Create my login' : 'Claim Free Account'}
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              className="w-full bg-cyan-600 hover:bg-cyan-700"
+              disabled={loading || !guesthouseParam}
+            >
+              {loading ? 'Sending…' : 'Send verification email'}
+            </Button>
+          </form>
+        )}
 
         <p className="mt-6 text-center text-xs text-gray-500">
           By claiming, you agree to keep 96% of every direct booking. We collect a 4% platform fee.
