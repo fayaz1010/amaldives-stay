@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
   }
 
   const origin = request.headers.get('origin') ?? `https://${tenant.subdomain}.stay.amaldives.com`;
-  const planTier = planKey === 'channel' ? 'channel' : 'web';
+  // Store the real tier (growth/business/channel/web) so the plan is recorded accurately.
+  const planTier = String(planKey).toLowerCase();
 
   const checkout = await stripe.checkout.sessions.create({
     mode: 'subscription',
@@ -67,7 +68,9 @@ export async function POST(request: NextRequest) {
     subscription_data: {
       metadata: { tenantId: tenant.id, planTier },
     },
-    success_url: `${origin}/admin/settings/billing?success=1`,
+    // session_id lets the billing page confirm + activate the plan on return,
+    // so activation doesn't depend on a webhook being registered.
+    success_url: `${origin}/admin/settings/billing?success=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/admin/settings/billing?cancelled=1`,
   });
 

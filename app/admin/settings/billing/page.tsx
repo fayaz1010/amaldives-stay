@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CreditCard } from 'lucide-react';
+import { Loader2, CreditCard, CheckCircle2 } from 'lucide-react';
 
 const PLANS = [
   { key: 'growth', name: 'Growth', price: '$19/mo', desc: 'Channel sync + SMS' },
@@ -14,6 +14,33 @@ const PLANS = [
 
 export default function BillingSettingsPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ kind: 'ok' | 'info'; text: string } | null>(null);
+
+  // On the Stripe success redirect, confirm + activate the plan (no webhook needed).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const success = url.searchParams.get('success');
+    const cancelled = url.searchParams.get('cancelled');
+    const sessionId = url.searchParams.get('session_id');
+    if (success === '1' && sessionId) {
+      setBanner({ kind: 'info', text: 'Confirming your subscription…' });
+      fetch('/api/admin/billing/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.ok) setBanner({ kind: 'ok', text: `Subscription active — your ${d.plan} plan is now unlocked.` });
+          else setBanner({ kind: 'info', text: 'Payment received — your plan will activate shortly.' });
+        })
+        .catch(() => setBanner({ kind: 'info', text: 'Payment received.' }));
+      window.history.replaceState({}, '', '/admin/settings/billing');
+    } else if (cancelled === '1') {
+      setBanner({ kind: 'info', text: 'Checkout cancelled — no changes made.' });
+      window.history.replaceState({}, '', '/admin/settings/billing');
+    }
+  }, []);
 
   async function subscribe(planKey: string) {
     setLoading(planKey);
@@ -42,6 +69,19 @@ export default function BillingSettingsPage() {
           Upgrade securely with Stripe. Cancel anytime from your Stripe customer portal.
         </p>
       </div>
+
+      {banner && (
+        <div
+          className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+            banner.kind === 'ok'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-cyan-200 bg-cyan-50 text-cyan-800'
+          }`}
+        >
+          {banner.kind === 'ok' && <CheckCircle2 className="h-4 w-4" />}
+          {banner.text}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         {PLANS.map((p) => (

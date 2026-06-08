@@ -24,8 +24,10 @@ export const STRIPE_PLAN_PRICES = {
 } as const;
 
 export function planFromStripePrice(priceId: string): string {
-  if (priceId && priceId === STRIPE_PLAN_PRICES.business) return 'web';
-  if (priceId && priceId === STRIPE_PLAN_PRICES.channel) return 'channel';
-  if (priceId && priceId === STRIPE_PLAN_PRICES.growth) return 'web';
+  if (!priceId) return 'basic';
+  if (priceId === STRIPE_PLAN_PRICES.channel) return 'channel';
+  if (priceId === STRIPE_PLAN_PRICES.business) return 'business';
+  if (priceId === STRIPE_PLAN_PRICES.growth) return 'growth';
+  if (priceId === STRIPE_PLAN_PRICES.web) return 'web';
   return 'basic';
 }
