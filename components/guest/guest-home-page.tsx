@@ -212,7 +212,11 @@ export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = fal
     tagline?: string;
     highlights?: string[];
     stats?: { value: string; label: string }[];
+    imageCredits?: { text: string; url?: string; licenseUrl?: string; licenseLabel?: string }[];
   };
+  const imageCredits = Array.isArray(webProfile.imageCredits)
+    ? webProfile.imageCredits.filter((c) => c?.text)
+    : [];
   const tagline: string | undefined = webProfile.tagline || tenant.description || undefined;
   const highlights: string[] = Array.isArray(webProfile.highlights) ? webProfile.highlights.filter(Boolean) : [];
   const stats = Array.isArray(webProfile.stats) ? webProfile.stats.filter((s) => s?.value) : [];
@@ -733,8 +737,32 @@ export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = fal
               </div>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400 text-sm">
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400 text-sm space-y-2">
             <p>&copy; {new Date().getFullYear()} {tenant.name}. All rights reserved.</p>
+            {imageCredits.length > 0 && (
+              <p className="text-xs text-gray-500">
+                {imageCredits.map((c, i) => (
+                  <span key={i}>
+                    {i > 0 && ' · '}
+                    {c.url ? (
+                      <a href={c.url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 underline-offset-2 hover:underline">
+                        {c.text}
+                      </a>
+                    ) : (
+                      c.text
+                    )}
+                    {c.licenseUrl && (
+                      <>
+                        {' '}
+                        <a href={c.licenseUrl} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 underline-offset-2 hover:underline">
+                          {c.licenseLabel || 'license'}
+                        </a>
+                      </>
+                    )}
+                  </span>
+                ))}
+              </p>
+            )}
           </div>
         </div>
       </footer>
