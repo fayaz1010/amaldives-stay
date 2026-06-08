@@ -20,6 +20,7 @@ export default async function HomePage() {
           include: {
             rooms: {
               where: { isActive: true },
+              orderBy: { basePrice: 'asc' },
               include: {
                 bookings: {
                   where: {
