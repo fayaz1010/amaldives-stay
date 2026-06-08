@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed:amaldives": "tsx --require dotenv/config scripts/seed-from-amaldives.ts"
+    "seed:amaldives": "tsx --require dotenv/config scripts/seed-from-amaldives.ts",
+    "create-admin": "tsx --require dotenv/config scripts/create-tenant-admin.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/seed.ts"
