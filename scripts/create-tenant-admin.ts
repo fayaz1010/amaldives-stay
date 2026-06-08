@@ -43,9 +43,11 @@ async function main() {
     process.exit(1);
   }
 
+  const keepClaimable = process.argv.includes('--keep-claimable');
+
   const tenant = await prisma.tenant.findFirst({
     where: { OR: [{ subdomain: tenantRef }, { id: tenantRef }] },
-    select: { id: true, name: true, subdomain: true, status: true },
+    select: { id: true, name: true, subdomain: true, status: true, settings: true },
   });
   if (!tenant) {
     console.error(`Tenant not found for "${tenantRef}"`);
@@ -69,7 +71,27 @@ async function main() {
     create: { userId: user.id, tenantId: tenant.id, role: 'TENANT_ADMIN', isDefault: true },
   });
 
+  // Lock the listing: provisioning an admin on the owner's behalf IS the claim,
+  // so mark it non-claimable to stop anyone else self-claiming it via /claim.
+  // (Pass --keep-claimable to leave it open, e.g. if the owner will self-verify.)
+  if (!keepClaimable) {
+    const settings = (tenant.settings as Record<string, unknown> | null) ?? {};
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: {
+        settings: {
+          ...settings,
+          claimable: false,
+          claimedAt: (settings.claimedAt as string) ?? new Date().toISOString(),
+          claimedByEmail: email,
+          claimedVia: 'platform_admin',
+        } as object,
+      },
+    });
+  }
+
   console.log(`✅ TENANT_ADMIN ready for ${tenant.name} (${tenant.subdomain})`);
+  console.log(`   Claim:    ${keepClaimable ? 'left OPEN (--keep-claimable)' : 'locked (claimable=false)'}`);
   console.log(`   Login:    https://${tenant.subdomain}.stay.amaldives.com/auth/signin`);
   console.log(`   Email:    ${email}`);
   if (generated) {
