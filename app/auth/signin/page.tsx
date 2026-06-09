@@ -115,13 +115,7 @@ export default function SignInPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo Accounts:</p>
-            <p className="mt-2">Super Admin: john@doe.com / johndoe123</p>
-            <p>Guest: guest@example.com / guest123</p>
-          </div>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
