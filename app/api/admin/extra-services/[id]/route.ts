@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { GUEST_EXTRA_CATEGORIES } from '@/lib/guest-extras';
 
 export const dynamic = 'force-dynamic';
 
-const EXTRA_CATEGORIES = [
-  'EXCURSION',
-  'DIVING',
-  'SNORKELLING',
-  'PICNIC',
-  'FISHING',
-  'RENTAL',
-];
+const EXTRA_CATEGORIES = [...GUEST_EXTRA_CATEGORIES];
 
 export async function PATCH(
   request: NextRequest,

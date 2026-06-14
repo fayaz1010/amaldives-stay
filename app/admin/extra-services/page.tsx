@@ -3,17 +3,11 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { ExtraServicesManager } from '@/components/admin/extra-services-manager';
+import { GUEST_EXTRA_CATEGORIES } from '@/lib/guest-extras';
 
 export const dynamic = 'force-dynamic';
 
-const EXTRA_CATEGORIES = [
-  'EXCURSION',
-  'DIVING',
-  'SNORKELLING',
-  'PICNIC',
-  'FISHING',
-  'RENTAL',
-];
+const EXTRA_CATEGORIES = [...GUEST_EXTRA_CATEGORIES];
 
 function serializeOrder(order: any) {
   return {

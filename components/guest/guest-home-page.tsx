@@ -39,6 +39,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { BookingEngine } from '@/components/booking/booking-engine';
+import { GuestExtrasSection } from '@/components/guest/guest-extras-section';
+import type { GuestExtraItem, PropertyGuestPolicies } from '@/lib/guest-extras';
 
 interface NearbyOperator {
   name: string;
@@ -55,6 +57,8 @@ interface GuestHomePageProps {
   tenant: any;
   nearbyOperators?: NearbyOperator[];
   nearbyScoped?: boolean;
+  guestExtras?: GuestExtraItem[];
+  guestPolicies?: PropertyGuestPolicies;
 }
 
 /** Pick a fitting icon for a free-text highlight/amenity by keyword. */
@@ -170,7 +174,13 @@ function HeroSlider({
   );
 }
 
-export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = false }: GuestHomePageProps) {
+export function GuestHomePage({
+  tenant,
+  nearbyOperators = [],
+  nearbyScoped = false,
+  guestExtras = [],
+  guestPolicies = {},
+}: GuestHomePageProps) {
   const property = tenant.properties?.[0];
   const rooms = property?.rooms || [];
   const availableRooms = rooms.filter((room: any) => room.status === 'AVAILABLE');
@@ -262,6 +272,9 @@ export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = fal
               <a href="#why" className="text-gray-600 transition-colors hover:opacity-80">Why us</a>
               <a href="#gallery" className="text-gray-600 transition-colors hover:opacity-80">Gallery</a>
               <a href="#amenities" className="text-gray-600 transition-colors hover:opacity-80">Amenities</a>
+              {guestExtras.length > 0 && (
+                <a href="#extras" className="text-gray-600 transition-colors hover:opacity-80">Extras</a>
+              )}
               <a href="#contact" className="text-gray-600 transition-colors hover:opacity-80">Contact</a>
             </nav>
             <div className="flex items-center space-x-4">
@@ -544,6 +557,8 @@ export function GuestHomePage({ tenant, nearbyOperators = [], nearbyScoped = fal
           </div>
         </div>
       </section>
+
+      <GuestExtrasSection extras={guestExtras} policies={guestPolicies} primaryColor={primary} />
 
       {/* Experiences & Activities Nearby — backlinks to amaldives directory */}
       <section id="experiences" className="py-20 px-4 sm:px-6 lg:px-8">

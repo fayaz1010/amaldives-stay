@@ -30,6 +30,8 @@ import {
   Sailboat,
   Calendar,
   RotateCcw,
+  Plane,
+  BedDouble,
   Plus,
   Edit2,
   Trash2,
@@ -40,6 +42,8 @@ import {
 } from 'lucide-react';
 
 type ExtraCategory =
+  | 'TRANSFER'
+  | 'ADDON'
   | 'EXCURSION'
   | 'DIVING'
   | 'SNORKELLING'
@@ -51,6 +55,18 @@ const CATEGORY_META: Record<
   ExtraCategory,
   { label: string; emoji: string; icon: typeof Compass; color: string }
 > = {
+  TRANSFER: {
+    label: 'Transfer',
+    emoji: '✈️',
+    icon: Plane,
+    color: 'bg-sky-50 border-sky-200 text-sky-700',
+  },
+  ADDON: {
+    label: 'Add-on',
+    emoji: '🛏️',
+    icon: BedDouble,
+    color: 'bg-orange-50 border-orange-200 text-orange-700',
+  },
   EXCURSION: {
     label: 'Excursion',
     emoji: '🌴',

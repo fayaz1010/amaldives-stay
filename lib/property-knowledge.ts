@@ -1,4 +1,9 @@
 import { prisma } from '@/lib/db';
+import {
+  BOOKING_EXTRA_CATEGORIES,
+  getGuestExtrasForProperty,
+  parsePropertyPolicies,
+} from '@/lib/guest-extras';
 
 /** Compact property facts for AI prompts — "local knowledge" per tenant. */
 export async function buildPropertyKnowledge(tenantId: string): Promise<string> {
@@ -31,6 +36,7 @@ export async function buildPropertyKnowledge(tenantId: string): Promise<string> 
   const property = tenant.properties[0];
   const settings = (tenant.settings as Record<string, unknown> | null) ?? {};
   const webProfile = (settings.webProfile as Record<string, unknown> | null) ?? {};
+  const policies = parsePropertyPolicies(property?.policies);
 
   const lines: string[] = [
     `Property: ${tenant.name}`,
@@ -58,6 +64,23 @@ export async function buildPropertyKnowledge(tenantId: string): Promise<string> 
           (r.description ? ` — ${r.description.slice(0, 120)}` : '')
       );
     }
+  }
+
+  const extras = property
+    ? await getGuestExtrasForProperty(tenantId, property.id, BOOKING_EXTRA_CATEGORIES)
+    : [];
+  if (extras.length) {
+    lines.push('Transfers & add-ons (USD):');
+    for (const e of extras) {
+      lines.push(`- ${e.name}: $${e.price}${e.unit ? ` ${e.unit}` : ''}`);
+    }
+  }
+
+  if (policies.airportTransferPickupNotice) {
+    lines.push(`Transfer policy: ${policies.airportTransferPickupNotice}`);
+  }
+  if (policies.specialRequestsPolicy) {
+    lines.push(`Special requests: ${policies.specialRequestsPolicy}`);
   }
 
   return lines.join('\n');

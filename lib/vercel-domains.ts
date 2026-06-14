@@ -57,9 +57,12 @@ export interface DomainStatus {
 
 const isApex = (domain: string) => domain.split('.').filter(Boolean).length === 2;
 
-/** Default records Vercel expects (apex → A 76.76.21.21, sub → CNAME). */
+/** Vercel apex A record (updated IP range — replaces legacy 76.76.21.21). */
+export const VERCEL_APEX_IP = '216.198.79.1';
+
+/** Default records Vercel expects (apex → A, sub → CNAME). */
 function expectedRecords(domain: string): DnsRecord[] {
-  if (isApex(domain)) return [{ type: 'A', name: '@', value: '76.76.21.21' }];
+  if (isApex(domain)) return [{ type: 'A', name: '@', value: VERCEL_APEX_IP }];
   const host = domain.split('.')[0];
   return [{ type: 'CNAME', name: host, value: 'cname.vercel-dns.com' }];
 }

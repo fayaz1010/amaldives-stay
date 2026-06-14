@@ -147,6 +147,21 @@ export function DomainConnect() {
                         </td>
                       </tr>
                     ))}
+                    {status.domain && !status.domain.startsWith('www.') && status.domain.split('.').length === 2 && (
+                      <tr className="border-t">
+                        <td className="py-1 pr-3">CNAME</td>
+                        <td className="py-1 pr-3">www</td>
+                        <td className="py-1 flex items-center gap-2">
+                          cname.vercel-dns.com
+                          <button
+                            onClick={() => navigator.clipboard?.writeText('cname.vercel-dns.com')}
+                            title="Copy"
+                          >
+                            <Copy className="h-3 w-3 text-gray-400" />
+                          </button>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -4,17 +4,11 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getActivePropertyId } from '@/lib/active-property';
 import { getSharing, categoryWhere, categoryCreatePropertyId } from '@/lib/property-sharing';
+import { GUEST_EXTRA_CATEGORIES } from '@/lib/guest-extras';
 
 export const dynamic = 'force-dynamic';
 
-const EXTRA_CATEGORIES = [
-  'EXCURSION',
-  'DIVING',
-  'SNORKELLING',
-  'PICNIC',
-  'FISHING',
-  'RENTAL',
-];
+const EXTRA_CATEGORIES = [...GUEST_EXTRA_CATEGORIES];
 
 export async function GET() {
   try {

@@ -57,6 +57,7 @@ export function BookingEngine({
     'pay_at_property',
   ]);
   const [confirmation, setConfirmation] = useState('');
+  const [specialRequestsPolicy, setSpecialRequestsPolicy] = useState('');
 
   const apiBase = `/api/public/${subdomain}`;
 
@@ -71,6 +72,8 @@ export function BookingEngine({
           if (list.includes(def)) setPayMode(def);
           else setPayMode(list[0]);
         }
+        const policy = data?.property?.policies?.specialRequestsPolicy as string | undefined;
+        if (policy) setSpecialRequestsPolicy(policy);
       })
       .catch(() => {});
   }, [apiBase]);
@@ -290,7 +293,11 @@ export function BookingEngine({
                 <Input
                   value={guest.specialRequests}
                   onChange={(e) => setGuest({ ...guest, specialRequests: e.target.value })}
+                  placeholder="Airport transfer, extra bed, baby cot, late check-out…"
                 />
+                {specialRequestsPolicy && (
+                  <p className="text-xs text-amber-700 mt-1.5">{specialRequestsPolicy}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2 pt-2">

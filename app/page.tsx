@@ -4,6 +4,11 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { GuestHomePage } from '@/components/guest/guest-home-page';
 import { WelcomePage } from '@/components/welcome-page';
+import {
+  BOOKING_EXTRA_CATEGORIES,
+  getGuestExtrasForProperty,
+  parsePropertyPolicies,
+} from '@/lib/guest-extras';
 
 export default async function HomePage() {
   const headersList = headers();
@@ -102,7 +107,21 @@ export default async function HomePage() {
       // ignore — falls back to the static category links
     }
 
-    return <GuestHomePage tenant={tenant} nearbyOperators={nearbyOperators} nearbyScoped={nearbyScoped} />;
+    const property = tenant.properties?.[0];
+    const guestExtras = property
+      ? await getGuestExtrasForProperty(tenant.id, property.id, BOOKING_EXTRA_CATEGORIES)
+      : [];
+    const guestPolicies = parsePropertyPolicies(property?.policies);
+
+    return (
+      <GuestHomePage
+        tenant={tenant}
+        nearbyOperators={nearbyOperators}
+        nearbyScoped={nearbyScoped}
+        guestExtras={guestExtras}
+        guestPolicies={guestPolicies}
+      />
+    );
   }
   
   // Main platform page

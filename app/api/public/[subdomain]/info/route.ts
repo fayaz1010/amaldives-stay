@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getPaymentsConfig } from '@/lib/tenant-settings';
 import { isStripeConfigured } from '@/lib/stripe';
+import {
+  BOOKING_EXTRA_CATEGORIES,
+  getGuestExtrasForProperty,
+  parsePropertyPolicies,
+} from '@/lib/guest-extras';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +52,7 @@ export async function GET(
             settings: true,
             checkInTime: true,
             checkOutTime: true,
+            policies: true,
             rooms: {
               where: { status: { in: ['AVAILABLE', 'OCCUPIED'] } },
               select: {
@@ -72,6 +78,10 @@ export async function GET(
 
     const property = tenant.properties[0] ?? null;
     const webProfile = (property?.settings as any)?.webProfile ?? {};
+    const policies = parsePropertyPolicies(property?.policies);
+    const extras = property
+      ? await getGuestExtrasForProperty(tenant.id, property.id, BOOKING_EXTRA_CATEGORIES)
+      : [];
     const payments = getPaymentsConfig(tenant.settings);
     const stripeOk = isStripeConfigured();
     const enabledPayments = payments.enabledProviders.filter((p) => {
@@ -114,8 +124,10 @@ export async function GET(
             tagline: webProfile.tagline ?? null,
             highlights: webProfile.highlights ?? [],
             roomTypes: property.rooms ?? [],
+            policies,
           }
         : null,
+      extras,
     });
   } catch (error) {
     console.error('Public info API error:', error);
