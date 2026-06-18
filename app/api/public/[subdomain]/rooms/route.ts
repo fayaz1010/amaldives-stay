@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { calculateStayRate } from '@/lib/calculate-stay-rate';
+import { groupRoomsIntoOffers, type RawAvailableRoom } from '@/lib/public-room-offers';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,27 +115,31 @@ export async function GET(
             checkOut,
             promotionCode,
           });
-          const rackNight = room.rackRate ?? room.basePrice;
-          return {
+          const raw: RawAvailableRoom = {
             id: room.id,
             number: room.number,
+            name: room.name,
             type: room.type,
             capacity: room.capacity,
             basePrice: room.basePrice,
-            rackRate: rackNight,
+            rackRate: room.rackRate,
             description: room.description,
             amenities: room.amenities,
             images: room.images,
-            property: room.property,
+            bedType: room.bedType,
+            size: room.size,
             nights: rate.nights,
             totalPrice: rate.totalAmount,
             rackTotal: rate.rackTotal,
             discountApplied: rate.discountApplied,
           };
+          return raw;
         }),
     );
 
-    return NextResponse.json({ rooms: availableRooms, nights });
+    const offers = groupRoomsIntoOffers(availableRooms);
+
+    return NextResponse.json({ offers, nights });
   } catch (error) {
     console.error('Public rooms API error:', error);
     return NextResponse.json(

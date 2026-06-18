@@ -9,6 +9,7 @@
 import { PrismaClient } from '@prisma/client';
 import { addDomain } from '../lib/vercel-domains';
 import { VERCEL_APEX_IP } from '../lib/vercel-domains';
+import bcrypt from 'bcryptjs';
 import {
   RIVETHI_BEACH_CONFIG,
   RIVETHI_BEACH_EXTRAS,
@@ -120,6 +121,31 @@ async function connectDomain(domain: string) {
   }
 }
 
+async function ensureAdminUser(tenantId: string) {
+  const email = 'admin@rivethibeach.mv';
+  const password = await bcrypt.hash('rivethi123', 12);
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      name: 'Rivethi Admin',
+      role: 'TENANT_ADMIN',
+      tenantId,
+      isActive: true,
+      password,
+    },
+    create: {
+      email,
+      name: 'Rivethi Admin',
+      role: 'TENANT_ADMIN',
+      tenantId,
+      isActive: true,
+      password,
+    },
+  });
+  console.log(`Admin ready: ${email} / rivethi123`);
+  return user;
+}
+
 async function main() {
   const tenant = await ensureTenant();
   const property = tenant.properties[0];
@@ -137,6 +163,7 @@ async function main() {
 
     console.log('Upserting transfer & add-on services…');
     await upsertServices(tenant.id, property.id);
+    await ensureAdminUser(tenant.id);
   }
 
   await prisma.tenant.update({

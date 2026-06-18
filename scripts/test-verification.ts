@@ -9,6 +9,7 @@ import {
   matchArrivalToFlight,
 } from '../lib/flight-arrival-sync';
 import type { FlightArrival } from '../lib/flights';
+import { groupRoomsIntoOffers } from '../lib/public-room-offers';
 
 let pass = 0;
 let fail = 0;
@@ -306,6 +307,37 @@ assert(agentRateFromRack(200, -5) === 190, '-5% on rack');
 console.log('\n[8] Promotion discount');
 assert(applyPromotion(80, 100, { discountPercent: 10, appliesTo: 'RACK' }) === 80, 'rack discount capped at sell');
 assert(applyPromotion(80, 100, { discountPercent: 10, appliesTo: 'ALL' }) === 72, 'sell discount 10%');
+
+console.log('\n[9] Public room offers grouping');
+const grouped = groupRoomsIntoOffers([
+  {
+    id: 'a1',
+    number: '101',
+    name: 'Deluxe Double',
+    type: 'DELUXE',
+    capacity: 2,
+    basePrice: 85,
+    nights: 2,
+    totalPrice: 170,
+    amenities: ['WiFi'],
+    images: [],
+  },
+  {
+    id: 'a2',
+    number: '102',
+    name: 'Deluxe Double',
+    type: 'DELUXE',
+    capacity: 2,
+    basePrice: 85,
+    nights: 2,
+    totalPrice: 170,
+    amenities: ['WiFi'],
+    images: [],
+  },
+]);
+assert(grouped.length === 1, 'groups identical room types');
+assert(grouped[0]?.availableCount === 2, 'counts availability');
+assert(grouped[0]?.name === 'Deluxe Double', 'uses room type name');
 
 // ─── Summary ─────────────────────────────────────────────────────────────
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);

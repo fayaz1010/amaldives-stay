@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PaymentProvider } from '@/lib/tenant-settings';
 import type { GuestExtraItem, PropertyGuestPolicies } from '@/lib/guest-extras';
 import { summarizeAddonSelection } from '@/lib/booking-addons';
+import type { PublicRoomOffer } from '@/lib/public-room-offers';
+import { RoomOfferCard } from '@/components/booking/room-offer-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,15 +26,6 @@ interface BookingEngineProps {
 
 type Step = 'search' | 'rooms' | 'guest' | 'pay' | 'done';
 
-interface RoomOption {
-  id: string;
-  name: string;
-  number: string;
-  basePrice: number;
-  totalPrice: number;
-  nights: number;
-}
-
 export function BookingEngine({
   subdomain,
   tenantName,
@@ -45,8 +38,8 @@ export function BookingEngine({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState({ checkIn: '', checkOut: '', adults: 2 });
-  const [rooms, setRooms] = useState<RoomOption[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<RoomOption | null>(null);
+  const [offers, setOffers] = useState<PublicRoomOffer[]>([]);
+  const [selectedOffer, setSelectedOffer] = useState<PublicRoomOffer | null>(null);
   const [guest, setGuest] = useState({
     name: '',
     email: '',
@@ -66,7 +59,7 @@ export function BookingEngine({
 
   const apiBase = `/api/public/${subdomain}`;
 
-  const nights = selectedRoom?.nights ?? 0;
+  const nights = selectedOffer?.nights ?? 0;
 
   const transfers = extras.filter((e) => e.category === 'TRANSFER');
   const addOns = extras.filter((e) => e.category === 'ADDON');
@@ -84,7 +77,7 @@ export function BookingEngine({
     [extras, effectiveSelection, nights],
   );
 
-  const roomTotal = selectedRoom?.totalPrice ?? 0;
+  const roomTotal = selectedOffer?.totalPrice ?? 0;
   const grandTotal = roomTotal + addonsTotal;
 
   useEffect(() => {
@@ -116,7 +109,7 @@ export function BookingEngine({
       const res = await fetch(`${apiBase}/rooms?${q}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not load rooms');
-      setRooms(data.rooms ?? []);
+      setOffers(data.offers ?? []);
       setStep('rooms');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
@@ -133,7 +126,7 @@ export function BookingEngine({
   }
 
   async function completeBooking() {
-    if (!selectedRoom) return;
+    if (!selectedOffer) return;
     setError('');
     setLoading(true);
     try {
@@ -141,7 +134,7 @@ export function BookingEngine({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          roomId: selectedRoom.id,
+          roomId: selectedOffer.id,
           checkIn: search.checkIn,
           checkOut: search.checkOut,
           adults: search.adults,
@@ -263,50 +256,76 @@ export function BookingEngine({
 
         {step === 'rooms' && (
           <div className="space-y-3">
-            <Button variant="ghost" size="sm" onClick={() => setStep('search')}>
-              ← Change dates
-            </Button>
-            {rooms.length === 0 ? (
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setStep('search')}>
+                ← Change dates
+              </Button>
+              <p className="text-xs text-gray-500">
+                {offers.length} room type{offers.length !== 1 ? 's' : ''} available
+              </p>
+            </div>
+            {offers.length === 0 ? (
               <p className="text-gray-600 text-sm">No rooms available for these dates.</p>
             ) : (
-              rooms.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedRoom(r);
-                    setStep('guest');
-                  }}
-                  className="w-full text-left border rounded-lg p-4 hover:border-cyan-500 transition-colors"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold">{r.name || r.number}</p>
-                      <p className="text-sm text-gray-500">
-                        {r.nights} night{r.nights !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <p className="font-bold" style={{ color: primaryColor }}>
-                      {formatCurrency(r.totalPrice)}
-                    </p>
-                  </div>
-                </button>
-              ))
+              <div
+                className={`space-y-3 ${compact ? 'max-h-[min(70vh,520px)] overflow-y-auto pr-1' : ''}`}
+              >
+                {offers.map((offer) => (
+                  <RoomOfferCard
+                    key={offer.id}
+                    offer={offer}
+                    primaryColor={primaryColor}
+                    compact={compact}
+                    selected={selectedOffer?.id === offer.id}
+                    onSelect={() => {
+                      setSelectedOffer(offer);
+                      setStep('guest');
+                    }}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {step === 'guest' && selectedRoom && (
+        {step === 'guest' && selectedOffer && (
           <div className="space-y-4">
             <Button variant="ghost" size="sm" onClick={() => setStep('rooms')}>
               ← Choose another room
             </Button>
 
+            <div className="rounded-lg border bg-white p-3">
+              {compact ? (
+                <div className="flex justify-between items-start gap-3 text-sm">
+                  <div>
+                    <p className="font-semibold text-gray-900">{selectedOffer.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {selectedOffer.nights} nights · up to {selectedOffer.capacity} guests
+                    </p>
+                  </div>
+                  <p className="font-bold shrink-0" style={{ color: primaryColor }}>
+                    {formatCurrency(selectedOffer.totalPrice)}
+                  </p>
+                </div>
+              ) : (
+                <RoomOfferCard
+                  offer={selectedOffer}
+                  primaryColor={primaryColor}
+                  compact={compact}
+                  selected
+                  onSelect={() => setStep('rooms')}
+                />
+              )}
+            </div>
+
             <div className="rounded-lg border bg-gray-50 p-3 text-sm space-y-1">
-              <div className="flex justify-between">
-                <span>{selectedRoom.name}</span>
+              <div className="flex justify-between text-gray-800">
+                <span>Room · {nights} night{nights !== 1 ? 's' : ''}</span>
                 <span className="font-medium">{formatCurrency(roomTotal)}</span>
               </div>
+              {addonLines.length > 0 && (
+                <p className="text-xs uppercase tracking-wide text-gray-500 pt-2 pb-1">Add-ons</p>
+              )}
               {addonLines.map((line) => (
                 <div key={line.serviceId} className="flex justify-between text-gray-600">
                   <span className="truncate pr-2">
