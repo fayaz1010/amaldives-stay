@@ -10,13 +10,17 @@ export default async function BookPage({
 }: {
   searchParams?: { source?: string };
 }) {
-  const subdomain = headers().get('X-Tenant-Subdomain');
-  if (!subdomain) notFound();
+  const headersList = headers();
+  const subdomain = headersList.get('X-Tenant-Subdomain');
+  const customDomain = headersList.get('X-Tenant-Domain');
+  if (!subdomain && !customDomain) notFound();
   const source =
     searchParams?.source === 'amaldives.com' ? 'amaldives.com' : 'stay_subdomain';
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { subdomain, status: 'ACTIVE' },
+  const tenant = await prisma.tenant.findFirst({
+    where: subdomain
+      ? { subdomain, status: 'ACTIVE' }
+      : { domain: customDomain!, status: 'ACTIVE' },
     select: { name: true, subdomain: true, theme: true },
   });
   if (!tenant) notFound();
