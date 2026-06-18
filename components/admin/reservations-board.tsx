@@ -6,8 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Loader2, Clock, CalendarCheck, DollarSign,
-  Receipt, LogIn, LogOut, AlertCircle, User, Share2,
+  Receipt, LogIn, LogOut, AlertCircle, User, Share2, MessageCircle,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { StayChatPanel } from '@/components/stay-chat-panel';
 import { CheckoutModal } from './checkout-modal';
 import { QuickPayModal } from './quick-pay-modal';
 
@@ -117,6 +119,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
   const [dateRange, setDateRange] = useState<DateRange>('all');
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const [chatBookingId, setChatBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!shareToast) return;
@@ -329,6 +332,15 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                   size="sm"
                                   variant="outline"
                                   className="h-7 text-xs"
+                                  onClick={() => setChatBookingId(b.id)}
+                                  title="Guest chat"
+                                >
+                                  <MessageCircle className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
                                   onClick={() => setBillId(b.id)}
                                   title="View bill"
                                 >
@@ -394,6 +406,20 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
         mode="bill"
         onClose={() => setBillId(null)}
       />
+      <Dialog open={!!chatBookingId} onOpenChange={(o) => !o && setChatBookingId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stay chat</DialogTitle>
+          </DialogHeader>
+          {chatBookingId && (
+            <StayChatPanel
+              apiPath={`/api/admin/stay-chat/${chatBookingId}`}
+              senderRole="STAFF"
+              emptyHint="No messages from the guest yet."
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       {/* Share toast */}
       {shareToast && (
         <div className="fixed bottom-4 right-4 z-50">

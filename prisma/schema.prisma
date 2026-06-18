@@ -65,12 +65,14 @@ model User {
   reportedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceReporter")
   assignedMaintenanceRequests MaintenanceRequest[] @relation("MaintenanceAssignee")
   arrivalPickups              ArrivalRecord[]      @relation("ArrivalPickupStaff")
+  stayMessages                StayMessage[]        @relation("StayMessageSender")
 
   // Multi-tenant membership. User.tenantId still points at the user's
   // currently-active tenant (so the entire existing query layer keeps
   // working) — `memberships` is the authoritative list of every tenant
   // this user can access.
   memberships   TenantMembership[]
+  agencyUser    AgencyUser?
 
   @@index([tenantId])
   @@index([email])
@@ -127,6 +129,10 @@ model Tenant {
   externalCalendarFeeds  ExternalCalendarFeed[]
   externalCalendarBlocks ExternalCalendarBlock[]
   memberships            TenantMembership[]
+  notifications          Notification[]
+  promotions             Promotion[]
+  stayConversations      StayConversation[]
+  agencies               Agency[]
 
   @@index([subdomain])
   @@index([status])
@@ -193,6 +199,7 @@ model Property {
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rooms       Room[]
   bookings    Booking[]
+  promotions  Promotion[]
 
   @@index([tenantId])
 }
@@ -208,6 +215,12 @@ model Room {
   description String?
   capacity    Int
   basePrice   Float
+  // Optional published "rack" rate (a.k.a. card rate / undiscounted retail rate).
+  // When null, calculateNightlyRate falls back to basePrice so existing tenants
+  // see no behaviour change. When set, basePrice represents the rate we sell at
+  // and rackRate is the displayed crossed-out price + the anchor that promotion
+  // discounts are computed against (Promotion.appliesTo = RACK).
+  rackRate    Float?
   images      String[]
   amenities   String[]
   size        Int?       // Square footage
@@ -309,6 +322,20 @@ model Booking {
   groupBookingId String?
   guestToken    String?       @unique
   stripeCheckoutSessionId String? @unique
+  // Instant check-in/out QR codes (short codes encoded in guest QR / desk scanner)
+  checkInCode   String?       @unique
+  checkoutCode  String?       @unique
+  keysIssued    Boolean       @default(false)
+  checkedInAt   DateTime?
+  checkoutReadyAt DateTime?
+  // Set on bookings promoted from an iCal OTA feed. Value is
+  // namespaced as `${feed.source}:${VEVENT.UID}` (e.g.
+  // `BOOKING_COM:abcd@booking.com`) so the same raw UID coming
+  // from two different OTAs can't collide. We use this as the
+  // dedupe key when re-syncing a feed so a stable OTA reservation
+  // becomes exactly one Booking row across syncs.
+  icalUid       String?       @unique
+  agencyId      String?       // B2B agent booking
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -317,6 +344,7 @@ model Booking {
   room          Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   guest         User          @relation(fields: [guestId], references: [id], onDelete: Cascade)
   groupBooking  GroupBooking? @relation(fields: [groupBookingId], references: [id])
+  agency        Agency?       @relation(fields: [agencyId], references: [id], onDelete: SetNull)
   
   payments      Payment[]
   serviceOrders ServiceOrder[]
@@ -324,13 +352,15 @@ model Booking {
   departure     DepartureRecord?
   minIBarUsages MinIBarUsage[]
   staffTasks    StaffTask[]
-  
+  stayConversation StayConversation?
+
   @@index([tenantId])
   @@index([confirmationNumber])
   @@index([checkInDate])
   @@index([checkOutDate])
   @@index([status])
   @@index([groupBookingId])
+  @@index([agencyId])
 }
 
 model GroupBooking {
@@ -360,6 +390,34 @@ model RatePlan {
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
   @@index([startDate, endDate])
+  @@index([propertyId])
+}
+
+enum PromotionAppliesTo {
+  RACK
+  ALL
+}
+
+model Promotion {
+  id              String             @id @default(cuid())
+  tenantId        String
+  propertyId      String?
+  code            String?
+  name            String
+  description     String?
+  discountPercent Float
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean            @default(true)
+  appliesTo       PromotionAppliesTo @default(RACK)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, startDate, endDate])
   @@index([propertyId])
 }
 
@@ -615,6 +673,7 @@ enum UserRole {
   FRONT_DESK
   HOUSEKEEPING
   MAINTENANCE
+  TRAVEL_AGENT
   GUEST
 }
 
@@ -1322,4 +1381,126 @@ enum PayrollStatus {
   DRAFT
   APPROVED
   PAID
+}
+
+// ─── Notification Hub ─────────────────────────────────────────────────────────
+//
+// Persistent outbox for any guest- or staff-facing message. queueNotification()
+// writes a row; sendPendingNotifications() (driven by /api/cron/notifications,
+// added in TASK-11b) drains rows whose scheduledFor has passed. Keeping the
+// queue in the DB rather than memory means retries survive cold starts and
+// delivery state is auditable per booking.
+model Notification {
+  id           String              @id @default(cuid())
+  tenantId     String
+  bookingId    String?
+  channel      NotificationChannel @default(EMAIL)
+  type         String              // e.g. BOOKING_CONFIRMATION, ARRIVAL_REMINDER
+  to           String               // email address (EMAIL) or phone (SMS/WHATSAPP)
+  subject      String?
+  body         String              @db.Text
+  payload      Json?
+  status       NotificationStatus  @default(PENDING)
+  scheduledFor DateTime            @default(now())
+  sentAt       DateTime?
+  attempts     Int                 @default(0)
+  lastError    String?             @db.Text
+  providerId   String?              // Resend / SMS provider message id
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status, scheduledFor])
+  @@index([bookingId])
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+// ─── Guest ↔ Hotel Stay Chat (TASK-03) ────────────────────────────────────────
+// Booking-scoped conversation thread, active from check-in date through
+// departure day (inclusive). One conversation per booking; messages carry a
+// sender role so the same thread renders correctly for guest and staff UIs.
+model StayConversation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  bookingId String   @unique
+  openedAt  DateTime @default(now())
+  closedAt  DateTime?
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  messages StayMessage[]
+
+  @@index([tenantId])
+}
+
+model StayMessage {
+  id             String          @id @default(cuid())
+  conversationId String
+  senderRole     ChatSenderRole
+  senderUserId   String?
+  body           String          @db.Text
+  createdAt      DateTime        @default(now())
+  readAt         DateTime?
+
+  conversation StayConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?            @relation("StayMessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([senderUserId])
+}
+
+enum ChatSenderRole {
+  GUEST
+  STAFF
+}
+
+// ─── B2B travel agencies (TASK-02) ───────────────────────────────────────────
+enum AgencyRole {
+  ADMIN
+  AGENT
+}
+
+model Agency {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  // Markup on rack total: +10 = agent pays 110% of rack, -15 = 15% below rack
+  markupPercent Float    @default(0)
+  creditTerms   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members  AgencyUser[]
+  bookings Booking[]
+
+  @@index([tenantId])
+}
+
+model AgencyUser {
+  id       String     @id @default(cuid())
+  agencyId String
+  userId   String     @unique
+  role     AgencyRole @default(AGENT)
+  createdAt DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
 }

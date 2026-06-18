@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { Loader2, CheckCircle, Copy, Check, RefreshCw, Terminal, CreditCard } from 'lucide-react';
+import { Loader2, CheckCircle, Copy, Check, RefreshCw, Terminal, CreditCard, QrCode } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -264,6 +264,27 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
             <Link href="/admin/settings/payments">
               <Button type="button" variant="outline" className="border-cyan-200 text-cyan-800 hover:bg-cyan-50">
                 Open payment settings →
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-teal-600" />
+              <CardTitle>Instant check-in & checkout</CardTitle>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              QR codes, key handoff, checkout bill timing, and desk vs app payment.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/settings/checkin">
+              <Button type="button" variant="outline" className="border-teal-200 text-teal-800 hover:bg-teal-50">
+                Open check-in/out settings →
               </Button>
             </Link>
           </CardContent>

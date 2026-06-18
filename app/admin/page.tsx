@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { TenantDb } from '@/lib/db';
 import { getActiveProperty } from '@/lib/active-property';
 import { DashboardOverview } from '@/components/admin/dashboard-overview';
+import { isStripeConfigured } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,8 @@ export default async function AdminDashboard() {
       propertySubdomain={tenant?.subdomain ?? ''}
       propertyName={property?.name ?? ''}
       propertyId={property?.id ?? ''}
+      stripePlatformConfigured={isStripeConfigured()}
+      tenantSettings={tenant?.settings}
     />
   );
 }

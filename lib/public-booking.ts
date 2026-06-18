@@ -1,6 +1,13 @@
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
+import { calculateStayRate } from '@/lib/calculate-stay-rate';
+import {
+  calculatePlatformFee,
+  getPlatformCommissionRate,
+} from '@/lib/commission';
+import { ensureCheckInCodes } from '@/lib/instant-checkin';
+import { createBookingAddonOrders, resolveBookingAddons } from '@/lib/booking-addons';
 
 export interface CreatePublicBookingInput {
   subdomain: string;
@@ -15,6 +22,10 @@ export interface CreatePublicBookingInput {
   specialRequests?: string;
   source?: string;
   status?: 'PENDING' | 'CONFIRMED';
+  promotionCode?: string;
+  agentMarkupPercent?: number;
+  agencyId?: string;
+  addonItems?: Array<{ serviceId: string; quantity: number }>;
 }
 
 export async function createPublicBooking(input: CreatePublicBookingInput) {
@@ -111,8 +122,16 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
   const nights = Math.ceil(
     (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
   );
-  const totalAmount = room.basePrice * nights;
-  const platformFee = totalAmount * tenant.commissionRate;
+  const rate = await calculateStayRate({
+    room,
+    checkIn: checkInDate,
+    checkOut: checkOutDate,
+    promotionCode: input.promotionCode,
+    agentMarkupPercent: input.agentMarkupPercent,
+  });
+  const totalAmount = rate.totalAmount;
+  const commissionRate = getPlatformCommissionRate(tenant, source);
+  const platformFee = calculatePlatformFee(totalAmount, commissionRate);
   const confirmationNumber = `AMS-${randomUUID().substring(0, 8).toUpperCase()}`;
 
   const booking = await prisma.booking.create({
@@ -132,8 +151,35 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
       source,
       specialRequests,
       guestToken: randomUUID(),
+      agencyId: input.agencyId ?? null,
     },
   });
+
+  await ensureCheckInCodes(booking.id);
+
+  const addonItems = input.addonItems ?? [];
+  const { lines: addonLines, addonsTotal } = await resolveBookingAddons({
+    tenantId: tenant.id,
+    propertyId: room.propertyId,
+    addonItems,
+    nights,
+  });
+
+  const addonOrderStatus =
+    status === 'CONFIRMED' ? 'CONFIRMED' : ('PENDING' as const);
+
+  if (addonLines.length > 0) {
+    await createBookingAddonOrders({
+      tenantId: tenant.id,
+      propertyId: room.propertyId,
+      bookingId: booking.id,
+      roomId: room.id,
+      guestId: guest.id,
+      lines: addonLines,
+      status: addonOrderStatus,
+      notes: 'Selected at online booking',
+    });
+  }
 
   return {
     booking,
@@ -142,5 +188,7 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     nights,
     tenant,
     currency: room.property.currency || 'USD',
+    addonLines,
+    addonsTotal,
   };
 }

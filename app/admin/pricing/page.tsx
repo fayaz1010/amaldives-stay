@@ -20,7 +20,7 @@ export default async function PricingPage() {
     prisma.room.groupBy({
       by: ['type'],
       where: { tenantId },
-      _avg: { basePrice: true },
+      _avg: { basePrice: true, rackRate: true },
       _count: true,
     }),
     prisma.ratePlan.findMany({
@@ -46,6 +46,7 @@ export default async function PricingPage() {
     id: idByType.get(g.type) ?? '',
     type: g.type,
     basePrice: g._avg.basePrice ?? 0,
+    rackRate: g._avg.rackRate ?? null,
     count: g._count,
   }));
 

@@ -1,11 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { createPublicBooking } from '@/lib/public-booking';
 import { getStripe, isStripeConfigured } from '@/lib/stripe';
-import { getPaymentsConfig, staySubdomainUrl } from '@/lib/tenant-settings';
+import { getPaymentsConfig, getDepositConfig, staySubdomainUrl } from '@/lib/tenant-settings';
+import { calculateDepositAmount } from '@/lib/stripe-booking';
 import { sendBookingConfirmationEmail } from '@/lib/send-booking-confirmation';
 
 export const dynamic = 'force-dynamic';
+
+const isoDate = z
+  .string()
+  .min(1)
+  .refine((v) => !Number.isNaN(new Date(v).getTime()), 'Invalid date');
+
+const PublicBookingSchema = z
+  .object({
+    roomId: z.string().min(1),
+    checkIn: isoDate,
+    checkOut: isoDate,
+    adults: z.number().int().positive().max(20).optional(),
+    children: z.number().int().nonnegative().max(20).optional(),
+    guestName: z.string().trim().min(1).max(200),
+    guestEmail: z.string().trim().email(),
+    guestPhone: z.string().trim().max(40).optional(),
+    specialRequests: z.string().max(2000).optional(),
+    source: z.string().max(60).optional().default('direct'),
+    promotionCode: z.string().trim().max(40).optional(),
+    paymentMethod: z.enum(['stripe', 'pay_at_property', 'maya', 'bml_connect']).optional().default('stripe'),
+    addonItems: z
+      .array(
+        z.object({
+          serviceId: z.string().min(1),
+          quantity: z.number().int().positive().max(20),
+        }),
+      )
+      .optional()
+      .default([]),
+  })
+  .refine((v) => new Date(v.checkOut) > new Date(v.checkIn), {
+    message: 'checkOut must be after checkIn',
+    path: ['checkOut'],
+  });
 
 export async function POST(
   request: NextRequest,
@@ -13,7 +50,14 @@ export async function POST(
 ) {
   try {
     const { subdomain } = params;
-    const body = await request.json();
+    const rawBody = await request.json().catch(() => null);
+    const parsed = PublicBookingSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', issues: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
     const {
       roomId,
       checkIn,
@@ -24,16 +68,9 @@ export async function POST(
       guestEmail,
       guestPhone,
       specialRequests,
-      source = 'direct',
-      paymentMethod = 'stripe',
-    } = body;
-
-    if (!roomId || !checkIn || !checkOut || !guestName || !guestEmail) {
-      return NextResponse.json(
-        { error: 'Missing required fields: roomId, checkIn, checkOut, guestName, guestEmail' },
-        { status: 400 }
-      );
-    }
+      source,
+      paymentMethod,
+    } = parsed.data;
 
     const payAtProperty = paymentMethod === 'pay_at_property';
     const useStripe = paymentMethod === 'stripe' && isStripeConfigured();
@@ -51,12 +88,23 @@ export async function POST(
       guestEmail,
       guestPhone,
       specialRequests,
-      source: typeof source === 'string' ? source : 'direct',
+      source,
+      promotionCode: parsed.data.promotionCode,
       status: payAtProperty ? 'CONFIRMED' : 'PENDING',
+      addonItems: parsed.data.addonItems,
     });
 
-    const { booking, guest, room, nights, tenant, currency } = result;
+    const { booking, guest, room, nights, tenant, currency, addonLines, addonsTotal } = result;
+    const roomTotal = booking.totalAmount;
+    const bookingGrandTotal = roomTotal + addonsTotal;
     const payments = getPaymentsConfig(tenant.settings);
+    const depositConfig = getDepositConfig(tenant.settings);
+    const depositAmount = calculateDepositAmount(bookingGrandTotal, depositConfig);
+    const stripeChargeAmount =
+      depositAmount > 0 && depositAmount < bookingGrandTotal
+        ? depositAmount
+        : bookingGrandTotal;
+    const isDepositCharge = stripeChargeAmount < bookingGrandTotal;
 
     if (payAtProperty) {
       await sendBookingConfirmationEmail({
@@ -67,7 +115,7 @@ export async function POST(
         checkIn: booking.checkInDate,
         checkOut: booking.checkOutDate,
         roomName: room.name || room.number,
-        totalAmount: booking.totalAmount,
+        totalAmount: bookingGrandTotal,
         currency,
       }).catch(() => {});
 
@@ -78,7 +126,9 @@ export async function POST(
             checkIn: booking.checkInDate,
             checkOut: booking.checkOutDate,
             nights,
-            totalAmount: booking.totalAmount,
+            roomTotal,
+            addonsTotal,
+            totalAmount: bookingGrandTotal,
             roomName: room.number,
             propertyName: room.property.name,
             guestName: guest.name,
@@ -96,13 +146,14 @@ export async function POST(
           bmlNote:
             'Initiate BML Connect payment with localId = confirmation number, then webhook will confirm.',
           confirmationNumber: booking.confirmationNumber,
+          totalAmount: bookingGrandTotal,
         },
         { status: 201 }
       );
     }
 
     if (useMaya && payments.maya?.merchantId) {
-      const mayaUrl = `https://pay.maya.ph/checkout?merchantId=${encodeURIComponent(payments.maya.merchantId)}&reference=${encodeURIComponent(booking.confirmationNumber)}&amount=${booking.totalAmount}&currency=${currency}`;
+      const mayaUrl = `https://pay.maya.ph/checkout?merchantId=${encodeURIComponent(payments.maya.merchantId)}&reference=${encodeURIComponent(booking.confirmationNumber)}&amount=${bookingGrandTotal}&currency=${currency}`;
       return NextResponse.json(
         {
           checkoutUrl: mayaUrl,
@@ -120,22 +171,58 @@ export async function POST(
 
       const origin = request.headers.get('origin') ?? staySubdomainUrl(subdomain);
 
+      const stripeLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        {
+          quantity: 1,
+          price_data: {
+            currency: currency.toLowerCase(),
+            unit_amount: Math.round(roomTotal * 100),
+            product_data: {
+              name: `${tenant.name} — ${room.name || room.number}`,
+              description: `${nights} night(s) · ${checkIn} to ${checkOut}`,
+            },
+          },
+        },
+        ...addonLines.map((line) => ({
+          quantity: 1,
+          price_data: {
+            currency: currency.toLowerCase(),
+            unit_amount: Math.round(line.totalAmount * 100),
+            product_data: {
+              name: line.name,
+              description:
+                line.unit === 'per night'
+                  ? `${line.quantity} × ${nights} night(s)`
+                  : line.unit === 'per hour'
+                    ? `${line.quantity} hour(s)`
+                    : `Qty ${line.quantity}`,
+            },
+          },
+        })),
+      ];
+
+      // Deposit: single line item when charging less than full total
+      const lineItems =
+        isDepositCharge
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: currency.toLowerCase(),
+                  unit_amount: Math.round(stripeChargeAmount * 100),
+                  product_data: {
+                    name: `${tenant.name} — booking deposit`,
+                    description: `Deposit (${depositConfig.percent ?? 0}%) · balance due before arrival`,
+                  },
+                },
+              },
+            ]
+          : stripeLineItems;
+
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         customer_email: guestEmail,
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: currency.toLowerCase(),
-              unit_amount: Math.round(booking.totalAmount * 100),
-              product_data: {
-                name: `${tenant.name} — ${room.name || room.number}`,
-                description: `${nights} night(s) · ${checkIn} to ${checkOut}`,
-              },
-            },
-          },
-        ],
+        line_items: lineItems,
         metadata: {
           bookingId: booking.id,
           tenantId: tenant.id,

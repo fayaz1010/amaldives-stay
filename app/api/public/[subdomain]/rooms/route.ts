@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { calculateStayRate } from '@/lib/calculate-stay-rate';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,22 +101,38 @@ export async function GET(
     const tenantWideBlock = externalBlocks.some((b) => !b.roomId);
     for (const b of externalBlocks) if (b.roomId) blockedRoomIds.add(b.roomId);
 
-    const availableRooms = rooms
-      .filter((room) => room.bookings.length === 0)
-      .filter((room) => !tenantWideBlock && !blockedRoomIds.has(room.id))
-      .map((room) => ({
-        id: room.id,
-        number: room.number,
-        type: room.type,
-        capacity: room.capacity,
-        basePrice: room.basePrice,
-        description: room.description,
-        amenities: room.amenities,
-        images: room.images,
-        property: room.property,
-        nights,
-        totalPrice: room.basePrice * nights,
-      }));
+    const promotionCode = url.searchParams.get('promotionCode');
+
+    const availableRooms = await Promise.all(
+      rooms
+        .filter((room) => room.bookings.length === 0)
+        .filter((room) => !tenantWideBlock && !blockedRoomIds.has(room.id))
+        .map(async (room) => {
+          const rate = await calculateStayRate({
+            room,
+            checkIn,
+            checkOut,
+            promotionCode,
+          });
+          const rackNight = room.rackRate ?? room.basePrice;
+          return {
+            id: room.id,
+            number: room.number,
+            type: room.type,
+            capacity: room.capacity,
+            basePrice: room.basePrice,
+            rackRate: rackNight,
+            description: room.description,
+            amenities: room.amenities,
+            images: room.images,
+            property: room.property,
+            nights: rate.nights,
+            totalPrice: rate.totalAmount,
+            rackTotal: rate.rackTotal,
+            discountApplied: rate.discountApplied,
+          };
+        }),
+    );
 
     return NextResponse.json({ rooms: availableRooms, nights });
   } catch (error) {

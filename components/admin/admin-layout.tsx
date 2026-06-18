@@ -44,6 +44,7 @@ import {
   Receipt,
   MapPin,
   Bot,
+  QrCode,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TenantSwitcher } from '@/components/admin/tenant-switcher';
@@ -112,6 +113,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Reservations', href: '/admin/reservations', icon: Calendar },
       { name: 'Availability', href: '/admin/availability', icon: CalendarDays },
       { name: 'Arrivals & Departures', href: '/admin/arrivals', icon: PlaneLanding },
+      { name: 'Instant check-in', href: '/admin/checkin', icon: QrCode },
       { name: 'Flight arrivals (MLE)', href: '/admin/arrivals/flights', icon: PlaneLanding },
     ],
   },
@@ -122,6 +124,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { name: 'Rooms', href: '/admin/rooms', icon: Hotel },
       { name: 'Pricing & Rates', href: '/admin/pricing', icon: Tag },
+      { name: 'Promotions', href: '/admin/promotions', icon: Tag, indent: true },
+      { name: 'Travel agents', href: '/admin/agencies', icon: Users },
       { name: 'Housekeeping', href: '/admin/housekeeping', icon: ClipboardList },
       { name: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
     ],

@@ -14,12 +14,30 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { basePrice } = await request.json();
-  if (typeof basePrice !== 'number' || !Number.isFinite(basePrice) || basePrice < 0) {
-    return NextResponse.json(
-      { error: 'basePrice must be a non-negative number' },
-      { status: 400 }
-    );
+  const { basePrice, rackRate } = await request.json();
+  const data: { basePrice?: number; rackRate?: number | null } = {};
+
+  if (basePrice != null) {
+    if (typeof basePrice !== 'number' || !Number.isFinite(basePrice) || basePrice < 0) {
+      return NextResponse.json(
+        { error: 'basePrice must be a non-negative number' },
+        { status: 400 },
+      );
+    }
+    data.basePrice = basePrice;
+  }
+  if (rackRate !== undefined) {
+    if (rackRate != null && (typeof rackRate !== 'number' || !Number.isFinite(rackRate) || rackRate < 0)) {
+      return NextResponse.json(
+        { error: 'rackRate must be a non-negative number or null' },
+        { status: 400 },
+      );
+    }
+    data.rackRate = rackRate;
+  }
+
+  if (!data.basePrice && data.rackRate === undefined) {
+    return NextResponse.json({ error: 'basePrice or rackRate required' }, { status: 400 });
   }
 
   const tenantId = session.user.tenantId;
@@ -34,8 +52,13 @@ export async function PATCH(
 
   const result = await prisma.room.updateMany({
     where: { tenantId, type: room.type },
-    data: { basePrice },
+    data,
   });
 
-  return NextResponse.json({ updated: result.count, basePrice, type: room.type });
+  return NextResponse.json({
+    updated: result.count,
+    basePrice: data.basePrice,
+    rackRate: data.rackRate,
+    type: room.type,
+  });
 }

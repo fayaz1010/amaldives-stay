@@ -59,10 +59,17 @@ export function parsePropertyPolicies(raw: unknown): PropertyGuestPolicies {
 
 function inferUnit(name: string, description: string | null): string | null {
   const text = `${name} ${description ?? ''}`.toLowerCase();
+  if (/extra bed|baby cot/.test(text)) return 'per night';
+  if (/late check/.test(text)) return 'per hour';
   if (/per night|\/night|nightly/.test(text)) return 'per night';
   if (/per hour|\/hour|hourly/.test(text)) return 'per hour';
-  if (/one.?way|round.?trip|pick.?up|drop/.test(text)) return 'per person';
+  if (/one.?way|round.?trip|pick.?up|drop|transfer/.test(text)) return 'per person';
   return null;
+}
+
+/** Pricing unit for website booking add-ons. */
+export function inferAddonUnit(name: string, description: string | null): string | null {
+  return inferUnit(name, description);
 }
 
 export function serializeGuestExtra(service: {

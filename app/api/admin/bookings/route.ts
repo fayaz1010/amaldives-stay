@@ -1,10 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { TenantDb, prisma } from '@/lib/db';
 import { getActivePropertyId } from '@/lib/active-property';
 
 export const dynamic = 'force-dynamic';
+
+const isoDate = z
+  .string()
+  .min(1)
+  .refine((v) => !Number.isNaN(new Date(v).getTime()), 'Invalid date');
+
+const GuestDataSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  email: z.string().trim().email(),
+  firstName: z.string().trim().max(120).optional(),
+  lastName: z.string().trim().max(120).optional(),
+  phone: z.string().trim().max(40).optional(),
+  nationality: z.string().trim().max(80).optional(),
+});
+
+const AdminBookingSchema = z
+  .object({
+    roomId: z.string().min(1),
+    propertyId: z.string().min(1),
+    checkInDate: isoDate,
+    checkOutDate: isoDate,
+    adults: z.number().int().positive().max(20),
+    children: z.number().int().nonnegative().max(20).optional().default(0),
+    totalAmount: z.number().nonnegative().optional(),
+    status: z.string().max(40).optional().default('CONFIRMED'),
+    source: z.string().max(60).optional().default('DIRECT'),
+    guestData: GuestDataSchema.optional(),
+    guestId: z.string().min(1).optional(),
+    specialRequests: z.string().max(2000).optional(),
+    notes: z.string().max(2000).optional(),
+    confirmationNumber: z.string().max(60).optional(),
+  })
+  .refine((v) => new Date(v.checkOutDate) > new Date(v.checkInDate), {
+    message: 'checkOutDate must be after checkInDate',
+    path: ['checkOutDate'],
+  })
+  .refine((v) => Boolean(v.guestId || v.guestData), {
+    message: 'guestData (name + email) is required when guestId is not provided',
+    path: ['guestData'],
+  });
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,7 +123,14 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = session.user.tenantId;
-    const data = await request.json();
+    const rawBody = await request.json().catch(() => null);
+    const parsed = AdminBookingSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', issues: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
     const {
       roomId,
@@ -90,35 +138,19 @@ export async function POST(request: NextRequest) {
       checkInDate,
       checkOutDate,
       adults,
-      children = 0,
+      children,
       totalAmount,
-      status = 'CONFIRMED',
-      source = 'DIRECT',
+      status,
+      source,
       guestData,
       guestId: providedGuestId,
       specialRequests,
       notes,
       confirmationNumber: providedConfirmation,
-    } = data || {};
-
-    if (!roomId || !propertyId || !checkInDate || !checkOutDate || typeof adults !== 'number') {
-      return NextResponse.json(
-        { error: 'Missing required fields: roomId, propertyId, checkInDate, checkOutDate, adults' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
-    if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
-    }
-    if (checkOut <= checkIn) {
-      return NextResponse.json(
-        { error: 'checkOutDate must be after checkInDate' },
-        { status: 400 }
-      );
-    }
 
     const room = await prisma.room.findFirst({
       where: { id: roomId, tenantId },

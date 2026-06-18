@@ -32,6 +32,13 @@ function pickup(iso: string): string {
   const d = new Date(new Date(iso).getTime() + 35 * 60_000);
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Indian/Maldives' });
 }
+function delayMinutes(scheduled: string, estimated: string | null): number {
+  if (!scheduled || !estimated) return 0;
+  const s = new Date(scheduled).getTime();
+  const e = new Date(estimated).getTime();
+  if (isNaN(s) || isNaN(e)) return 0;
+  return Math.round((e - s) / 60_000);
+}
 
 const statusColor = (s: string) =>
   /land|arriv/i.test(s) ? 'bg-green-100 text-green-700'
@@ -91,18 +98,26 @@ export function MaleArrivalsBoard() {
             {loading && !board && (
               <tr><td colSpan={5} className="px-3 py-8 text-center text-gray-400"><Loader2 className="h-4 w-4 animate-spin inline" /></td></tr>
             )}
-            {board?.arrivals.map((f, i) => (
+            {board?.arrivals.map((f, i) => {
+              const delay = delayMinutes(f.scheduled, f.estimated);
+              return (
               <tr key={`${f.flight}-${i}`} className="hover:bg-gray-50">
                 <td className="px-3 py-2.5 font-semibold text-gray-900">{f.flight}<div className="text-[11px] font-normal text-gray-400">{f.airline}</div></td>
                 <td className="px-3 py-2.5 text-gray-700">{f.from}</td>
                 <td className="px-3 py-2.5 font-medium text-gray-900">
                   {hhmm(f.estimated || f.scheduled)}
                   {f.estimated && <span className="ml-1 text-[11px] text-amber-600">(est)</span>}
+                  {delay > 20 && (
+                    <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                      +{delay}m delay
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusColor(f.status)}`}>{f.status}</span></td>
                 <td className="px-3 py-2.5 text-teal-700 font-medium">{pickup(f.estimated || f.scheduled)}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

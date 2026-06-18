@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PaymentProvider } from '@/lib/tenant-settings';
+import type { GuestExtraItem, PropertyGuestPolicies } from '@/lib/guest-extras';
+import { summarizeAddonSelection } from '@/lib/booking-addons';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Users, CheckCircle2 } from 'lucide-react';
+import { Loader2, Users, CheckCircle2, Plane, BedDouble } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 export type BookingSource = 'stay_subdomain' | 'amaldives.com' | 'embed' | 'social';
@@ -57,9 +59,33 @@ export function BookingEngine({
     'pay_at_property',
   ]);
   const [confirmation, setConfirmation] = useState('');
-  const [specialRequestsPolicy, setSpecialRequestsPolicy] = useState('');
+  const [extras, setExtras] = useState<GuestExtraItem[]>([]);
+  const [policies, setPolicies] = useState<PropertyGuestPolicies>({});
+  const [addonSelection, setAddonSelection] = useState<Record<string, number>>({});
+  const [selectedTransferId, setSelectedTransferId] = useState<string | null>(null);
 
   const apiBase = `/api/public/${subdomain}`;
+
+  const nights = selectedRoom?.nights ?? 0;
+
+  const transfers = extras.filter((e) => e.category === 'TRANSFER');
+  const addOns = extras.filter((e) => e.category === 'ADDON');
+
+  const effectiveSelection = useMemo(() => {
+    const sel: Record<string, number> = { ...addonSelection };
+    for (const t of transfers) {
+      sel[t.id] = selectedTransferId === t.id ? 1 : 0;
+    }
+    return sel;
+  }, [addonSelection, selectedTransferId, transfers]);
+
+  const { lines: addonLines, addonsTotal } = useMemo(
+    () => summarizeAddonSelection(extras, effectiveSelection, nights),
+    [extras, effectiveSelection, nights],
+  );
+
+  const roomTotal = selectedRoom?.totalPrice ?? 0;
+  const grandTotal = roomTotal + addonsTotal;
 
   useEffect(() => {
     fetch(`${apiBase}/info`)
@@ -72,8 +98,8 @@ export function BookingEngine({
           if (list.includes(def)) setPayMode(def);
           else setPayMode(list[0]);
         }
-        const policy = data?.property?.policies?.specialRequestsPolicy as string | undefined;
-        if (policy) setSpecialRequestsPolicy(policy);
+        if (Array.isArray(data.extras)) setExtras(data.extras);
+        if (data?.property?.policies) setPolicies(data.property.policies);
       })
       .catch(() => {});
   }, [apiBase]);
@@ -99,6 +125,13 @@ export function BookingEngine({
     }
   }, [apiBase, search]);
 
+  function buildAddonPayload() {
+    return addonLines.map((line) => ({
+      serviceId: line.serviceId,
+      quantity: line.quantity,
+    }));
+  }
+
   async function completeBooking() {
     if (!selectedRoom) return;
     setError('');
@@ -118,6 +151,7 @@ export function BookingEngine({
           specialRequests: guest.specialRequests,
           source,
           paymentMethod: payMode,
+          addonItems: buildAddonPayload(),
         }),
       });
       const data = await res.json();
@@ -136,6 +170,13 @@ export function BookingEngine({
     } finally {
       setLoading(false);
     }
+  }
+
+  function setAddonQty(serviceId: string, qty: number) {
+    setAddonSelection((prev) => ({
+      ...prev,
+      [serviceId]: Math.max(0, Math.min(20, qty)),
+    }));
   }
 
   if (step === 'done') {
@@ -256,13 +297,134 @@ export function BookingEngine({
         )}
 
         {step === 'guest' && selectedRoom && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Button variant="ghost" size="sm" onClick={() => setStep('rooms')}>
               ← Choose another room
             </Button>
-            <p className="text-sm font-medium">
-              {selectedRoom.name} · {formatCurrency(selectedRoom.totalPrice)} total
-            </p>
+
+            <div className="rounded-lg border bg-gray-50 p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span>{selectedRoom.name}</span>
+                <span className="font-medium">{formatCurrency(roomTotal)}</span>
+              </div>
+              {addonLines.map((line) => (
+                <div key={line.serviceId} className="flex justify-between text-gray-600">
+                  <span className="truncate pr-2">
+                    {line.name}
+                    {line.unit === 'per night' && ` × ${line.quantity} × ${nights}n`}
+                    {line.unit === 'per hour' && ` × ${line.quantity}h`}
+                  </span>
+                  <span>{formatCurrency(line.totalAmount)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between font-bold border-t pt-2 mt-2">
+                <span>Total</span>
+                <span style={{ color: primaryColor }}>{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+
+            {transfers.length > 0 && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Plane className="h-4 w-4" /> Airport transfer (optional)
+                </Label>
+                <div className="space-y-2 border rounded-lg p-3 bg-white">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="transfer"
+                      checked={selectedTransferId === null}
+                      onChange={() => setSelectedTransferId(null)}
+                    />
+                    No airport transfer
+                  </label>
+                  {transfers.map((t) => (
+                    <label
+                      key={t.id}
+                      className="flex items-center justify-between gap-2 text-sm cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="transfer"
+                          checked={selectedTransferId === t.id}
+                          onChange={() => setSelectedTransferId(t.id)}
+                        />
+                        {t.name.replace(/^Airport Transfer — /, '')}
+                      </span>
+                      <span className="font-semibold shrink-0">{formatCurrency(t.price)}</span>
+                    </label>
+                  ))}
+                </div>
+                {policies.airportTransferPickupNotice && (
+                  <p className="text-xs text-gray-500">{policies.airportTransferPickupNotice}</p>
+                )}
+              </div>
+            )}
+
+            {addOns.length > 0 && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <BedDouble className="h-4 w-4" /> Room add-ons (optional)
+                </Label>
+                <div className="space-y-3 border rounded-lg p-3 bg-white">
+                  {addOns.map((item) => {
+                    const qty = addonSelection[item.id] ?? 0;
+                    const isPerNight = item.unit === 'per night';
+                    const isPerHour = item.unit === 'per hour';
+                    const lineTotal = summarizeAddonSelection(
+                      [item],
+                      { [item.id]: qty },
+                      nights,
+                    ).addonsTotal;
+
+                    return (
+                      <div key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatCurrency(item.price)}
+                            {isPerNight && ' per night'}
+                            {isPerHour && ' per hour'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isPerHour ? (
+                            <Input
+                              type="number"
+                              min={0}
+                              max={12}
+                              className="w-20 h-9"
+                              value={qty || ''}
+                              placeholder="0"
+                              onChange={(e) =>
+                                setAddonQty(item.id, parseInt(e.target.value, 10) || 0)
+                              }
+                            />
+                          ) : (
+                            <select
+                              className="border rounded-md h-9 px-2 text-sm"
+                              value={qty}
+                              onChange={(e) => setAddonQty(item.id, parseInt(e.target.value, 10))}
+                            >
+                              <option value={0}>None</option>
+                              <option value={1}>1</option>
+                              <option value={2}>2</option>
+                            </select>
+                          )}
+                          {qty > 0 && (
+                            <span className="text-sm font-semibold text-gray-700">
+                              {formatCurrency(lineTotal)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-3">
               <div>
                 <Label>Full name</Label>
@@ -289,17 +451,18 @@ export function BookingEngine({
                 />
               </div>
               <div>
-                <Label>Special requests</Label>
+                <Label>Other special requests</Label>
                 <Input
                   value={guest.specialRequests}
                   onChange={(e) => setGuest({ ...guest, specialRequests: e.target.value })}
-                  placeholder="Airport transfer, extra bed, baby cot, late check-out…"
+                  placeholder="Dietary needs, arrival time, etc."
                 />
-                {specialRequestsPolicy && (
-                  <p className="text-xs text-amber-700 mt-1.5">{specialRequestsPolicy}</p>
+                {policies.specialRequestsPolicy && (
+                  <p className="text-xs text-amber-700 mt-1.5">{policies.specialRequestsPolicy}</p>
                 )}
               </div>
             </div>
+
             <div className="space-y-2 pt-2">
               <Label>Payment</Label>
               <div className="flex flex-wrap gap-2">
@@ -331,7 +494,11 @@ export function BookingEngine({
               onClick={completeBooking}
               style={{ backgroundColor: primaryColor, color: '#fff' }}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm booking'}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `Confirm booking · ${formatCurrency(grandTotal)}`
+              )}
             </Button>
           </div>
         )}

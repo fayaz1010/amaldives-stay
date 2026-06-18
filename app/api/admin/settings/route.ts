@@ -25,12 +25,11 @@ export async function PATCH(request: NextRequest) {
     const data = await request.json();
     const tenantId = session.user.tenantId;
 
-    const tenantUpdates: any = {};
+    const tenantUpdates: Record<string, unknown> = {};
     if (data.name !== undefined) tenantUpdates.name = data.name;
     if (data.description !== undefined) tenantUpdates.description = data.description;
-    if (data.settings !== undefined) tenantUpdates.settings = data.settings;
 
-    const propertyUpdates: any = {};
+    const propertyUpdates: Record<string, unknown> = {};
     if (data.address !== undefined) propertyUpdates.address = data.address;
     if (data.city !== undefined) propertyUpdates.city = data.city;
     if (data.state !== undefined) propertyUpdates.state = data.state;
@@ -46,16 +45,31 @@ export async function PATCH(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       let tenant = null;
 
-      const needsSettingsMerge = Object.keys(settingsMerge).length > 0 || taglineProvided;
+      const currentTenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+      const currentSettings = (currentTenant?.settings as Record<string, unknown> | null) ?? {};
+
+      const needsSettingsMerge =
+        Object.keys(settingsMerge).length > 0 ||
+        taglineProvided ||
+        data.settings !== undefined;
+
       if (needsSettingsMerge) {
-        const current = await tx.tenant.findUnique({ where: { id: tenantId } });
-        const currentSettings = (current?.settings as Record<string, any> | null) ?? {};
-        const nextSettings: Record<string, any> = { ...currentSettings, ...settingsMerge };
+        const nextSettings: Record<string, unknown> = { ...currentSettings, ...settingsMerge };
         if (taglineProvided) {
           nextSettings.webProfile = {
-            ...(currentSettings.webProfile ?? {}),
+            ...(currentSettings.webProfile as Record<string, unknown> | undefined ?? {}),
             tagline: data.tagline,
           };
+        }
+        if (data.settings !== undefined && typeof data.settings === 'object') {
+          const patch = data.settings as Record<string, unknown>;
+          nextSettings.payments = {
+            ...(currentSettings.payments as Record<string, unknown> | undefined ?? {}),
+            ...(patch.payments as Record<string, unknown> | undefined ?? {}),
+          };
+          for (const [k, v] of Object.entries(patch)) {
+            if (k !== 'payments') nextSettings[k] = v;
+          }
         }
         tenantUpdates.settings = nextSettings;
       }

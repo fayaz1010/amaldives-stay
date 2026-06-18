@@ -19,11 +19,14 @@ import {
   ShoppingCart,
   HelpCircle,
   CheckCircle,
+  MessageCircle,
   Loader2,
   Plus,
   Minus,
   AlertCircle,
+  QrCode,
 } from 'lucide-react';
+import { StayChatPanel } from '@/components/stay-chat-panel';
 
 const TEAL = '#14B8A6';
 
@@ -120,6 +123,21 @@ export default function GuestPortalPage({
   const [reportSuccess, setReportSuccess] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
 
+  const [checkInData, setCheckInData] = useState<{
+    checkInCode?: string;
+    checkoutCode?: string;
+    checkInQrUrl?: string;
+    checkoutQrUrl?: string;
+    status?: string;
+    keysIssued?: boolean;
+    checkoutReadyAt?: string | null;
+    houseRules?: string;
+    keyHandoffMessage?: string;
+    allowInAppCheckoutPay?: boolean;
+    room?: { number: string; name: string | null };
+  } | null>(null);
+  const [paying, setPaying] = useState(false);
+
   // Toast
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
@@ -140,6 +158,10 @@ export default function GuestPortalPage({
           setError(data.error || 'Booking not found');
         } else {
           setBooking(data.booking);
+          fetch(`/api/guest/${params.token}/checkin`)
+            .then((r) => r.json())
+            .then((d) => { if (d.checkInCode) setCheckInData(d); })
+            .catch(() => {});
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Failed to load');
@@ -356,13 +378,27 @@ export default function GuestPortalPage({
         </div>
 
         <Tabs defaultValue="bill" className="w-full">
-          <TabsList className="grid grid-cols-3 w-full h-12 bg-white border">
+          <TabsList className="grid grid-cols-5 w-full h-12 bg-white border">
             <TabsTrigger
               value="bill"
               className="data-[state=active]:bg-teal-500 data-[state=active]:text-white"
             >
               <Receipt className="h-4 w-4 mr-1.5" />
               <span className="text-xs sm:text-sm">My Bill</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="checkin"
+              className="data-[state=active]:bg-teal-500 data-[state=active]:text-white"
+            >
+              <QrCode className="h-4 w-4 mr-1.5" />
+              <span className="text-xs sm:text-sm">Check-in</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="chat"
+              className="data-[state=active]:bg-teal-500 data-[state=active]:text-white"
+            >
+              <MessageCircle className="h-4 w-4 mr-1.5" />
+              <span className="text-xs sm:text-sm">Chat</span>
             </TabsTrigger>
             <TabsTrigger
               value="services"
@@ -505,6 +541,103 @@ export default function GuestPortalPage({
                     {fmtMoney(Math.max(0, balance), currency)}
                   </p>
                 </div>
+                {checkInData?.checkoutReadyAt && checkInData.checkoutCode && (
+                  <div className="pt-3 space-y-3 border-t">
+                    <p className="text-sm font-semibold text-gray-800">Express checkout</p>
+                    <p className="text-xs text-gray-500">
+                      Show this at the desk or pay below before you leave.
+                    </p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+                        checkInData.checkoutQrUrl || checkInData.checkoutCode,
+                      )}`}
+                      alt="Checkout QR"
+                      className="mx-auto rounded-lg border p-2 bg-white"
+                      width={160}
+                      height={160}
+                    />
+                    <p className="font-mono text-xs text-center text-gray-700">
+                      {checkInData.checkoutCode}
+                    </p>
+                  </div>
+                )}
+                {balance > 0.01 && checkInData?.allowInAppCheckoutPay && (
+                  <Button
+                    className="w-full mt-3 bg-teal-600 hover:bg-teal-700"
+                    disabled={paying}
+                    onClick={async () => {
+                      setPaying(true);
+                      try {
+                        const res = await fetch(`/api/guest/${params.token}/pay`, { method: 'POST' });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Payment failed');
+                        if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+                      } catch (e: unknown) {
+                        alert(e instanceof Error ? e.message : 'Could not start payment');
+                      } finally {
+                        setPaying(false);
+                      }
+                    }}
+                  >
+                    {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pay balance with card'}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="checkin" className="mt-4">
+            <Card>
+              <CardContent className="p-4 space-y-4 text-center">
+                {checkInData?.status === 'CHECKED_IN' ? (
+                  <>
+                    <p className="font-semibold text-green-700">You&apos;re checked in</p>
+                    {checkInData.room && (
+                      <p className="text-lg font-bold">Room {checkInData.room.number}</p>
+                    )}
+                    {checkInData.keysIssued ? (
+                      <p className="text-sm text-gray-600">Keys issued — enjoy your stay!</p>
+                    ) : (
+                      <p className="text-sm text-amber-700">{checkInData.keyHandoffMessage}</p>
+                    )}
+                    {checkInData.houseRules && (
+                      <div className="text-left text-sm text-gray-700 border rounded-lg p-3 bg-gray-50 whitespace-pre-wrap">
+                        {checkInData.houseRules}
+                      </div>
+                    )}
+                  </>
+                ) : checkInData?.checkInCode ? (
+                  <>
+                    <p className="text-sm text-gray-600">Show this QR at the front desk for instant check-in</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                        checkInData.checkInQrUrl || checkInData.checkInCode,
+                      )}`}
+                      alt="Check-in QR"
+                      className="mx-auto rounded-lg border p-2 bg-white"
+                      width={200}
+                      height={200}
+                    />
+                    <p className="font-mono text-sm text-gray-800">{checkInData.checkInCode}</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">Loading check-in…</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="chat" className="mt-4">
+            <Card>
+              <CardContent className="p-4">
+                <h2 className="font-semibold text-gray-800 mb-3">Message the front desk</h2>
+                <StayChatPanel
+                  apiPath={`/api/guest/${params.token}/chat`}
+                  senderRole="GUEST"
+                  emptyHint="Ask about transfers, late checkout, or anything you need during your stay."
+                />
               </CardContent>
             </Card>
           </TabsContent>

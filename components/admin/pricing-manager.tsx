@@ -18,6 +18,7 @@ export type RoomTypeRow = {
   id: string;
   type: string;
   basePrice: number;
+  rackRate: number | null;
   count: number;
 };
 
@@ -103,6 +104,10 @@ export function PricingManager({ roomTypes: initialRoomTypes, ratePlans: initial
   const [ratePlans, setRatePlans] = useState<RatePlanRow[]>(initialPlans);
   const [loading, setLoading] = useState(false);
 
+  const [editingRackId, setEditingRackId] = useState<string | null>(null);
+  const [rackDraft, setRackDraft] = useState('');
+  const [savingRackId, setSavingRackId] = useState<string | null>(null);
+
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState('');
   const [savingPriceId, setSavingPriceId] = useState<string | null>(null);
@@ -176,6 +181,40 @@ export function PricingManager({ roomTypes: initialRoomTypes, ratePlans: initial
     } finally {
       setSavingPriceId(null);
       cancelPriceEdit();
+    }
+  }
+
+  function startRackEdit(row: RoomTypeRow) {
+    setEditingRackId(row.id);
+    setRackDraft(row.rackRate != null ? String(row.rackRate) : String(row.basePrice));
+  }
+
+  function cancelRackEdit() {
+    setEditingRackId(null);
+    setRackDraft('');
+  }
+
+  async function saveRack(row: RoomTypeRow) {
+    const next = Number(rackDraft);
+    if (!Number.isFinite(next) || next < 0) {
+      cancelRackEdit();
+      return;
+    }
+    setSavingRackId(row.id);
+    try {
+      const res = await fetch(`/api/admin/rooms/${row.id}/price`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rackRate: next }),
+      });
+      if (res.ok) {
+        setRoomTypes((prev) =>
+          prev.map((r) => (r.type === row.type ? { ...r, rackRate: next } : r)),
+        );
+      }
+    } finally {
+      setSavingRackId(null);
+      cancelRackEdit();
     }
   }
 
@@ -297,14 +336,18 @@ export function PricingManager({ roomTypes: initialRoomTypes, ratePlans: initial
               <tr>
                 <th className="text-left px-5 py-2 font-medium">Room Type</th>
                 <th className="text-left px-5 py-2 font-medium">Rooms</th>
-                <th className="text-left px-5 py-2 font-medium">Base Price / Night</th>
+                <th className="text-left px-5 py-2 font-medium">Sell / Night</th>
+                <th className="text-left px-5 py-2 font-medium">Rack / Night</th>
                 <th className="px-5 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {roomTypes.map((row) => {
                 const editing = editingPriceId === row.id;
+                const editingRack = editingRackId === row.id;
                 const isSaving = savingPriceId === row.id;
+                const isSavingRack = savingRackId === row.id;
+                const rackDisplay = row.rackRate ?? row.basePrice;
                 return (
                   <tr key={row.id} className="border-t border-gray-100">
                     <td className="px-5 py-3 font-medium text-gray-900">
@@ -356,8 +399,42 @@ export function PricingManager({ roomTypes: initialRoomTypes, ratePlans: initial
                         </button>
                       )}
                     </td>
+                    <td className="px-5 py-3">
+                      {editingRack ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500">$</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={rackDraft}
+                            onChange={(e) => setRackDraft(e.target.value)}
+                            className="h-8 w-28"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveRack(row);
+                              if (e.key === 'Escape') cancelRackEdit();
+                            }}
+                          />
+                          <Button size="sm" className="h-8 px-2" onClick={() => saveRack(row)} disabled={isSavingRack}>
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 px-2" onClick={cancelRackEdit} disabled={isSavingRack}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startRackEdit(row)}
+                          className="text-left font-semibold text-gray-700 hover:text-teal-700 hover:underline underline-offset-2"
+                        >
+                          ${rackDisplay.toFixed(2)}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-right">
-                      {!editing && (
+                      {!editing && !editingRack && (
                         <Button
                           variant="ghost"
                           size="sm"

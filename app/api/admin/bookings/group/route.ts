@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { calculateStayRate } from '@/lib/calculate-stay-rate';
+import { calculatePlatformFee, getPlatformCommissionRate } from '@/lib/commission';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Validate all rooms belong to tenant and fetch basePrice + number
     const rooms = await prisma.room.findMany({
       where: { id: { in: roomIds }, tenantId },
-      select: { id: true, number: true, basePrice: true },
+      select: { id: true, number: true, basePrice: true, rackRate: true, tenantId: true, propertyId: true },
     });
     if (rooms.length !== roomIds.length) {
       return NextResponse.json({ error: 'One or more rooms not found for this tenant' }, { status: 404 });
@@ -144,6 +146,12 @@ export async function POST(request: NextRequest) {
     const guestLabel = guestData?.name ?? 'Guest';
     const checkInLabel = checkIn.toLocaleDateString();
 
+    const tenantForCommission = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { commissionRate: true, status: true, amaldivesSlug: true },
+    });
+    const commissionRate = getPlatformCommissionRate(tenantForCommission, 'DIRECT');
+
     // Create GroupBooking + all individual Bookings atomically
     const groupBooking = await prisma.$transaction(async (tx) => {
       const group = await tx.groupBooking.create({
@@ -152,7 +160,13 @@ export async function POST(request: NextRequest) {
 
       for (const room of rooms) {
         const confirmationNumber = generateConfirmationNumber();
-        const totalAmount = room.basePrice * nights;
+        const rate = await calculateStayRate({
+          room,
+          checkIn,
+          checkOut,
+        });
+        const totalAmount = rate.totalAmount;
+        const platformFee = calculatePlatformFee(totalAmount, commissionRate);
         await tx.booking.create({
           data: {
             tenantId,
@@ -166,7 +180,7 @@ export async function POST(request: NextRequest) {
             adults,
             children,
             totalAmount,
-            platformFee: totalAmount * 0.04,
+            platformFee,
             status: 'CONFIRMED',
             source: 'DIRECT',
             specialRequests: specialRequests ?? null,
@@ -183,6 +197,11 @@ export async function POST(request: NextRequest) {
       where: { groupBookingId: groupBooking.id },
       select: { id: true, roomId: true, confirmationNumber: true },
     });
+
+    const { ensureCheckInCodes } = await import('@/lib/instant-checkin');
+    for (const b of createdBookings) {
+      await ensureCheckInCodes(b.id);
+    }
 
     // Auto-create arrival tasks per room — fire and forget
     try {

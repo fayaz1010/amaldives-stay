@@ -619,7 +619,9 @@ export function ExtraServicesManager({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Extra Services</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Excursions, diving, snorkelling, picnics, fishing & rentals
+            Excursions, diving, and rentals for in-stay orders. <strong>Transfer</strong> and{' '}
+            <strong>Add-on</strong> categories appear on your public website booking form with the
+            prices you set here.
           </p>
         </div>
         <div className="flex gap-2">

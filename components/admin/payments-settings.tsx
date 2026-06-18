@@ -7,11 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, CheckCircle, CreditCard, Copy, Check, RefreshCw } from 'lucide-react';
-import {
-  getPaymentsConfig,
-  type PaymentProvider,
-  type TenantPaymentsConfig,
-} from '@/lib/tenant-settings';
+import { getPaymentsConfig, getDepositConfig, type PaymentProvider, type TenantPaymentsConfig } from '@/lib/tenant-settings';
 
 interface PaymentsSettingsProps {
   tenant: {
@@ -46,6 +42,7 @@ function generateSecret(len = 32) {
 export function PaymentsSettings({ tenant, stripePlatformConfigured }: PaymentsSettingsProps) {
   const router = useRouter();
   const initial = getPaymentsConfig(tenant.settings);
+  const depositInitial = getDepositConfig(tenant.settings);
   const baseSettings = (tenant.settings as Record<string, unknown>) ?? {};
 
   const [saving, setSaving] = useState(false);
@@ -71,6 +68,12 @@ export function PaymentsSettings({ tenant, stripePlatformConfigured }: PaymentsS
   const [mayaApiKey, setMayaApiKey] = useState(initial.maya?.apiKey ?? '');
   const [mayaWebhookSecret, setMayaWebhookSecret] = useState(initial.maya?.webhookSecret ?? '');
   const [mayaPortalSlug, setMayaPortalSlug] = useState(initial.maya?.portalSlug ?? '');
+
+  const [depositEnabled, setDepositEnabled] = useState(depositInitial.enabled ?? false);
+  const [depositPercent, setDepositPercent] = useState(String(depositInitial.percent ?? 30));
+  const [depositMinAmount, setDepositMinAmount] = useState(
+    depositInitial.minAmount != null ? String(depositInitial.minAmount) : '',
+  );
 
   const bmlWebhook = `https://stay.amaldives.com/api/webhooks/bml-connect/${tenant.subdomain}`;
   const mayaWebhook = `https://${tenant.subdomain}.stay.amaldives.com/api/webhooks/maya/${tenant.subdomain}`;
@@ -105,7 +108,15 @@ export function PaymentsSettings({ tenant, stripePlatformConfigured }: PaymentsS
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          settings: { ...baseSettings, payments },
+          settings: {
+            ...baseSettings,
+            payments,
+            deposit: {
+              enabled: depositEnabled,
+              percent: Number(depositPercent) || 0,
+              minAmount: depositMinAmount.trim() ? Number(depositMinAmount) : undefined,
+            },
+          },
         }),
       });
       if (!res.ok) throw new Error('Save failed');
@@ -306,6 +317,50 @@ export function PaymentsSettings({ tenant, stripePlatformConfigured }: PaymentsS
                 </div>
               </div>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Booking deposit</CardTitle>
+          <p className="text-sm text-gray-500">
+            Charge a percentage online at booking; balance due at check-in or checkout.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={depositEnabled}
+              onChange={(e) => setDepositEnabled(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            <span className="text-sm font-medium">Require deposit for online card bookings</span>
+          </label>
+          {depositEnabled && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Deposit % of stay total</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={depositPercent}
+                  onChange={(e) => setDepositPercent(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Minimum deposit (optional)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={depositMinAmount}
+                  onChange={(e) => setDepositMinAmount(e.target.value)}
+                  placeholder="e.g. 50"
+                />
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

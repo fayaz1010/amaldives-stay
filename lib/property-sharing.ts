@@ -24,6 +24,7 @@ export const SHARE_CATEGORIES = [
   'minibar',    // minibar catalogue (MinIBarItem)
   'inventory',  // supplies, logistics stock + assets
   'ratePlans',  // rate plans
+  'promotions', // discount codes
   'transport',  // transfer / transport options
 ] as const;
 
@@ -36,6 +37,7 @@ export const SHARE_LABELS: Record<ShareCategory, string> = {
   minibar: 'Minibar catalogue',
   inventory: 'Inventory & assets',
   ratePlans: 'Rate plans',
+  promotions: 'Promotions',
   transport: 'Transfers / transport',
 };
 

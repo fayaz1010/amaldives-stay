@@ -37,7 +37,7 @@ export function GuestExtrasSection({ extras, policies, primaryColor = '#0d9488' 
         >
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Transfers &amp; Add-ons</h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Optional services and extras for your stay. Add requests when you book or contact us directly.
+            Optional services priced below — select them in the booking form when you reserve your room.
           </p>
         </motion.div>
 

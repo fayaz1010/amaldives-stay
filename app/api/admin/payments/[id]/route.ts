@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { markPaymentRefunded } from '@/lib/stripe-booking';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,18 +29,15 @@ export async function PATCH(
     if (data.notes !== undefined) updates.notes = data.notes;
     if (data.transactionId !== undefined) updates.transactionId = data.transactionId;
 
+    if (data.status === 'REFUNDED' && existing.status !== 'REFUNDED') {
+      const payment = await markPaymentRefunded(params.id, session.user.tenantId);
+      return NextResponse.json({ payment });
+    }
+
     const payment = await prisma.payment.update({
       where: { id: params.id },
       data: updates,
     });
-
-    // If refunding, reduce paidAmount on booking
-    if (data.status === 'REFUNDED' && existing.status === 'COMPLETED') {
-      await prisma.booking.update({
-        where: { id: existing.bookingId },
-        data: { paidAmount: { decrement: existing.amount } },
-      });
-    }
 
     return NextResponse.json({ payment });
   } catch (error) {

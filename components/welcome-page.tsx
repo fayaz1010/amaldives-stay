@@ -73,6 +73,7 @@ export function WelcomePage() {
         'Booking calendar',
         'Mobile dashboard',
         'Listed on amaldives.com',
+        '10% platform fee on amaldives.com bookings (4% on your stay page)',
       ],
       badge: null,
     },
@@ -419,8 +420,9 @@ export function WelcomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <div className="text-4xl font-bold text-white mb-2">4%</div>
-              <div className="text-cyan-100">Platform Fee</div>
+              <div className="text-4xl font-bold text-white mb-2">10%</div>
+              <div className="text-cyan-100">amaldives.com fee</div>
+              <div className="text-cyan-200/80 text-xs mt-1">4% direct · OTAs 18%+</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}

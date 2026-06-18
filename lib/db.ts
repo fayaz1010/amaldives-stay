@@ -117,13 +117,13 @@ export class TenantDb {
   }
 
   async createBooking(data: any) {
-    // Auto-calculate commission fee for amaldives.com bookings
     const tenant = await prisma.tenant.findUnique({
       where: { id: this.tenantId },
-      select: { commissionRate: true },
+      select: { commissionRate: true, status: true, amaldivesSlug: true },
     });
-    const commissionRate = tenant?.commissionRate ?? 0.04;
-    const platformFee = (data.totalAmount || 0) * commissionRate;
+    const { getPlatformCommissionRate, calculatePlatformFee } = await import('@/lib/commission');
+    const commissionRate = getPlatformCommissionRate(tenant, data.source);
+    const platformFee = calculatePlatformFee(data.totalAmount || 0, commissionRate);
 
     return await prisma.booking.create({
       data: {
@@ -143,6 +143,10 @@ export class TenantDb {
           },
         },
       },
+    }).then(async (booking) => {
+      const { ensureCheckInCodes } = await import('@/lib/instant-checkin');
+      await ensureCheckInCodes(booking.id);
+      return booking;
     });
   }
 

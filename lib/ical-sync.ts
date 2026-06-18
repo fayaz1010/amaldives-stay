@@ -1,11 +1,18 @@
 import { prisma } from '@/lib/db';
 import { parseIcal } from '@/lib/ical-parse';
 import { extractGuestFromIcalText, extractGuestWithAi } from '@/lib/ical-guest-extract';
+import {
+  promoteIcalEventToBooking,
+  cancelDisappearedIcalBookings,
+} from '@/lib/ical-booking-promote';
 
 interface SyncResult {
   feedId: string;
   ok: boolean;
   eventCount: number;
+  bookingsCreated?: number;
+  bookingsUpdated?: number;
+  bookingsCancelled?: number;
   error?: string;
 }
 
@@ -38,6 +45,15 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
     // Upsert each event. Booking.com / Airbnb both emit stable UIDs, so
     // an existing block whose dates changed gets updated rather than
     // duplicated.
+    //
+    // After the block row is written we also try to promote the event
+    // into a first-class Booking row (see promoteIcalEventToBooking).
+    // The block stays — it's what the availability calendar reads — but
+    // the Booking row is what the front desk, reports, and arrivals
+    // pipeline operate on. promote is best-effort: if it throws (e.g.
+    // a unique-constraint race) we log and keep syncing other events.
+    let bookingsCreated = 0;
+    let bookingsUpdated = 0;
     for (const e of events) {
       let guest = extractGuestFromIcalText(e.summary, e.description);
       if (guest.confidence === 'none' && (e.summary || e.description)) {
@@ -71,6 +87,23 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
           source: feed.source,
         },
       });
+
+      try {
+        const promoted = await promoteIcalEventToBooking(
+          { id: feed.id, tenantId: feed.tenantId, roomId: feed.roomId, source: feed.source },
+          e,
+          guest
+        );
+        if (promoted.status === 'created') bookingsCreated++;
+        else if (promoted.status === 'updated') bookingsUpdated++;
+      } catch (err) {
+        // Never let one bad event abort the whole feed sync — block row
+        // was already written so availability stays correct.
+        console.warn(
+          `[ical-sync] promote failed feedId=${feed.id} uid=${e.uid}:`,
+          err instanceof Error ? err.message : err
+        );
+      }
     }
 
     await prisma.$transaction(async (tx) => {
@@ -89,6 +122,14 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
       }
     });
 
+    // Bookings we previously promoted whose UIDs no longer appear in the
+    // feed are marked CANCELLED rather than deleted, so payments/notes/
+    // history stay attached.
+    const bookingsCancelled = await cancelDisappearedIcalBookings(
+      { id: feed.id, tenantId: feed.tenantId, roomId: feed.roomId, source: feed.source },
+      events.map((e) => e.uid)
+    );
+
     await prisma.externalCalendarFeed.update({
       where: { id: feed.id },
       data: {
@@ -98,7 +139,14 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
       },
     });
 
-    return { feedId, ok: true, eventCount: events.length };
+    return {
+      feedId,
+      ok: true,
+      eventCount: events.length,
+      bookingsCreated,
+      bookingsUpdated,
+      bookingsCancelled,
+    };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     await prisma.externalCalendarFeed.update({

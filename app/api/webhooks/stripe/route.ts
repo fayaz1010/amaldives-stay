@@ -33,9 +33,10 @@ export async function POST(request: NextRequest) {
       const meta = session.metadata ?? {};
 
       if (meta.type === 'booking' && meta.bookingId) {
+        const amount = (session.amount_total ?? 0) / 100;
         const booking = await prisma.booking.update({
           where: { id: meta.bookingId },
-          data: { status: 'CONFIRMED', paidAmount: (session.amount_total ?? 0) / 100 },
+          data: { status: 'CONFIRMED', paidAmount: amount },
           include: {
             guest: true,
             room: { include: { property: true } },
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
           data: {
             tenantId: booking.tenantId,
             bookingId: booking.id,
-            amount: (session.amount_total ?? 0) / 100,
+            amount,
             currency: (session.currency ?? 'usd').toUpperCase(),
             method: 'CARD',
             status: 'COMPLETED',
@@ -58,6 +59,18 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        await prisma.serviceOrder.updateMany({
+          where: { bookingId: booking.id, status: 'PENDING' },
+          data: { status: 'CONFIRMED' },
+        });
+
+        const addonTotal = await prisma.serviceOrder.aggregate({
+          where: { bookingId: booking.id, status: { not: 'CANCELLED' } },
+          _sum: { totalAmount: true },
+        });
+        const emailTotal =
+          booking.totalAmount + (addonTotal._sum.totalAmount ?? 0);
+
         if (booking.guest.email) {
           await sendBookingConfirmationEmail({
             to: booking.guest.email,
@@ -67,12 +80,35 @@ export async function POST(request: NextRequest) {
             checkIn: booking.checkInDate,
             checkOut: booking.checkOutDate,
             roomName: booking.room.name || booking.room.number,
-            totalAmount: booking.totalAmount,
+            totalAmount: emailTotal,
             currency: booking.room.property.currency || 'USD',
             propertyPhone: booking.room.property.phone,
             propertyEmail: booking.room.property.email,
           }).catch(() => {});
         }
+      }
+
+      if (meta.type === 'balance' && meta.bookingId) {
+        const amount = (session.amount_total ?? 0) / 100;
+        const booking = await prisma.booking.update({
+          where: { id: meta.bookingId },
+          data: { paidAmount: { increment: amount } },
+        });
+
+        await prisma.payment.create({
+          data: {
+            tenantId: booking.tenantId,
+            bookingId: booking.id,
+            amount,
+            currency: (session.currency ?? 'usd').toUpperCase(),
+            method: 'CARD',
+            status: 'COMPLETED',
+            transactionId: session.payment_intent as string | undefined,
+            notes: 'Stripe Checkout — balance',
+            gatewayResponse: session as object,
+            processedAt: new Date(),
+          },
+        });
       }
 
       if (meta.type === 'subscription' && meta.tenantId) {

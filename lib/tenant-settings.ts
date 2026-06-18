@@ -1,5 +1,11 @@
 export type PaymentProvider = 'stripe' | 'bml_connect' | 'maya' | 'pay_at_property';
 
+export interface DepositConfig {
+  enabled?: boolean;
+  percent?: number;
+  minAmount?: number;
+}
+
 export interface TenantPaymentsConfig {
   enabledProviders: PaymentProvider[];
   currency: 'USD' | 'MVR';
@@ -21,6 +27,7 @@ export interface TenantPaymentsConfig {
 export interface TenantSettings {
   draftMode?: boolean;
   payments?: TenantPaymentsConfig;
+  deposit?: DepositConfig;
   icalSyncIntervalMinutes?: number;
   embed?: {
     buttonLabel?: string;
@@ -42,6 +49,11 @@ export function getPaymentsConfig(raw: unknown): TenantPaymentsConfig {
       defaultProvider: 'stripe',
     }
   );
+}
+
+export function getDepositConfig(raw: unknown): DepositConfig {
+  const settings = getTenantSettings(raw);
+  return settings.deposit ?? { enabled: false, percent: 0 };
 }
 
 export function amaldivesListingUrl(slug: string): string {

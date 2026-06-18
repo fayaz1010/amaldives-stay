@@ -28,7 +28,9 @@ interface Props {
   tenantSubdomain: string;
 }
 
-const PLATFORM_FEE_RATE = 0.04;
+import { STAY_DIRECT_COMMISSION_DEFAULT } from '@/lib/commission';
+
+const PLATFORM_FEE_RATE = STAY_DIRECT_COMMISSION_DEFAULT;
 
 function todayPlus(days: number) {
   const d = new Date();
@@ -481,7 +483,7 @@ export function NewBookingForm({ propertyId, tenantSubdomain }: Props) {
                   className="flex items-center justify-between text-gray-500 text-xs"
                   title="What stay.amaldives charges you — deducted from your payout, not added to the guest's bill"
                 >
-                  <span>Platform commission (4%)</span>
+                  <span>Platform commission ({(PLATFORM_FEE_RATE * 100).toFixed(0)}%)</span>
                   <span>−${platformFee.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between font-semibold text-base pt-1">

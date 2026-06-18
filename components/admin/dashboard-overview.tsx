@@ -55,6 +55,8 @@ interface DashboardOverviewProps {
   propertySubdomain?: string;
   propertyName?: string;
   propertyId?: string;
+  stripePlatformConfigured?: boolean;
+  tenantSettings?: unknown;
 }
 
 function StatCard({
@@ -139,6 +141,8 @@ export function DashboardOverview({
   propertySubdomain = '',
   propertyName = '',
   propertyId = '',
+  stripePlatformConfigured = false,
+  tenantSettings,
 }: DashboardOverviewProps) {
   // The quick-setup card is shown first when the property is empty. If the
   // owner skips it, we fall back to the manual wizard. The wizard is also
@@ -202,6 +206,8 @@ export function DashboardOverview({
           propertyName={propertyName}
           subdomain={propertySubdomain}
           propertyId={propertyId}
+          stripePlatformConfigured={stripePlatformConfigured}
+          tenantSettings={tenantSettings}
           onComplete={() => setShowWizard(false)}
         />
       )}
