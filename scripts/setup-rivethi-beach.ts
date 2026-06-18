@@ -143,6 +143,16 @@ async function ensureAdminUser(tenantId: string) {
     },
   });
   console.log(`Admin ready: ${email} / rivethi123`);
+  await prisma.tenantMembership.upsert({
+    where: { userId_tenantId: { userId: user.id, tenantId } },
+    update: { role: 'TENANT_ADMIN', isDefault: true },
+    create: {
+      userId: user.id,
+      tenantId,
+      role: 'TENANT_ADMIN',
+      isDefault: true,
+    },
+  });
   return user;
 }
 
