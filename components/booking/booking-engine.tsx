@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PaymentProvider } from '@/lib/tenant-settings';
 import type { GuestExtraItem, PropertyGuestPolicies } from '@/lib/guest-extras';
 import { summarizeAddonSelection } from '@/lib/booking-addons';
@@ -22,6 +22,11 @@ interface BookingEngineProps {
   source?: BookingSource;
   compact?: boolean;
   onSuccess?: (confirmation: string) => void;
+  /** Deep-link prefill (e.g. from an amaldives.com property page). */
+  initialCheckIn?: string;
+  initialCheckOut?: string;
+  initialAdults?: number;
+  initialRoomId?: string;
 }
 
 type Step = 'search' | 'rooms' | 'guest' | 'pay' | 'done';
@@ -33,11 +38,19 @@ export function BookingEngine({
   source = 'stay_subdomain',
   compact = false,
   onSuccess,
+  initialCheckIn,
+  initialCheckOut,
+  initialAdults,
+  initialRoomId,
 }: BookingEngineProps) {
   const [step, setStep] = useState<Step>('search');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState({ checkIn: '', checkOut: '', adults: 2 });
+  const [search, setSearch] = useState({
+    checkIn: initialCheckIn ?? '',
+    checkOut: initialCheckOut ?? '',
+    adults: initialAdults ?? 2,
+  });
   const [offers, setOffers] = useState<PublicRoomOffer[]>([]);
   const [selectedOffer, setSelectedOffer] = useState<PublicRoomOffer | null>(null);
   const [guest, setGuest] = useState({
@@ -117,6 +130,28 @@ export function BookingEngine({
       setLoading(false);
     }
   }, [apiBase, search]);
+
+  // Deep-link prefill (e.g. arriving from an amaldives.com property page with
+  // dates + room already chosen): auto-run the availability search, then jump
+  // straight to guest details for the chosen room — a near one-click handoff.
+  const didAutoSearch = useRef(false);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(initialRoomId ?? null);
+  useEffect(() => {
+    if (didAutoSearch.current) return;
+    if (initialCheckIn && initialCheckOut) {
+      didAutoSearch.current = true;
+      void searchRooms();
+    }
+  }, [initialCheckIn, initialCheckOut, searchRooms]);
+  useEffect(() => {
+    if (!pendingRoomId || step !== 'rooms' || offers.length === 0) return;
+    const match = offers.find((o) => o.id === pendingRoomId);
+    if (match) {
+      setSelectedOffer(match);
+      setStep('guest');
+    }
+    setPendingRoomId(null);
+  }, [pendingRoomId, step, offers]);
 
   function buildAddonPayload() {
     return addonLines.map((line) => ({

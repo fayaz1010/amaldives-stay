@@ -8,7 +8,13 @@ export const dynamic = 'force-dynamic';
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams?: { source?: string };
+  searchParams?: {
+    source?: string;
+    checkIn?: string;
+    checkOut?: string;
+    adults?: string;
+    roomId?: string;
+  };
 }) {
   const headersList = headers();
   const subdomain = headersList.get('X-Tenant-Subdomain');
@@ -16,6 +22,7 @@ export default async function BookPage({
   if (!subdomain && !customDomain) notFound();
   const source =
     searchParams?.source === 'amaldives.com' ? 'amaldives.com' : 'stay_subdomain';
+  const adultsNum = searchParams?.adults ? parseInt(searchParams.adults, 10) : NaN;
 
   const tenant = await prisma.tenant.findFirst({
     where: subdomain
@@ -35,6 +42,10 @@ export default async function BookPage({
           tenantName={tenant.name}
           primaryColor={theme.primaryColor}
           source={source}
+          initialCheckIn={searchParams?.checkIn}
+          initialCheckOut={searchParams?.checkOut}
+          initialAdults={Number.isFinite(adultsNum) ? adultsNum : undefined}
+          initialRoomId={searchParams?.roomId}
         />
       </div>
     </div>
