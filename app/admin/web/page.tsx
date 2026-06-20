@@ -67,6 +67,11 @@ export default async function WebAdminPage({ searchParams }: WebPageProps) {
     orderBy: { number: 'asc' },
   });
 
+  // Domain that receives OTA booking-notification emails for auto-import.
+  // Set OTA_INGEST_DOMAIN once the inbound email transport is live; until then
+  // the self-serve "auto-import by email" card stays hidden.
+  const otaIngestDomain = process.env.OTA_INGEST_DOMAIN ?? null;
+
   return (
     <WebManager
       tenant={tenant}
@@ -75,6 +80,7 @@ export default async function WebAdminPage({ searchParams }: WebPageProps) {
       plan={tenant.plan}
       allRooms={allRooms}
       defaultTab={searchParams.tab ?? 'profile'}
+      otaIngestDomain={otaIngestDomain}
     />
   );
 }

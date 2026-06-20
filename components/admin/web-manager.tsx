@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Lock,
   Hotel,
+  Mail,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -36,6 +37,8 @@ interface WebManagerProps {
    *  the channels tab don't have to fetch them. */
   allRooms?: Array<{ id: string; number: string; name: string | null; type: string }>;
   defaultTab?: string;
+  /** Domain that receives OTA booking emails for auto-import. Null hides the card. */
+  otaIngestDomain?: string | null;
 }
 
 const COMMON_AMENITIES = [
@@ -86,8 +89,9 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function WebManager({ tenant, property, subdomain, plan, allRooms = [], defaultTab = 'profile' }: WebManagerProps) {
+export function WebManager({ tenant, property, subdomain, plan, allRooms = [], defaultTab = 'profile', otaIngestDomain = null }: WebManagerProps) {
   const isLocked = plan === 'basic';
+  const otaIngestEmail = otaIngestDomain ? `ota-${subdomain}@${otaIngestDomain}` : null;
   const icalUrl = `https://stay.amaldives.com/api/public/${subdomain}/calendar.ics`;
   const amaldivesUrl = `https://www.amaldives.com/guesthouses/${tenant?.amaldivesSlug ?? subdomain}`;
   const stayUrl = `https://${subdomain}.stay.amaldives.com`;
@@ -836,6 +840,37 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Auto-import OTA bookings by email (self-serve) */}
+          {otaIngestEmail && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Mail className="h-5 w-5 text-emerald-600" />
+                <h3 className="font-semibold text-gray-900">Auto-import bookings by email</h3>
+                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Recommended</Badge>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Works for <strong>Booking.com and every OTA</strong> (including hotel listings that don&apos;t support
+                calendar links). Add your private address below as an extra <em>reservation notification</em> email in
+                each channel — new bookings then appear here automatically.
+              </p>
+              <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-2">
+                <code className="text-xs text-gray-700 flex-1 break-all">{otaIngestEmail}</code>
+                <CopyButton text={otaIngestEmail} />
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-gray-700">
+                <p className="font-medium text-gray-800">Where to add it:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-600">
+                  <li><strong>Booking.com:</strong> Account → Contacts → Reservations → add this email</li>
+                  <li><strong>Airbnb:</strong> Account → Notifications → add this as a reservation email</li>
+                  <li><strong>Agoda / Expedia / others:</strong> add it under reservation/notification emails</li>
+                </ul>
+                <p className="text-xs text-gray-400 pt-1">
+                  Private to your property — don&apos;t share it. We only read reservation details to create bookings.
+                </p>
               </div>
             </div>
           )}
