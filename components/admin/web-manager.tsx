@@ -809,6 +809,37 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
             </div>
           </div>
 
+          {/* Per-room feeds — use these when each room is listed separately on an OTA */}
+          {allRooms.length > 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Hotel className="h-5 w-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Per-room feeds</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                If each room is a <strong>separate listing</strong> on Booking.com / Airbnb, use that room&apos;s own
+                link below instead of the whole-property feed — so a booking in one room only blocks that one listing.
+              </p>
+              <div className="divide-y">
+                {allRooms.map((r) => {
+                  const roomUrl = `${icalUrl}?roomId=${r.id}`;
+                  return (
+                    <div key={r.id} className="flex items-center gap-2 py-2">
+                      <span className="text-sm font-medium text-gray-800 w-28 shrink-0">
+                        {(r.name ? r.name + ' ' : '')}{r.number}
+                      </span>
+                      <code className="text-xs text-gray-600 flex-1 break-all">{roomUrl}</code>
+                      <CopyButton text={roomUrl} />
+                      <a href={roomUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Instructions by OTA */}
           <div className="space-y-4">
             <h3 className="font-semibold text-sm text-gray-800">How to connect</h3>
@@ -884,8 +915,11 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Paste the iCal URL each OTA gives you. We refresh every
-                  5 minutes (fastest practical iCal sync) and use AI to extract
+                  5 minutes and use AI to extract
                   guest names and contacts when OTAs include them in the feed.
+                  <a href="/admin/help#ical" className="text-teal-600 hover:underline ml-1">
+                    Full OTA guide →
+                  </a>
                 </p>
               </div>
             </div>

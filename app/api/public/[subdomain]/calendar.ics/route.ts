@@ -44,10 +44,27 @@ export async function GET(
       return new NextResponse('Guesthouse not found', { status: 404 });
     }
 
+    // Optional per-room feed: /calendar.ics?roomId=<id> exports only that room's
+    // bookings. Required for multi-room OTA listings (one feed per listing) so a
+    // booking in one room doesn't block every listing. No roomId = whole property.
+    const roomId = request.nextUrl.searchParams.get('roomId');
+    let roomLabel = '';
+    if (roomId) {
+      const room = await prisma.room.findFirst({
+        where: { id: roomId, tenantId: tenant.id },
+        select: { number: true, name: true },
+      });
+      if (!room) {
+        return new NextResponse('Room not found', { status: 404 });
+      }
+      roomLabel = ` – ${room.name} ${room.number}`;
+    }
+
     // Fetch all confirmed/checked-in bookings
     const bookings = await prisma.booking.findMany({
       where: {
         tenantId: tenant.id,
+        ...(roomId ? { roomId } : {}),
         status: { in: ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'] },
         checkOutDate: { gte: new Date() }, // only future/ongoing
       },
@@ -67,7 +84,7 @@ export async function GET(
       `PRODID:-//amaldives STAY//stay.amaldives.com//EN`,
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
-      `X-WR-CALNAME:${escapeIcal(tenant.name)} – Blocked Dates`,
+      `X-WR-CALNAME:${escapeIcal(tenant.name + roomLabel)} – Blocked Dates`,
       'X-WR-CALDESC:Availability calendar for channel manager sync',
       'X-WR-TIMEZONE:UTC',
     ];
