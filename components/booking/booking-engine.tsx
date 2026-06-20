@@ -18,6 +18,7 @@ export type BookingSource = 'stay_subdomain' | 'amaldives.com' | 'embed' | 'soci
 interface BookingEngineProps {
   subdomain: string;
   tenantName: string;
+  logoUrl?: string | null;
   primaryColor?: string;
   source?: BookingSource;
   compact?: boolean;
@@ -34,6 +35,7 @@ type Step = 'search' | 'rooms' | 'guest' | 'pay' | 'done';
 export function BookingEngine({
   subdomain,
   tenantName,
+  logoUrl,
   primaryColor = '#0d9488',
   source = 'stay_subdomain',
   compact = false,
@@ -228,6 +230,9 @@ export function BookingEngine({
     <Card className={compact ? 'border-0 shadow-none' : 'bg-white/95 backdrop-blur-sm'}>
       {!compact && (
         <CardHeader className="pb-2">
+          {logoUrl && (
+            <img src={logoUrl} alt={tenantName} className="h-10 w-auto object-contain mb-1" />
+          )}
           <CardTitle className="text-lg">Book {tenantName}</CardTitle>
           <CardDescription>Commission-free direct booking</CardDescription>
         </CardHeader>

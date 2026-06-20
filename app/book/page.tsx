@@ -28,7 +28,7 @@ export default async function BookPage({
     where: subdomain
       ? { subdomain, status: 'ACTIVE' }
       : { domain: customDomain!, status: 'ACTIVE' },
-    select: { name: true, subdomain: true, theme: true },
+    select: { name: true, subdomain: true, theme: true, logo: true },
   });
   if (!tenant) notFound();
 
@@ -44,6 +44,7 @@ export default async function BookPage({
           source={source}
           initialCheckIn={searchParams?.checkIn}
           initialCheckOut={searchParams?.checkOut}
+          logoUrl={tenant.logo}
           initialAdults={Number.isFinite(adultsNum) ? adultsNum : undefined}
           initialRoomId={searchParams?.roomId}
         />

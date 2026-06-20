@@ -15,6 +15,7 @@ interface Tenant {
   name: string;
   subdomain: string;
   description?: string | null;
+  logo?: string | null;
   plan: string;
   commissionRate: number;
   status: string;
@@ -63,6 +64,8 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
 
   const [name, setName] = useState(tenant.name);
   const [description, setDescription] = useState(tenant.description ?? '');
+  const [logo, setLogo] = useState<string | null>(tenant.logo ?? null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [address, setAddress] = useState(property?.address ?? '');
   const [city, setCity] = useState(property?.city ?? '');
   const [state, setState] = useState(property?.state ?? '');
@@ -95,7 +98,7 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, address, city, state, phone, email }),
+        body: JSON.stringify({ name, description, logo, address, city, state, phone, email }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -180,6 +183,38 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
               <Textarea id="description" value={description}
                 onChange={(e) => setDescription(e.target.value)} rows={3}
                 placeholder="Tell guests about your property…" />
+            </div>
+            <div className="space-y-2">
+              <Label>Logo</Label>
+              <div className="flex items-center gap-4">
+                {logo && (
+                  <img src={logo} alt="Property logo" className="h-14 w-auto rounded border object-contain bg-gray-50 p-1" />
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="cursor-pointer inline-flex items-center gap-2 text-sm px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-gray-700">
+                    {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : '📷 Upload logo'}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setLogoUploading(true);
+                        const reader = new FileReader();
+                        reader.onload = () => { setLogo(reader.result as string); setLogoUploading(false); };
+                        reader.onerror = () => { alert('Failed to read file'); setLogoUploading(false); };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {logo && (
+                    <button type="button" onClick={() => setLogo(null)}
+                      className="text-xs text-red-500 hover:underline text-left">Remove logo</button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400">PNG, JPG or SVG · shown on your guest booking page</p>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm pt-2">
               <div>
