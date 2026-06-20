@@ -212,6 +212,10 @@ model Room {
   number      String
   name        String
   type        RoomType
+  // Per-tenant custom category label (free text). Falls back to `type` when null.
+  // Lets each property define its own room-type categories without touching the
+  // shared RoomType enum. See tenant.settings.roomTypes for the picklist.
+  typeLabel   String?
   description String?
   capacity    Int
   basePrice   Float

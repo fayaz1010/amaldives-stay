@@ -15,23 +15,23 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ImageIcon, X, Upload, Loader2 } from 'lucide-react';
 import type { GroupedRoomType } from '@/components/admin/rooms-manager';
 
-const ROOM_TYPES = [
-  { value: 'STANDARD', label: 'Standard' },
-  { value: 'DELUXE', label: 'Deluxe' },
-  { value: 'SUITE', label: 'Suite' },
-  { value: 'FAMILY', label: 'Family' },
-  { value: 'DORMITORY', label: 'Dormitory' },
-];
+const ENUM_ROOM_TYPES = ['STANDARD', 'DELUXE', 'SUITE', 'FAMILY', 'DORMITORY'] as const;
+
+/** Pretty label for a stored enum value, e.g. "DELUXE" -> "Deluxe". */
+function prettifyType(t: string): string {
+  if (!t) return '';
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
+/** Map a free-text category label back to a valid RoomType enum for the DB.
+ *  Falls back to STANDARD for custom labels (e.g. "Sea View", "Twin"). */
+function labelToEnum(label: string): string {
+  const up = (label || '').trim().toUpperCase();
+  return (ENUM_ROOM_TYPES as readonly string[]).includes(up) ? up : 'STANDARD';
+}
 
 const AMENITY_OPTIONS = [
   'Air Conditioning',
@@ -55,11 +55,14 @@ interface AddRoomModalProps {
   prefillType?: GroupedRoomType | null;
   /** When set the modal is in edit-type mode — updates all rooms in the group */
   editGroup?: GroupedRoomType | null;
+  /** Per-tenant room-type category suggestions for the combobox. */
+  roomTypeOptions?: string[];
 }
 
 type FormState = {
   typeName: string;
   type: string;
+  typeLabel: string;
   description: string;
   basePrice: string;
   capacity: string;
@@ -73,6 +76,7 @@ type FormState = {
 const emptyForm: FormState = {
   typeName: '',
   type: 'STANDARD',
+  typeLabel: '',
   description: '',
   basePrice: '',
   capacity: '2',
@@ -186,6 +190,7 @@ export function AddRoomModal({
   propertyId,
   prefillType,
   editGroup,
+  roomTypeOptions = [],
 }: AddRoomModalProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -206,6 +211,7 @@ export function AddRoomModal({
       setForm({
         typeName: source.typeName,
         type: source.type,
+        typeLabel: source.typeLabel || prettifyType(source.type),
         description: source.description,
         basePrice: String(source.basePrice ?? ''),
         capacity: String(source.capacity ?? 2),
@@ -244,7 +250,7 @@ export function AddRoomModal({
   const validate = (): string | null => {
     if (!propertyId) return 'No active property found. Set up a property first.';
     if (!form.typeName.trim()) return 'Room Type Name is required.';
-    if (!form.type) return 'Room Type is required.';
+    if (!form.typeLabel.trim()) return 'Room Type is required.';
     const basePrice = Number(form.basePrice);
     if (!form.basePrice || Number.isNaN(basePrice) || basePrice < 0)
       return 'Base Price must be a non-negative number.';
@@ -306,7 +312,8 @@ export function AddRoomModal({
     const sizeVal = form.size ? Number(form.size) : null;
     const typePayload = {
       name: form.typeName.trim(),
-      type: form.type,
+      type: labelToEnum(form.typeLabel),
+      typeLabel: form.typeLabel.trim(),
       description: form.description.trim() || null,
       capacity: Number(form.capacity),
       basePrice: Number(form.basePrice),
@@ -395,23 +402,25 @@ export function AddRoomModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Room Type</Label>
-              <Select
-                value={form.type}
-                onValueChange={(v) => update('type', v)}
+              <Label htmlFor="typeLabel">Room Type</Label>
+              <Input
+                id="typeLabel"
+                list="room-type-options"
+                placeholder="e.g. Sea View, Twin, Suite…"
+                value={form.typeLabel}
+                onChange={(e) => update('typeLabel', e.target.value)}
                 disabled={isAddUnit}
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROOM_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                autoComplete="off"
+                required
+              />
+              <datalist id="room-type-options">
+                {roomTypeOptions.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+              <p className="text-xs text-gray-400">
+                Pick an existing category or type a new one — it&apos;s saved for your property.
+              </p>
             </div>
 
             <div className="space-y-2">

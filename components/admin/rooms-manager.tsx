@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 export type GroupedRoomType = {
   typeName: string;
   type: string;
+  typeLabel?: string | null;
   rooms: { id: string; number: string; status: string }[];
   basePrice: number;
   capacity: number;
@@ -38,9 +39,10 @@ const STATUS_LABEL: Record<string, string> = {
 interface RoomsManagerProps {
   groupedRoomTypes: GroupedRoomType[];
   propertyId: string;
+  roomTypeOptions?: string[];
 }
 
-export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps) {
+export function RoomsManager({ groupedRoomTypes, propertyId, roomTypeOptions = [] }: RoomsManagerProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [prefillType, setPrefillType] = useState<GroupedRoomType | null>(null);
   const [editGroup, setEditGroup] = useState<GroupedRoomType | null>(null);
@@ -145,6 +147,7 @@ export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps
         propertyId={propertyId}
         prefillType={prefillType}
         editGroup={editGroup}
+        roomTypeOptions={roomTypeOptions}
       />
     </div>
   );
@@ -343,7 +346,7 @@ function RoomTypeCard({
         <div className="absolute inset-0 p-4 flex flex-col justify-between text-white">
           <div className="flex items-start justify-between">
             <span className="inline-flex items-center rounded-full bg-white/25 backdrop-blur px-2.5 py-1 text-xs font-medium uppercase tracking-wide">
-              {group.type}
+              {group.typeLabel || group.type}
             </span>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center rounded-full bg-white text-cyan-700 px-3 py-1 text-sm font-bold shadow">

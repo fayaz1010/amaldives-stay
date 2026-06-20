@@ -31,6 +31,7 @@ export default async function RoomsPage() {
       grouped[key] = {
         typeName: room.name,
         type: room.type,
+        typeLabel: (room as { typeLabel?: string | null }).typeLabel ?? null,
         rooms: [],
         basePrice: room.basePrice,
         capacity: room.capacity,
@@ -52,10 +53,23 @@ export default async function RoomsPage() {
     a.typeName.localeCompare(b.typeName)
   );
 
+  // Per-tenant room-type categories: whatever this tenant has actually used
+  // (custom typeLabels), unioned with a small sensible default set. Drives the
+  // combobox in the Add/Edit Room modal so each property builds its own list.
+  const prettify = (t: string) => t.charAt(0) + t.slice(1).toLowerCase();
+  const DEFAULT_TYPES = ['Standard', 'Deluxe', 'Suite', 'Family', 'Twin', 'Sea View'];
+  const used = rooms
+    .map((r) => (r as { typeLabel?: string | null }).typeLabel || prettify(r.type))
+    .filter(Boolean) as string[];
+  const roomTypeOptions = Array.from(new Set([...used, ...DEFAULT_TYPES])).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
   return (
     <RoomsManager
       groupedRoomTypes={groupedRoomTypes}
       propertyId={property?.id ?? ''}
+      roomTypeOptions={roomTypeOptions}
     />
   );
 }

@@ -11,6 +11,7 @@ const EDITABLE_FIELDS = [
   'number',
   'name',
   'type',
+  'typeLabel',
   'description',
   'capacity',
   'basePrice',

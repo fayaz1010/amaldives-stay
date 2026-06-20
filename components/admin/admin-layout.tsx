@@ -45,6 +45,7 @@ import {
   MapPin,
   Bot,
   QrCode,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TenantSwitcher } from '@/components/admin/tenant-switcher';
@@ -172,6 +173,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Settings', href: '/admin/settings', icon: Settings },
       { name: 'Payments', href: '/admin/settings/payments', icon: Banknote },
       { name: 'Billing', href: '/admin/settings/billing', icon: CreditCard },
+      { name: 'Help', href: '/admin/help', icon: HelpCircle },
     ],
   },
 ];

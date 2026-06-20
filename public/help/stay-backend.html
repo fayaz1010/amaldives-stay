@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>amaldives STAY — Backend Help</title>
+  <style>
+    :root {
+      --teal: #0d9488;
+      --teal-dark: #0f766e;
+      --teal-light: #ccfbf1;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --code-bg: #f1f5f9;
+      --warn-bg: #fffbeb;
+      --warn-border: #fcd34d;
+      --sidebar-w: 280px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    a { color: var(--teal-dark); }
+    a:hover { color: var(--teal); }
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 1.25rem 1rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .sidebar h1 {
+      font-size: 1rem;
+      margin: 0 0 0.25rem;
+      color: var(--teal-dark);
+    }
+    .sidebar .subtitle {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .sidebar nav a {
+      display: block;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      text-decoration: none;
+      border-radius: 6px;
+    }
+    .sidebar nav a:hover {
+      background: var(--teal-light);
+      color: var(--teal-dark);
+    }
+    .sidebar nav .group {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin: 1rem 0 0.35rem 0.5rem;
+    }
+    .main {
+      flex: 1;
+      max-width: 820px;
+      padding: 2rem 2.5rem 4rem;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+      color: #fff;
+      padding: 1.75rem 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+    .hero h2 { margin: 0 0 0.5rem; font-size: 1.5rem; }
+    .hero p { margin: 0; opacity: 0.92; font-size: 0.9375rem; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+    section h2 {
+      margin: 0 0 1rem;
+      font-size: 1.25rem;
+      color: var(--teal-dark);
+      border-bottom: 2px solid var(--teal-light);
+      padding-bottom: 0.5rem;
+    }
+    section h3 {
+      margin: 1.25rem 0 0.5rem;
+      font-size: 1rem;
+    }
+    section h4 {
+      margin: 1rem 0 0.35rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    p { margin: 0.5rem 0; }
+    ul, ol { margin: 0.5rem 0; padding-left: 1.25rem; }
+    li { margin: 0.25rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      margin: 0.75rem 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--code-bg); font-weight: 600; }
+    .code-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      margin: 0.5rem 0;
+      font-family ui-monospace, monospace;
+      font-size: 0.75rem;
+      word-break: break-all;
+    }
+    .code-row code { flex: 1; }
+    .btn-copy {
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .btn-copy:hover { background: var(--teal-light); color: var(--teal-dark); }
+    .badge {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: var(--teal-light);
+      color: var(--teal-dark);
+    }
+    .warn {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      margin: 0.75rem 0;
+    }
+    .tip {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      margin: 0.75rem 0;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .figure {
+      margin: 1rem 0 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .figure figcaption {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.5rem 0.75rem;
+      background: var(--code-bg);
+      border-top: 1px solid var(--border);
+    }
+    .path {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8125rem;
+      background: var(--code-bg);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      margin: 0.5rem 0;
+    }
+    .ota-block {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      background: #fafafa;
+    }
+    .ota-block h3 { margin-top: 0; }
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .main { padding: 1.25rem 1rem 3rem; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .sidebar { display: none; }
+      .main { max-width: 100%; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>amaldives STAY</h1>
+      <p class="subtitle">Backend &amp; admin guide</p>
+      <nav>
+        <div class="group">Start</div>
+        <a href="#intro">Introduction</a>
+        <a href="#quick-links">Quick links</a>
+        <a href="#login">Sign in &amp; roles</a>
+        <div class="group">Operations</div>
+        <a href="#dashboard">Dashboard</a>
+        <a href="#reservations">Reservations</a>
+        <a href="#availability">Availability</a>
+        <a href="#rooms-pricing">Rooms &amp; pricing</a>
+        <a href="#guest-services">Guest services</a>
+        <div class="group">Distribution</div>
+        <a href="#website">Guest website</a>
+        <a href="#booking">Direct booking</a>
+        <a href="#ical">iCal &amp; OTAs</a>
+        <a href="#ical-where">Where to click (exact)</a>
+        <a href="#payments">Payments</a>
+        <div class="group">More</div>
+        <a href="#checkin">Instant check-in</a>
+        <a href="#api">Public APIs</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="hero">
+        <h2>Stay backend help</h2>
+        <p>How to run your guesthouse on amaldives STAY — reservations, website, OTAs, payments, and day-to-day operations.</p>
+      </div>
+
+      <section id="intro">
+        <h2>Introduction</h2>
+        <p>
+          <strong>amaldives STAY</strong> is your property management system: admin dashboard, guest website,
+          direct bookings, OTA calendar sync, housekeeping, finance, and guest services.
+        </p>
+        <p>Your property can be reached on:</p>
+        <ul>
+          <li><strong>Custom domain</strong> (e.g. <code id="sample-domain">rivethibeach.com</code>) — guest marketing site + sign-in</li>
+          <li><strong>STAY subdomain</strong> — <code id="sample-stay-url">https://<span class="subdomain">your-slug</span>.stay.amaldives.com</code></li>
+        </ul>
+        <div class="tip">
+          This page personalizes URLs when opened from <strong>Admin → Help</strong>. You can also pass
+          <code>?subdomain=your-slug</code> in the address bar.
+        </div>
+      </section>
+
+      <section id="quick-links">
+        <h2>Quick links</h2>
+        <p>Common admin paths (replace host with your domain):</p>
+        <table>
+          <thead>
+            <tr><th>Task</th><th>Path</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Dashboard</td><td><code>/admin</code></td></tr>
+            <tr><td>Reservations</td><td><code>/admin/reservations</code></td></tr>
+            <tr><td>New reservation</td><td><code>/admin/reservations/new</code></td></tr>
+            <tr><td>Availability calendar</td><td><code>/admin/availability</code></td></tr>
+            <tr><td>Rooms</td><td><code>/admin/rooms</code></td></tr>
+            <tr><td>Pricing &amp; rates</td><td><code>/admin/pricing</code></td></tr>
+            <tr><td>Promotions</td><td><code>/admin/promotions</code></td></tr>
+            <tr><td>Travel agents (B2B)</td><td><code>/admin/agencies</code></td></tr>
+            <tr><td>Guest website editor</td><td><code>/admin/web</code></td></tr>
+            <tr><td>Channel Manager (iCal)</td><td><code>/admin/web?tab=channels</code></td></tr>
+            <tr><td>Extra services</td><td><code>/admin/extra-services</code></td></tr>
+            <tr><td>Instant check-in</td><td><code>/admin/checkin</code></td></tr>
+            <tr><td>Payments settings</td><td><code>/admin/settings/payments</code></td></tr>
+            <tr><td>Sign in</td><td><code>/auth/signin</code></td></tr>
+            <tr><td>Guest book page</td><td><code>/book</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="login">
+        <h2>Sign in &amp; roles</h2>
+        <ol>
+          <li>Go to <strong>Sign in</strong> on your website or <code>/auth/signin</code>.</li>
+          <li>Use your tenant admin email and password.</li>
+          <li>If you see <strong>Unauthorized</strong>, your user needs a <strong>tenant membership</strong> — contact your platform admin.</li>
+        </ol>
+        <table>
+          <thead><tr><th>Role</th><th>Typical access</th></tr></thead>
+          <tbody>
+            <tr><td>TENANT_ADMIN</td><td>Full access including settings, channels, billing</td></tr>
+            <tr><td>MANAGER</td><td>Operations, reservations, most admin areas</td></tr>
+            <tr><td>FRONT_DESK</td><td>Reservations, check-in, guests</td></tr>
+            <tr><td>HOUSEKEEPING / MAINTENANCE</td><td>Tasks, housekeeping, maintenance</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="dashboard">
+        <h2>Dashboard</h2>
+        <p>The dashboard shows occupancy, today’s check-ins/out, open tasks, revenue snapshot, and recent bookings.</p>
+        <ul>
+          <li>Use the <strong>property switcher</strong> in the sidebar if you manage multiple properties.</li>
+          <li>Use the <strong>tenant switcher</strong> if your account belongs to more than one guesthouse.</li>
+        </ul>
+      </section>
+
+      <section id="reservations">
+        <h2>Reservations</h2>
+        <h3>Create a booking</h3>
+        <ol>
+          <li><strong>Reservations → New</strong> or walk-in from the availability calendar.</li>
+          <li>Pick room, dates, guest details, and source (Direct, OTA, Agent).</li>
+          <li>Confirm — status becomes <span class="badge">CONFIRMED</span> (or <span class="badge">PENDING</span> for unpaid online bookings).</li>
+        </ol>
+        <h3>Booking statuses</h3>
+        <table>
+          <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>PENDING</td><td>Awaiting payment (e.g. Stripe checkout not completed)</td></tr>
+            <tr><td>CONFIRMED</td><td>Active reservation; blocks availability</td></tr>
+            <tr><td>CHECKED_IN</td><td>Guest in house</td></tr>
+            <tr><td>CHECKED_OUT</td><td>Stay completed</td></tr>
+            <tr><td>CANCELLED</td><td>Cancelled; dates released</td></tr>
+          </tbody>
+        </table>
+        <h3>Sources</h3>
+        <p>Bookings may come from <code>direct</code> (website), admin, OTA iCal sync, or B2B agents. Filter by source in the reservations list.</p>
+      </section>
+
+      <section id="availability">
+        <h2>Availability calendar</h2>
+        <p><strong>Admin → Availability</strong> shows per-room occupancy plus <strong>external blocks</strong> from Booking.com / Airbnb iCal feeds.</p>
+        <ul>
+          <li>Green = available · Red = booked · External blocks show the OTA source.</li>
+          <li>Click a cell to start a new reservation for that room and date.</li>
+        </ul>
+      </section>
+
+      <section id="rooms-pricing">
+        <h2>Rooms &amp; pricing</h2>
+        <h3>Rooms</h3>
+        <p>Each <strong>physical room</strong> has a number, display name (room type), base price, amenities, photos, and capacity. The public booking widget groups rooms into <strong>offers</strong> by type and price.</p>
+        <h3>Pricing &amp; promotions</h3>
+        <ul>
+          <li><strong>Pricing</strong> — rate plans and nightly rules.</li>
+          <li><strong>Promotions</strong> — discount codes and seasonal offers.</li>
+          <li><strong>Rack rate</strong> — optional strikethrough “was” price on the website.</li>
+        </ul>
+        <h3>Travel agents</h3>
+        <p><strong>Agencies</strong> lets B2B partners book at net rates with commission tracking.</p>
+      </section>
+
+      <section id="guest-services">
+        <h2>Guest services</h2>
+        <div class="grid-2">
+          <div>
+            <h4>Extra services</h4>
+            <p>Transfers, baby cot, late checkout — sold at booking or added in admin.</p>
+          </div>
+          <div>
+            <h4>Room service &amp; F&amp;B</h4>
+            <p>Menu, orders, restaurant bills for in-house guests.</p>
+          </div>
+          <div>
+            <h4>Minibar</h4>
+            <p>Stock per room and charge on checkout.</p>
+          </div>
+          <div>
+            <h4>Housekeeping &amp; maintenance</h4>
+            <p>Tasks generated from check-out and manual requests.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="website">
+        <h2>Guest website</h2>
+        <p><strong>Admin → amaldives Page</strong> edits your public site: photos, highlights, amenities, room descriptions, and the homepage booking widget.</p>
+        <ul>
+          <li><strong>Profile</strong> tab — property story, stats, gallery.</li>
+          <li><strong>Branding</strong> — logo, colors, hero image.</li>
+          <li><strong>Domain</strong> — point your custom domain (e.g. rivethibeach.com) to STAY.</li>
+        </ul>
+      </section>
+
+      <section id="booking">
+        <h2>Direct booking</h2>
+        <p>Guests book from the homepage hero or <code>/book</code>. Flow:</p>
+        <ol>
+          <li>Choose check-in, check-out, guests → <strong>Search</strong>.</li>
+          <li>Select a <strong>room type</strong> (not individual room numbers).</li>
+          <li>Optional airport transfer and add-ons.</li>
+          <li>Guest details → <strong>Card (Stripe)</strong> or <strong>Pay at property</strong>.</li>
+        </ol>
+        <div class="warn">
+          <strong>Stripe bookings</strong> stay <code>PENDING</code> until payment completes. They do not block OTA calendars until confirmed.
+        </div>
+      </section>
+
+      <section id="ical">
+        <h2>iCal sync &amp; OTAs (Channel Manager)</h2>
+        <p>All calendar linking is done in one admin screen. Direct URL:</p>
+        <p class="path"><strong>/admin/web?tab=channels</strong> — sidebar: <strong>Web &amp; Distribution → Channel Manager</strong></p>
+
+        <h3 id="ical-where">Cheat sheet — where each link lives</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Copy <em>from</em> (export URL)</th>
+              <th>Paste <em>into</em> (import URL)</th>
+              <th>Paste into Stay</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Stay</strong></td>
+              <td>Channel Manager → <strong>Your iCal Availability Feed</strong> (copy icon)</td>
+              <td>Channel Manager → <strong>Add an iCal feed</strong> URL field</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>Booking.com</strong></td>
+              <td>Extranet → Rates &amp; availability → <strong>Calendar</strong> → room → <strong>Sync calendars</strong> → <strong>Export calendar</strong> → copy link</td>
+              <td>Same screen → <strong>Import calendar</strong> → paste Stay URL</td>
+              <td>Source: Booking.com · Room dropdown · URL field · <strong>Add feed</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Airbnb</strong></td>
+              <td>Listing → <strong>Calendar</strong> → <strong>Availability settings</strong> → <strong>Export calendar</strong> → copy link</td>
+              <td>Same panel → <strong>Import calendar</strong> → paste Stay URL</td>
+              <td>Source: Airbnb · Room · URL · <strong>Add feed</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Expedia</strong></td>
+              <td>Partner Central → property → <strong>Rooms and rates</strong> → room → <strong>Calendar sync</strong> → <strong>Export</strong></td>
+              <td>Same → <strong>Import calendar</strong> / iCal import → paste Stay URL</td>
+              <td>Source: Other · Room · URL · <strong>Add feed</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Vrbo</strong></td>
+              <td>Listing → <strong>Calendar</strong> → <strong>Import &amp; export</strong> → <strong>Export calendar</strong></td>
+              <td>Same → <strong>Import calendar</strong> → paste Stay URL</td>
+              <td>Source: Vrbo · Room · URL · <strong>Add feed</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Stay — open Channel Manager (screenshots)</h3>
+        <ol>
+          <li>Sign in → left sidebar <strong>Web &amp; Distribution</strong> (click to expand).</li>
+          <li>Click <strong>Channel Manager</strong> (not “amaldives Page”).</li>
+          <li>Or open <code>/admin/web?tab=channels</code> directly.</li>
+        </ol>
+        <figure class="figure">
+          <img src="/help/images/stay-sidebar-web-menu.png" alt="Stay admin sidebar showing Web and Distribution menu with Channel Manager" loading="lazy" />
+          <figcaption>Screenshot: sidebar → <strong>Web &amp; Distribution</strong> → <strong>Channel Manager</strong></figcaption>
+        </figure>
+
+        <h4>A) Copy Stay URL → paste into OTAs</h4>
+        <p>Top green box: <strong>Your iCal Availability Feed</strong>. Click the <strong>copy</strong> icon next to the URL (or use <strong>Test Feed</strong>).</p>
+        <div class="code-row">
+          <code id="ical-export-url">https://stay.amaldives.com/api/public/your-slug/calendar.ics</code>
+          <button type="button" class="btn-copy" data-copy="ical-export-url">Copy</button>
+        </div>
+        <p>Custom domain (same file):</p>
+        <div class="code-row">
+          <code id="ical-export-custom">https://your-domain.com/api/public/your-slug/calendar.ics</code>
+          <button type="button" class="btn-copy" data-copy="ical-export-custom">Copy</button>
+        </div>
+        <figure class="figure">
+          <img src="/help/images/stay-export-url-box.png" alt="Stay Channel Manager export URL box with copy button" loading="lazy" />
+          <figcaption>Screenshot: <strong>Your iCal Availability Feed</strong> — copy this URL into each OTA’s <em>Import calendar</em> field</figcaption>
+        </figure>
+
+        <h4>B) Copy OTA URL → paste into Stay</h4>
+        <p>Scroll to <strong>Block dates from Booking.com / Airbnb</strong>:</p>
+        <ol>
+          <li><strong>Source</strong> dropdown (Booking.com / Airbnb / Vrbo / Other).</li>
+          <li><strong>Room</strong> dropdown — pick the matching Stay room (not “All rooms” unless whole property closed).</li>
+          <li>Paste OTA export URL in the long URL field (placeholder shows <code>ical.booking.com</code>).</li>
+          <li>Optional <strong>Label</strong> (e.g. “Booking.com — Deluxe Sea View”).</li>
+          <li>Click teal <strong>Add feed</strong>.</li>
+        </ol>
+        <figure class="figure">
+          <img src="/help/images/stay-import-ota-form.png" alt="Stay form to add OTA iCal feed with source, room, and URL fields" loading="lazy" />
+          <figcaption>Screenshot: paste each OTA <strong>export</strong> link here · click <strong>Add feed</strong></figcaption>
+        </figure>
+        <p>After adding: use <strong>Sync now</strong> on each row; check <strong>Last sync</strong> and block count.</p>
+        <figure class="figure">
+          <img src="/help/images/stay-channel-manager-full.png" alt="Full Stay Channel Manager page" loading="lazy" />
+          <figcaption>Full Channel Manager page (export at top, OTA import feeds below)</figcaption>
+        </figure>
+
+        <div class="warn">
+          <strong>Multi-room:</strong> Stay’s export URL is <em>property-wide</em> (all confirmed bookings). Each OTA <em>import</em> feed should map to one Stay room. Re-importing the same Stay URL on every Booking.com room type can over-block.
+        </div>
+
+        <h3>Booking.com — exact clicks</h3>
+        <div class="ota-block">
+          <p class="path">Login: <a href="https://admin.booking.com" target="_blank" rel="noopener">admin.booking.com</a></p>
+          <h4>Find export link (Booking.com → Stay)</h4>
+          <ol>
+            <li><strong>Rates &amp; availability</strong> (left menu).</li>
+            <li><strong>Calendar</strong> → select the <strong>room/rate plan</strong> you sell on Booking.com.</li>
+            <li><strong>Sync calendars</strong> (or calendar sync icon).</li>
+            <li>Under <strong>Export calendar</strong> → <strong>Copy link</strong> (URL like <code>https://ical.booking.com/v1/export?…</code>).</li>
+            <li>Paste into Stay → <strong>Add an iCal feed</strong> (see screenshot above).</li>
+          </ol>
+          <h4>Paste Stay link (Stay → Booking.com)</h4>
+          <ol>
+            <li>Same <strong>Sync calendars</strong> screen.</li>
+            <li><strong>Import calendar</strong> → paste Stay export URL → confirm.</li>
+            <li>Booking.com refreshes imports about every <strong>6–12 hours</strong> (their schedule).</li>
+          </ol>
+          <figure class="figure">
+            <img src="/help/images/ota-booking-help-calendar.png" alt="Booking.com partner help article on syncing calendars" loading="lazy" />
+            <figcaption>Booking.com partner help: <a href="https://partner.booking.com/en-us/help/rates-availability/extranet-calendar/syncing-calendars" target="_blank" rel="noopener">Syncing calendars</a> (reference)</figcaption>
+          </figure>
+        </div>
+
+        <h3>Airbnb — exact clicks</h3>
+        <div class="ota-block">
+          <p class="path">Login: <a href="https://www.airbnb.com/hosting" target="_blank" rel="noopener">airbnb.com/hosting</a> → select listing</p>
+          <h4>Find export link (Airbnb → Stay)</h4>
+          <ol>
+            <li>Open the <strong>listing</strong> → tab <strong>Calendar</strong>.</li>
+            <li><strong>Availability settings</strong> (gear / settings on calendar).</li>
+            <li><strong>Connect calendars</strong> or <strong>Connect to another website</strong>.</li>
+            <li><strong>Export calendar</strong> → copy the link (often <code>https://www.airbnb.com/calendar/ical/…</code>).</li>
+            <li>Paste into Stay <strong>Add feed</strong> · source <strong>Airbnb</strong> · matching room.</li>
+          </ol>
+          <h4>Paste Stay link (Stay → Airbnb)</h4>
+          <ol>
+            <li>Same <strong>Availability settings</strong> panel.</li>
+            <li><strong>Import calendar</strong> → paste Stay URL → name the calendar (e.g. “Stay PMS”) → Import.</li>
+            <li>Airbnb typically refreshes every <strong>~2 hours</strong>.</li>
+          </ol>
+          <figure class="figure">
+            <img src="/help/images/ota-airbnb-help-calendar.png" alt="Airbnb help article on syncing calendars" loading="lazy" />
+            <figcaption>Airbnb help: <a href="https://www.airbnb.com/help/article/99" target="_blank" rel="noopener">Sync calendar with another calendar</a> (reference)</figcaption>
+          </figure>
+        </div>
+
+        <h3>Expedia / Hotels.com — exact clicks</h3>
+        <div class="ota-block">
+          <p class="path">Login: <a href="https://www.expediapartnercentral.com" target="_blank" rel="noopener">expediapartnercentral.com</a></p>
+          <h4>Find export link (Expedia → Stay)</h4>
+          <ol>
+            <li>Select <strong>property</strong> → <strong>Rooms and rates</strong> (or Inventory).</li>
+            <li>Open the <strong>room type</strong> → <strong>Calendar sync</strong> / <strong>iCal</strong>.</li>
+            <li><strong>Export calendar</strong> → copy URL.</li>
+            <li>Stay: source <strong>Other</strong>, label “Expedia — …”, paste URL, <strong>Add feed</strong>.</li>
+          </ol>
+          <h4>Paste Stay link (Stay → Expedia)</h4>
+          <ol>
+            <li>Same calendar sync area → <strong>Import calendar</strong> / <strong>Add external calendar</strong>.</li>
+            <li>Paste Stay export URL → save.</li>
+          </ol>
+          <figure class="figure">
+            <img src="/help/images/ota-expedia-help-calendar.png" alt="Expedia Partner Central calendar sync help" loading="lazy" />
+            <figcaption>Expedia Partner Central calendar sync help (reference)</figcaption>
+          </figure>
+        </div>
+
+        <h3>Vrbo / HomeAway — exact clicks</h3>
+        <div class="ota-block">
+          <p class="path">Login: <a href="https://www.vrbo.com/traveler/th/account" target="_blank" rel="noopener">vrbo.com</a> → host dashboard → listing</p>
+          <h4>Find export link (Vrbo → Stay)</h4>
+          <ol>
+            <li>Listing <strong>Calendar</strong>.</li>
+            <li><strong>Import &amp; export</strong> or <strong>Sync calendars</strong>.</li>
+            <li><strong>Export calendar</strong> → copy link.</li>
+            <li>Stay: source <strong>Vrbo</strong>, room, paste URL, <strong>Add feed</strong>.</li>
+          </ol>
+          <h4>Paste Stay link (Stay → Vrbo)</h4>
+          <ol>
+            <li>Same area → <strong>Import calendar</strong> → paste Stay URL.</li>
+          </ol>
+          <p class="tip">Vrbo UI varies by region; search help for “import export calendar” if menus differ.</p>
+        </div>
+
+        <h3>Channel managers (Cloudbeds, Lodgify, SiteMinder, etc.)</h3>
+        <ul>
+          <li><strong>Import Stay URL:</strong> CM → External calendars / iCal import / blocked dates → paste Stay export URL.</li>
+          <li><strong>Export to Stay:</strong> CM → per-room iCal export URL → paste in Stay <strong>Add feed</strong> (source Other).</li>
+        </ul>
+
+        <h3>Verify sync</h3>
+        <ul>
+          <li>Stay: <strong>Test Feed</strong> → “Feed OK” · inbound <strong>Last sync</strong> · <strong>Sync now</strong>.</li>
+          <li><strong>Admin → Availability</strong> — external blocks shown per room.</li>
+          <li>Website search — OTA-booked dates should not appear as available.</li>
+        </ul>
+      </section>
+
+      <section id="payments">
+        <h2>Payments</h2>
+        <p><strong>Settings → Payments</strong> configures Stripe and pay-at-property.</p>
+        <ul>
+          <li><strong>Stripe</strong> — guest pays online; booking confirms via webhook after payment.</li>
+          <li><strong>Pay at property</strong> — booking confirms immediately; collect on arrival.</li>
+          <li><strong>Deposits</strong> — optional partial charge at booking (configured in tenant settings).</li>
+        </ul>
+        <p>Manage payouts and disputes in your <a href="https://dashboard.stripe.com" target="_blank" rel="noopener">Stripe Dashboard</a>.</p>
+      </section>
+
+      <section id="checkin">
+        <h2>Instant check-in &amp; check-out</h2>
+        <ul>
+          <li><strong>Admin → Instant check-in</strong> — scan guest QR or enter check-in code.</li>
+          <li>Each booking gets <code>checkInCode</code> and <code>checkoutCode</code> (also on confirmation).</li>
+          <li><strong>Settings → Check-in</strong> — QR templates and checkout automation.</li>
+          <li>Guests use the <strong>Check-in</strong> tab on their stay portal when enabled.</li>
+        </ul>
+      </section>
+
+      <section id="api">
+        <h2>Public APIs (for integrations)</h2>
+        <p>Base path: <code>/api/public/{subdomain}/…</code></p>
+        <table>
+          <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET /info</code></td><td>Property, extras, payment providers</td></tr>
+            <tr><td><code>GET /rooms?checkIn&checkOut&adults</code></td><td>Available room-type offers</td></tr>
+            <tr><td><code>POST /book</code></td><td>Create booking (Stripe or pay-at-property)</td></tr>
+            <tr><td><code>GET /calendar.ics</code></td><td>Outbound iCal for OTAs</td></tr>
+          </tbody>
+        </table>
+        <p>Authenticated admin APIs live under <code>/api/admin/…</code> (session cookie required).</p>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+        <table>
+          <thead><tr><th>Problem</th><th>What to check</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Unauthorized after sign-in</td>
+              <td>User needs tenant membership; role must be admin/manager/front desk.</td>
+            </tr>
+            <tr>
+              <td>OTA still shows available after Stay booking</td>
+              <td>OTA polls slowly (hours). Booking must be CONFIRMED, not PENDING.</td>
+            </tr>
+            <tr>
+              <td>Stay shows available after OTA booking</td>
+              <td>Add inbound iCal feed; click Sync now; check lastError on feed.</td>
+            </tr>
+            <tr>
+              <td>Double booking</td>
+              <td>Ensure inbound feed mapped to correct room; both directions connected.</td>
+            </tr>
+            <tr>
+              <td>iCal feed HTTP error</td>
+              <td>Re-export URL from OTA; URLs expire when regenerated.</td>
+            </tr>
+            <tr>
+              <td>Room types wrong on website</td>
+              <td>Edit room <strong>name</strong> and amenities under Rooms; offers group by type.</td>
+            </tr>
+            <tr>
+              <td>Stripe booking missing</td>
+              <td>Payment incomplete — guest must finish Checkout; check Stripe webhook logs.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:1rem;color:var(--muted);font-size:0.875rem;">
+          Platform support: <a href="mailto:support@amaldives.com">support@amaldives.com</a> ·
+          Reservations (Rivethi example): <a href="mailto:reservations@rivethibeach.com">reservations@rivethibeach.com</a>
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var sub = params.get('subdomain') || params.get('slug') || 'your-slug';
+      var domain = params.get('domain') || '';
+
+      function el(id) { return document.getElementById(id); }
+
+      document.querySelectorAll('.subdomain').forEach(function (n) {
+        n.textContent = sub;
+      });
+
+      var stayBase = 'https://' + sub + '.stay.amaldives.com';
+      var exportUrl = 'https://stay.amaldives.com/api/public/' + sub + '/calendar.ics';
+      var exportCustom = domain
+        ? 'https://' + domain + '/api/public/' + sub + '/calendar.ics'
+        : 'https://your-domain.com/api/public/' + sub + '/calendar.ics';
+
+      if (el('ical-export-url')) el('ical-export-url').textContent = exportUrl;
+      if (el('ical-export-custom')) el('ical-export-custom').textContent = exportCustom;
+      if (el('sample-stay-url')) el('sample-stay-url').innerHTML =
+        '<a href="' + stayBase + '" target="_blank" rel="noopener">' + stayBase + '</a>';
+      if (domain && el('sample-domain')) el('sample-domain').textContent = domain;
+
+      document.querySelectorAll('.btn-copy').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-copy');
+          var node = el(id);
+          if (!node) return;
+          var text = node.textContent;
+          navigator.clipboard.writeText(text).then(function () {
+            var prev = btn.textContent;
+            btn.textContent = 'Copied';
+            setTimeout(function () { btn.textContent = prev; }, 1500);
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
