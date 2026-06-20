@@ -307,6 +307,10 @@ function AvailabilityCalendarInner() {
   const [selStart, setSelStart] = useState<string | null>(null);
   const [selEnd, setSelEnd] = useState<string | null>(null);
   const [selRooms, setSelRooms] = useState<Set<string>>(new Set());
+  // When a selection is started by clicking a specific room's cell, remember
+  // that room so we auto-select ONLY it (not all 18). Null = started from a
+  // date-column header → select all available rooms (whole-property block).
+  const [selAnchorRoom, setSelAnchorRoom] = useState<string | null>(null);
   const [showPanel, setShowPanel] = useState(false);
   const [success, setSuccess] = useState<{ groupId: string; count: number } | null>(null);
 
@@ -359,11 +363,16 @@ function AvailabilityCalendarInner() {
   // Auto-select available rooms when range is set, then open panel
   useEffect(() => {
     if (selStart && selEnd && rooms) {
-      const autoSel = new Set(rooms.filter(availableInRange).map((r) => r.id));
+      const available = rooms.filter(availableInRange);
+      // Cell-started selection → only the room they clicked. Header-started
+      // selection (anchor null) → all available rooms.
+      const autoSel = selAnchorRoom
+        ? new Set(available.filter((r) => r.id === selAnchorRoom).map((r) => r.id))
+        : new Set(available.map((r) => r.id));
       setSelRooms(autoSel);
       if (autoSel.size > 0) setShowPanel(true);
     }
-  }, [selStart, selEnd, rooms, availableInRange]);
+  }, [selStart, selEnd, rooms, availableInRange, selAnchorRoom]);
 
   function getCellStatus(room: RoomAvailability, dateKey: string): CellStatus {
     if (room.bookedDates.includes(dateKey)) return 'BOOKED';
@@ -380,10 +389,11 @@ function AvailabilityCalendarInner() {
   // Handle clicking a date column header
   function handleDateHeaderClick(dateKey: string) {
     if (!selStart || (selStart && selEnd)) {
-      // Start fresh selection
+      // Start fresh selection — from the date header means "all rooms"
       setSelStart(dateKey);
       setSelEnd(null);
       setSelRooms(new Set());
+      setSelAnchorRoom(null);
       setShowPanel(false);
     } else {
       // Set end date — panel will open via useEffect after rooms are auto-selected
@@ -397,10 +407,11 @@ function AvailabilityCalendarInner() {
     if (status !== 'AVAILABLE') return;
 
     if (!selStart || (selStart && selEnd)) {
-      // Start new selection at this date
+      // Start new selection at this date, anchored to THIS room only
       setSelStart(dateKey);
       setSelEnd(null);
       setSelRooms(new Set());
+      setSelAnchorRoom(room.id);
       setShowPanel(false);
     } else {
       // Extend range to this date — panel will open via useEffect
