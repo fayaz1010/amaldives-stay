@@ -40,7 +40,13 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
       {/* Header */}
       <header className="border-b bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-gray-900">{tenant.name}</Link>
+          <Link href="/" className="flex items-center gap-2.5">
+            {tenant.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={tenant.logo} alt={tenant.name} className="h-9 w-auto object-contain" />
+            )}
+            <span className="text-2xl font-bold text-gray-900">{tenant.name}</span>
+          </Link>
           <Link href="/#rooms" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
             <ArrowLeft className="h-4 w-4" /> All rooms
           </Link>

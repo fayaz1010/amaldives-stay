@@ -620,8 +620,16 @@ export function CheckoutModal({ bookingId, mode, onClose }: CheckoutModalProps) 
     <>
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #print-receipt-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; padding: 32px; }
+          /* Hide everything, then re-show only the receipt and its descendants.
+             visibility (unlike display:none) lets descendants override a hidden ancestor,
+             so this works even though the wrapper is nested deep in the React tree. */
+          body * { visibility: hidden !important; }
+          #print-receipt-wrapper,
+          #print-receipt-wrapper * { visibility: visible !important; }
+          #print-receipt-wrapper {
+            display: block !important;
+            position: absolute; top: 0; left: 0; width: 100%; padding: 32px;
+          }
         }
         #print-receipt-wrapper { display: none; }
       `}</style>
