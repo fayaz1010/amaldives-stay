@@ -202,16 +202,26 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
                     {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : '📷 Upload logo'}
                     <input
                       type="file"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      accept="image/png,image/jpeg,image/webp"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         setLogoUploading(true);
-                        const reader = new FileReader();
-                        reader.onload = () => { setLogo(reader.result as string); setLogoUploading(false); };
-                        reader.onerror = () => { alert('Failed to read file'); setLogoUploading(false); };
-                        reader.readAsDataURL(file);
+                        try {
+                          const fd = new FormData();
+                          fd.append('files', file);
+                          fd.append('kind', 'branding');
+                          const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+                          const data = await res.json().catch(() => ({}));
+                          if (!res.ok) throw new Error(data.error || `Upload failed (HTTP ${res.status})`);
+                          setLogo(data.urls[0]);
+                        } catch (err: any) {
+                          alert(err?.message || 'Failed to upload logo');
+                        } finally {
+                          setLogoUploading(false);
+                          e.target.value = '';
+                        }
                       }}
                     />
                   </label>
@@ -221,7 +231,7 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-gray-400">PNG, JPG or SVG · shown on your guest booking page</p>
+              <p className="text-xs text-gray-400">PNG, JPG or WebP · stored on Cloudflare R2 · shown on your guest booking page</p>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm pt-2">
               <div>
