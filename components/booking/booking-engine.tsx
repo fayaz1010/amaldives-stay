@@ -248,7 +248,7 @@ export function BookingEngine({
               e.preventDefault();
               searchRooms();
             }}
-            className="flex flex-col md:flex-row gap-3 items-end"
+            className={`flex flex-col gap-3 items-end ${compact ? '' : 'md:flex-row'}`}
           >
             <div className="flex-1 w-full">
               <Label>Check-in</Label>
@@ -268,7 +268,7 @@ export function BookingEngine({
                 onChange={(e) => setSearch({ ...search, checkOut: e.target.value })}
               />
             </div>
-            <div className="w-full md:w-28">
+            <div className={compact ? 'w-full' : 'w-full md:w-28'}>
               <Label>Guests</Label>
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -287,6 +287,7 @@ export function BookingEngine({
             <Button
               type="submit"
               disabled={loading}
+              className={compact ? 'w-full' : ''}
               style={{ backgroundColor: primaryColor, color: '#fff' }}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}

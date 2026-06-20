@@ -112,6 +112,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
                 tenantName={tenant.name}
                 primaryColor={primary}
                 source="stay_subdomain"
+                compact
               />
             </div>
           </aside>
