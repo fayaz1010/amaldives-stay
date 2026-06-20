@@ -36,10 +36,13 @@ export async function PATCH(request: NextRequest) {
     if (data.state !== undefined) propertyUpdates.state = data.state;
     if (data.phone !== undefined) propertyUpdates.phone = data.phone;
     if (data.email !== undefined) propertyUpdates.email = data.email;
+    if (data.checkInTime !== undefined) propertyUpdates.checkInTime = data.checkInTime;
+    if (data.checkOutTime !== undefined) propertyUpdates.checkOutTime = data.checkOutTime;
 
     // Fields that get merged into tenant.settings JSON
     const settingsMerge: Record<string, any> = {};
     if (data.onboardingComplete !== undefined) settingsMerge.onboardingComplete = data.onboardingComplete;
+    if (data.cancellationPolicy !== undefined) settingsMerge.cancellationPolicy = data.cancellationPolicy;
     // tagline lives under settings.webProfile.tagline (matches public info API)
     const taglineProvided = data.tagline !== undefined;
 
