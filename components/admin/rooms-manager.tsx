@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, BedDouble, Users, Maximize2, Pencil } from 'lucide-react';
+import { Plus, BedDouble, Users, Maximize2, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddRoomModal } from '@/components/admin/add-room-modal';
+import { useRouter } from 'next/navigation';
 
 export type GroupedRoomType = {
   typeName: string;
@@ -149,6 +150,86 @@ export function RoomsManager({ groupedRoomTypes, propertyId }: RoomsManagerProps
   );
 }
 
+type EditUnitState = { id: string; number: string } | null;
+
+function EditUnitModal({
+  unit,
+  onClose,
+  onSaved,
+}: {
+  unit: EditUnitState;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [number, setNumber] = useState(unit?.number ?? '');
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  if (!unit) return null;
+
+  const handleSave = async () => {
+    if (!number.trim()) return;
+    setSaving(true);
+    await fetch(`/api/admin/rooms/${unit.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: number.trim() }),
+    });
+    setSaving(false);
+    onSaved();
+    onClose();
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    await fetch(`/api/admin/rooms/${unit.id}`, { method: 'DELETE' });
+    setDeleting(false);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-gray-900">Edit Unit</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <label className="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+        <input
+          className="w-full border rounded-md px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          value={number}
+          onChange={(e) => setNumber(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          autoFocus
+        />
+
+        <div className="flex gap-2">
+          <Button className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+          {!confirmDelete ? (
+            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button variant="outline" className="text-red-600 border-red-300 bg-red-50" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Confirm delete'}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RoomTypeCard({
   group,
   onAddUnit,
@@ -158,6 +239,8 @@ function RoomTypeCard({
   onAddUnit: () => void;
   onEditType: () => void;
 }) {
+  const router = useRouter();
+  const [editUnit, setEditUnit] = useState<EditUnitState>(null);
   const visibleAmenities = group.amenities.slice(0, 5);
   const moreAmenities = Math.max(0, group.amenities.length - 5);
 
@@ -246,17 +329,26 @@ function RoomTypeCard({
           </div>
           <div className="flex flex-wrap gap-1.5">
             {group.rooms.map((room) => (
-              <div
+              <button
                 key={room.id}
-                title={`Room ${room.number} — ${STATUS_LABEL[room.status] ?? room.status}`}
-                className={`h-7 min-w-7 px-2 rounded text-xs font-semibold text-white flex items-center justify-center ${
+                title={`Room ${room.number} (${STATUS_LABEL[room.status] ?? room.status}) — click to edit or delete`}
+                onClick={() => setEditUnit({ id: room.id, number: room.number })}
+                className={`h-7 min-w-7 px-2 rounded text-xs font-semibold text-white flex items-center justify-center hover:opacity-80 hover:ring-2 hover:ring-white/60 hover:ring-offset-1 transition-opacity cursor-pointer ${
                   STATUS_COLORS[room.status] ?? 'bg-gray-400'
                 }`}
               >
                 {room.number}
-              </div>
+              </button>
             ))}
           </div>
+
+          {editUnit && (
+            <EditUnitModal
+              unit={editUnit}
+              onClose={() => setEditUnit(null)}
+              onSaved={() => router.refresh()}
+            />
+          )}
           <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 mt-2">
             <LegendDot color="bg-emerald-500" label="Available" />
             <LegendDot color="bg-red-500" label="Occupied" />

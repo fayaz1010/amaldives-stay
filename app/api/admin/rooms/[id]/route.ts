@@ -21,3 +21,18 @@ export async function PATCH(
   });
   return NextResponse.json({ room });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.tenantId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  await prisma.room.delete({
+    where: { id: params.id, tenantId: session.user.tenantId },
+  });
+  return NextResponse.json({ ok: true });
+}
