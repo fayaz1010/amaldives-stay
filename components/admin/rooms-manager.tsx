@@ -165,28 +165,47 @@ function EditUnitModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!unit) return null;
 
   const handleSave = async () => {
     if (!number.trim()) return;
     setSaving(true);
-    await fetch(`/api/admin/rooms/${unit.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ number: number.trim() }),
-    });
-    setSaving(false);
-    onSaved();
-    onClose();
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/rooms/${unit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: number.trim() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Save failed (HTTP ${res.status})`);
+      }
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to save');
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    await fetch(`/api/admin/rooms/${unit.id}`, { method: 'DELETE' });
-    setDeleting(false);
-    onSaved();
-    onClose();
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/rooms/${unit.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Delete failed (HTTP ${res.status})`);
+      }
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to delete');
+      setDeleting(false);
+    }
   };
 
   return (
@@ -210,6 +229,12 @@ function EditUnitModal({
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
           autoFocus
         />
+
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 mb-3">
+            {error}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <Button className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white" onClick={handleSave} disabled={saving}>
