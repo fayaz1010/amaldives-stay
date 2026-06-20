@@ -468,7 +468,19 @@ export function AddRoomModal({
             </div>
           </div>
 
-          {!isEditMode && (
+          {isEditMode && editGroup && editGroup.rooms.length > 0 ? (
+            <div className="space-y-2">
+              <Label>Current Units ({editGroup.rooms.length})</Label>
+              <div className="flex flex-wrap gap-1.5 rounded-md border p-3 bg-gray-50">
+                {editGroup.rooms.map((r) => (
+                  <span key={r.id} className="inline-flex items-center rounded px-2 py-1 text-xs font-semibold bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    {r.number}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400">These unit numbers stay the same — editing here updates the type details (name, price, capacity, etc.) for all units above.</p>
+            </div>
+          ) : !isEditMode ? (
             <div className="space-y-2">
               <Label htmlFor="roomNumbers">Room Numbers</Label>
               <Input
@@ -483,7 +495,7 @@ export function AddRoomModal({
                 {numbers.length > 0 ? ` (${numbers.length} unit${numbers.length === 1 ? '' : 's'})` : ''}
               </p>
             </div>
-          )}
+          ) : null}
 
           {error && (
             <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
