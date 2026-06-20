@@ -230,6 +230,64 @@ function EditUnitModal({
   );
 }
 
+function DeleteTypeModal({
+  group,
+  onClose,
+  onDeleted,
+}: {
+  group: GroupedRoomType;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      for (const room of group.rooms) {
+        const res = await fetch(`/api/admin/rooms/${room.id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || `Failed to delete unit ${room.number} (HTTP ${res.status})`);
+        }
+      }
+      onDeleted();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to delete room type');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-3">
+          <Trash2 className="h-5 w-5 text-red-600" />
+          <h3 className="text-base font-semibold text-gray-900">Delete &ldquo;{group.typeName}&rdquo;?</h3>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          This permanently deletes the room type and all {group.rooms.length} unit
+          {group.rooms.length === 1 ? '' : 's'} ({group.rooms.map((r) => r.number).join(', ')}). This cannot be undone.
+        </p>
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 mb-3">{error}</div>
+        )}
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete type'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RoomTypeCard({
   group,
   onAddUnit,
@@ -241,6 +299,7 @@ function RoomTypeCard({
 }) {
   const router = useRouter();
   const [editUnit, setEditUnit] = useState<EditUnitState>(null);
+  const [deleteType, setDeleteType] = useState(false);
   const visibleAmenities = group.amenities.slice(0, 5);
   const moreAmenities = Math.max(0, group.amenities.length - 5);
 
@@ -261,10 +320,20 @@ function RoomTypeCard({
             <span className="inline-flex items-center rounded-full bg-white/25 backdrop-blur px-2.5 py-1 text-xs font-medium uppercase tracking-wide">
               {group.type}
             </span>
-            <span className="inline-flex items-center rounded-full bg-white text-cyan-700 px-3 py-1 text-sm font-bold shadow">
-              ${group.basePrice}
-              <span className="text-xs font-medium text-cyan-500 ml-1">/night</span>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-white text-cyan-700 px-3 py-1 text-sm font-bold shadow">
+                ${group.basePrice}
+                <span className="text-xs font-medium text-cyan-500 ml-1">/night</span>
+              </span>
+              <button
+                type="button"
+                title="Delete this room type"
+                onClick={() => setDeleteType(true)}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-white/25 backdrop-blur text-white hover:bg-red-600 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <h3 className="text-2xl font-bold drop-shadow">{group.typeName}</h3>
         </div>
@@ -347,6 +416,13 @@ function RoomTypeCard({
               unit={editUnit}
               onClose={() => setEditUnit(null)}
               onSaved={() => router.refresh()}
+            />
+          )}
+          {deleteType && (
+            <DeleteTypeModal
+              group={group}
+              onClose={() => setDeleteType(false)}
+              onDeleted={() => router.refresh()}
             />
           )}
           <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 mt-2">
