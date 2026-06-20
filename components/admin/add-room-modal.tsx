@@ -84,6 +84,102 @@ const emptyForm: FormState = {
 };
 
 
+function UnitEditor({ rooms }: { rooms: { id: string; number: string; status: string }[] }) {
+  const [editing, setEditing] = useState<{ id: string; number: string } | null>(null);
+  const [number, setNumber] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [localRooms, setLocalRooms] = useState(rooms);
+
+  const openEdit = (r: { id: string; number: string }) => {
+    setEditing(r);
+    setNumber(r.number);
+    setConfirmDelete(false);
+  };
+
+  const handleSave = async () => {
+    if (!editing || !number.trim()) return;
+    setSaving(true);
+    await fetch(`/api/admin/rooms/${editing.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: number.trim() }),
+    });
+    setLocalRooms((rs) => rs.map((r) => r.id === editing.id ? { ...r, number: number.trim() } : r));
+    setSaving(false);
+    setEditing(null);
+  };
+
+  const handleDelete = async () => {
+    if (!editing) return;
+    setDeleting(true);
+    await fetch(`/api/admin/rooms/${editing.id}`, { method: 'DELETE' });
+    setLocalRooms((rs) => rs.filter((r) => r.id !== editing.id));
+    setDeleting(false);
+    setEditing(null);
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Current Units ({localRooms.length})</Label>
+      <div className="flex flex-wrap gap-1.5 rounded-md border p-3 bg-gray-50">
+        {localRooms.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => openEdit(r)}
+            className={`inline-flex items-center rounded px-2 py-1 text-xs font-semibold border cursor-pointer hover:opacity-80 transition-opacity ${
+              editing?.id === r.id
+                ? 'bg-cyan-500 text-white border-cyan-600'
+                : 'bg-cyan-100 text-cyan-800 border-cyan-200'
+            }`}
+          >
+            {r.number}
+          </button>
+        ))}
+      </div>
+
+      {editing && (
+        <div className="rounded-md border border-cyan-200 bg-cyan-50 p-3 space-y-2">
+          <p className="text-xs font-medium text-cyan-800">Editing unit: <strong>{editing.number}</strong></p>
+          <input
+            className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+            {!confirmDelete ? (
+              <Button type="button" size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setConfirmDelete(true)}>
+                Delete
+              </Button>
+            ) : (
+              <Button type="button" size="sm" variant="outline" className="text-red-600 border-red-300 bg-red-50" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Confirm delete'}
+              </Button>
+            )}
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-gray-400">Click a unit number to edit or delete it. Saving type details below updates price, capacity, etc. for all units.</p>
+    </div>
+  );
+}
+
 export function AddRoomModal({
   open,
   onOpenChange,
@@ -469,17 +565,7 @@ export function AddRoomModal({
           </div>
 
           {isEditMode && editGroup && editGroup.rooms.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Current Units ({editGroup.rooms.length})</Label>
-              <div className="flex flex-wrap gap-1.5 rounded-md border p-3 bg-gray-50">
-                {editGroup.rooms.map((r) => (
-                  <span key={r.id} className="inline-flex items-center rounded px-2 py-1 text-xs font-semibold bg-cyan-100 text-cyan-800 border border-cyan-200">
-                    {r.number}
-                  </span>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400">These unit numbers stay the same — editing here updates the type details (name, price, capacity, etc.) for all units above.</p>
-            </div>
+            <UnitEditor rooms={editGroup.rooms} />
           ) : !isEditMode ? (
             <div className="space-y-2">
               <Label htmlFor="roomNumbers">Room Numbers</Label>
