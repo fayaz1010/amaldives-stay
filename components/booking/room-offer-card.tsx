@@ -35,10 +35,10 @@ export function RoomOfferCard({
       }`}
       style={selected ? { borderColor: primaryColor } : undefined}
     >
-      <div className={`flex ${compact ? 'flex-col sm:flex-row' : 'flex-col md:flex-row'}`}>
+      <div className={`flex ${compact ? 'flex-col' : 'flex-col md:flex-row'}`}>
         <div
           className={`relative bg-gray-100 shrink-0 ${
-            compact ? 'w-full sm:w-36 h-32 sm:h-auto sm:min-h-[140px]' : 'w-full md:w-52 h-44 md:h-auto md:min-h-[180px]'
+            compact ? 'w-full h-36' : 'w-full md:w-52 h-44 md:h-auto md:min-h-[180px]'
           }`}
         >
           {image ? (
@@ -61,7 +61,7 @@ export function RoomOfferCard({
           )}
         </div>
 
-        <div className="flex-1 p-4 min-w-0 flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className={`flex-1 p-4 min-w-0 flex gap-4 ${compact ? 'flex-col' : 'flex-col sm:flex-row sm:items-start'}`}>
           <div className="flex-1 min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-xs uppercase tracking-wide">
@@ -118,7 +118,11 @@ export function RoomOfferCard({
             )}
           </div>
 
-          <div className="sm:text-right shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 border-t sm:border-t-0 pt-3 sm:pt-0">
+          <div className={`shrink-0 flex items-center gap-3 border-t pt-3 ${
+            compact
+              ? 'w-full justify-between'
+              : 'sm:text-right sm:flex-col sm:items-end justify-between sm:justify-start sm:border-t-0 sm:pt-0'
+          }`}>
             <div>
               {hasDiscount && (
                 <p className="text-xs text-gray-400 line-through">
