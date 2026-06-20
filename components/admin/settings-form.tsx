@@ -30,6 +30,8 @@ interface Property {
   country: string;
   phone?: string | null;
   email?: string | null;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
 }
 
 interface SettingsFormProps {
@@ -71,6 +73,11 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
   const [state, setState] = useState(property?.state ?? '');
   const [phone, setPhone] = useState(property?.phone ?? '');
   const [email, setEmail] = useState(property?.email ?? '');
+  const [checkInTime, setCheckInTime] = useState(property?.checkInTime ?? '14:00');
+  const [checkOutTime, setCheckOutTime] = useState(property?.checkOutTime ?? '12:00');
+  const [cancellationPolicy, setCancellationPolicy] = useState(
+    (tenant.settings as Record<string, any> | null)?.cancellationPolicy ?? ''
+  );
 
   // FPOS settings
   const fposSettings = tenant.settings?.fpos ?? {};
@@ -98,7 +105,7 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, logo, address, city, state, phone, email }),
+        body: JSON.stringify({ name, description, logo, address, city, state, phone, email, checkInTime, checkOutTime, cancellationPolicy }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -270,6 +277,34 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Policies</CardTitle>
+            <p className="text-sm text-gray-500">Check-in / checkout times and cancellation policy shown to guests before booking.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="checkInTime">Check-in Time</Label>
+                <Input id="checkInTime" type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkOutTime">Check-out Time</Label>
+                <Input id="checkOutTime" type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
+              <Input
+                id="cancellationPolicy"
+                placeholder="e.g. Free cancellation up to 24 hours before arrival"
+                value={cancellationPolicy}
+                onChange={(e) => setCancellationPolicy(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex items-center justify-end gap-3">
           {savedAt && (
