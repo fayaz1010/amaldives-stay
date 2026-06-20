@@ -72,8 +72,29 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  await prisma.room.delete({
-    where: { id: params.id, tenantId: session.user.tenantId },
-  });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.room.delete({
+      where: { id: params.id, tenantId: session.user.tenantId },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2025') {
+        return NextResponse.json({ error: 'Room not found.' }, { status: 404 });
+      }
+      // Foreign-key constraint — room has linked bookings or other records
+      if (err.code === 'P2003') {
+        return NextResponse.json(
+          {
+            error:
+              'This room has linked bookings or records and cannot be deleted directly. ' +
+              'Cancel/move its bookings first, or contact support to clean it up.',
+          },
+          { status: 409 }
+        );
+      }
+    }
+    console.error('DELETE /api/admin/rooms/[id] failed:', err);
+    return NextResponse.json({ error: 'Failed to delete room.' }, { status: 500 });
+  }
 }
