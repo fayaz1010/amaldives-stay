@@ -181,7 +181,7 @@ function prettySource(source: string): string {
     .join('.');
 }
 
-async function ensureGuestUser(input: {
+export async function ensureGuestUser(input: {
   email: string;
   name: string;
   phone: string | null;
