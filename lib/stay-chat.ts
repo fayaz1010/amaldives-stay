@@ -14,18 +14,22 @@ function addDays(d: Date, days: number): Date {
   return x;
 }
 
+/** Days after departure that admin↔guest chat stays open for post-stay follow-up. */
+const POST_STAY_GRACE_DAYS = 3;
+
 /**
- * Chat is available from check-in date through departure day (inclusive).
+ * Chat is available from booking creation (pre-arrival) through a few days
+ * after departure, so owners can coordinate with the guest before check-in and
+ * follow up shortly after check-out. Only hard-blocked for cancelled/no-show
+ * bookings.
  */
 export function canAccessStayChat(
   booking: Pick<Booking, 'checkInDate' | 'checkOutDate' | 'status'>,
   now = new Date(),
 ): boolean {
-  if (booking.status === 'CANCELLED') return false;
+  if (booking.status === 'CANCELLED' || booking.status === 'NO_SHOW') return false;
   const today = startOfDay(now);
-  const checkIn = startOfDay(booking.checkInDate);
-  const lastDay = startOfDay(booking.checkOutDate); // departure day inclusive
-  if (today < checkIn) return false;
+  const lastDay = addDays(startOfDay(booking.checkOutDate), POST_STAY_GRACE_DAYS);
   if (today > lastDay) return false;
   return true;
 }

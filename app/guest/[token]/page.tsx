@@ -362,7 +362,7 @@ export default function GuestPortalPage({
 
       <main className="max-w-2xl mx-auto px-4 pt-5">
         {/* Greeting */}
-        <div className="mb-5">
+        <div className="mb-4">
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome, {guestName}!
           </h1>
@@ -370,12 +370,55 @@ export default function GuestPortalPage({
             {booking.room?.name || booking.room?.type}
             {booking.property?.name ? ` · ${booking.property.name}` : ''}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {new Date(booking.checkInDate).toLocaleDateString()} →{' '}
-            {new Date(booking.checkOutDate).toLocaleDateString()} · {stayNights}{' '}
-            night{stayNights !== 1 ? 's' : ''}
-          </p>
         </div>
+
+        {/* Confirmation banner */}
+        <Card className="mb-5 border-teal-500 border-2 bg-teal-50">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-teal-700">
+                  Confirmation
+                </p>
+                <p className="text-lg font-bold font-mono text-gray-900 truncate">
+                  #{booking.confirmationNumber}
+                </p>
+              </div>
+              {booking.room && (
+                <Badge
+                  variant="outline"
+                  className="text-sm border-teal-500 text-teal-700 bg-white shrink-0"
+                >
+                  Room {booking.room.number}
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  Check-in
+                </p>
+                <p className="font-medium text-gray-900">
+                  {new Date(booking.checkInDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  Check-out
+                </p>
+                <p className="font-medium text-gray-900">
+                  {new Date(booking.checkOutDate).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              {stayNights} night{stayNights !== 1 ? 's' : ''}
+              {booking.room?.name || booking.room?.type
+                ? ` · ${booking.room?.name || booking.room?.type}`
+                : ''}
+            </p>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="bill" className="w-full">
           <TabsList className="grid grid-cols-5 w-full h-12 bg-white border">

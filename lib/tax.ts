@@ -88,6 +88,9 @@ export interface MiraBookingLike {
   totalAmount: number;
   checkInDate: Date;
   checkOutDate: Date;
+  // Platform commission (Booking.platformFee) accrued at booking creation. Owed
+  // even on a NO_SHOW, so it is summed independently of stay status.
+  platformFee?: number | null;
 }
 
 export interface MiraReturn {
@@ -97,6 +100,7 @@ export interface MiraReturn {
   tgstOutput: number; // TGST due on room revenue
   greenTaxDue: number; // Green Tax due
   serviceCharge: number; // 10% service charge (informational — paid to staff)
+  commissionDue: number; // platform commission (Booking.platformFee) accrued — incl. no-shows
   totalGovTaxDue: number; // tgstOutput + greenTaxDue (the MIRA cash)
   bookingCount: number;
   greenTaxExemptNote: string;
@@ -115,12 +119,18 @@ export function computeMiraReturn(
   const config = resolvePropertyTaxConfig(prop);
   let roomRevenue = 0;
   let guestNights = 0;
+  let commissionDue = 0;
   for (const b of bookings) {
     roomRevenue += b.totalAmount || 0;
     const n = nightsBetween(b.checkInDate, b.checkOutDate) || 1;
+    // Guest-nights (→ Green Tax) accrue for the booked nights even on a NO_SHOW:
+    // the green-tax liability is owed for the reserved stay regardless of arrival.
     guestNights += ((b.adults || 0) + (b.children || 0)) * n;
+    // Platform commission is owed on the booking (incl. no-shows) — sum it here.
+    commissionDue += b.platformFee || 0;
   }
   roomRevenue = round2(roomRevenue);
+  commissionDue = round2(commissionDue);
   const tgstOutput = computeTgst(roomRevenue, config.tgstRate);
   const greenTaxDue = computeGreenTax(guestNights, config.greenTaxUsdPerNight);
   const serviceCharge = round2(roomRevenue * config.serviceChargeRate);
@@ -131,6 +141,7 @@ export function computeMiraReturn(
     tgstOutput,
     greenTaxDue,
     serviceCharge,
+    commissionDue,
     totalGovTaxDue: round2(tgstOutput + greenTaxDue),
     bookingCount: bookings.length,
     greenTaxExemptNote: 'Under-2 guests are Green Tax exempt; not deducted here (no age data captured).',

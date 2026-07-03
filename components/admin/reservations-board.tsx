@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Loader2, Clock, CalendarCheck, DollarSign,
   Receipt, LogIn, LogOut, AlertCircle, User, Share2, MessageCircle,
+  Info, UserX, Mail, Phone,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { StayChatPanel } from '@/components/stay-chat-panel';
@@ -70,6 +71,13 @@ function nights(from: string, to: string) {
   return Math.max(1, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000));
 }
 
+// Chat is offered from booking (pre-arrival) through post-stay follow-up; only
+// hidden once the reservation is cancelled or marked no-show. Mirrors the
+// widened server-side gate in lib/stay-chat.ts.
+function canChat(status: string): boolean {
+  return !['CANCELLED', 'NO_SHOW'].includes(status);
+}
+
 function startOf(range: DateRange): Date | null {
   const now = new Date();
   if (range === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -99,6 +107,44 @@ interface Booking {
   serviceOrders?: Array<{ id: string; totalAmount: number }> | null;
 }
 
+// Fuller shape returned by GET /api/admin/bookings/[id] (getBookingById).
+interface BookingDetail {
+  id: string;
+  confirmationNumber: string;
+  checkInDate: string;
+  checkOutDate: string;
+  adults: number;
+  children: number;
+  totalAmount: number;
+  paidAmount: number;
+  platformFee: number;
+  status: string;
+  source?: string | null;
+  notes?: string | null;
+  specialRequests?: string | null;
+  guest?: {
+    name: string | null;
+    email: string;
+    guestProfile?: { phone?: string | null } | null;
+  } | null;
+  room?: {
+    number: string;
+    name: string | null;
+    type: string;
+    property?: { currency?: string | null } | null;
+  } | null;
+  payments?: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    method: string;
+    status: string;
+    createdAt: string;
+    notes?: string | null;
+  }> | null;
+  serviceOrders?: Array<{ id: string; totalAmount: number }> | null;
+}
+
 function grandTotal(b: Booking): number {
   // The amount the GUEST owes — room nights + service orders. The
   // platformFee is what stay.amaldives charges the owner (commission)
@@ -120,6 +166,46 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [chatBookingId, setChatBookingId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<BookingDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+
+  const loadDetail = useCallback(async (id: string) => {
+    setDetailLoading(true);
+    setDetailError(null);
+    setDetail(null);
+    try {
+      const res = await fetch(`/api/admin/bookings/${id}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load booking');
+      setDetail(data.booking);
+    } catch (e: unknown) {
+      setDetailError(e instanceof Error ? e.message : 'Failed to load booking');
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (detailId) loadDetail(detailId);
+  }, [detailId, loadDetail]);
+
+  async function markNoShow(id: string) {
+    if (!window.confirm('Mark this reservation as no-show? The guest did not arrive.')) return;
+    setBusyId(id);
+    try {
+      const res = await fetch(`/api/admin/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'NO_SHOW' }),
+      });
+      if (!res.ok) throw new Error();
+      setDetailId(null);
+      router.refresh();
+    } catch { alert('Failed to mark no-show'); }
+    finally { setBusyId(null); }
+  }
 
   useEffect(() => {
     if (!shareToast) return;
@@ -312,6 +398,38 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                               phone; this row used to overflow in CHECKED_IN state
                               where there are 4 buttons. */}
                           <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => setDetailId(b.id)}
+                              title="View booking details"
+                            >
+                              <Info className="h-3 w-3" />
+                            </Button>
+                            {canChat(b.status) && b.status !== 'CHECKED_IN' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => setChatBookingId(b.id)}
+                                title="Chat with guest"
+                              >
+                                <MessageCircle className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {(b.status === 'CONFIRMED' || b.status === 'PENDING') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+                                disabled={busy}
+                                onClick={() => markNoShow(b.id)}
+                                title="Mark reservation as no-show"
+                              >
+                                <UserX className="h-3 w-3" />
+                              </Button>
+                            )}
                             {b.status === 'CONFIRMED' && (
                               <Button size="sm" className="h-7 text-xs flex-1 bg-cyan-600 hover:bg-cyan-700"
                                 disabled={busy} onClick={() => quickCheckin(b.id)}>
@@ -333,7 +451,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                                   variant="outline"
                                   className="h-7 text-xs"
                                   onClick={() => setChatBookingId(b.id)}
-                                  title="Guest chat"
+                                  title="Chat with guest"
                                 >
                                   <MessageCircle className="h-3 w-3" />
                                 </Button>
@@ -409,7 +527,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
       <Dialog open={!!chatBookingId} onOpenChange={(o) => !o && setChatBookingId(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Stay chat</DialogTitle>
+            <DialogTitle>Chat with guest</DialogTitle>
           </DialogHeader>
           {chatBookingId && (
             <StayChatPanel
@@ -418,6 +536,156 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
               emptyHint="No messages from the guest yet."
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Booking detail modal */}
+      <Dialog open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Booking details</DialogTitle>
+          </DialogHeader>
+          {detailLoading && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
+            </div>
+          )}
+          {detailError && (
+            <p className="text-sm text-red-600 py-4 text-center">{detailError}</p>
+          )}
+          {!detailLoading && !detailError && detail && (() => {
+            const dn = nights(detail.checkInDate, detail.checkOutDate);
+            const balance = detail.totalAmount - detail.paidAmount;
+            const currency = detail.room?.property?.currency || 'USD';
+            const money = (v: number) =>
+              `${currency === 'USD' ? '$' : `${currency} `}${v.toFixed(2)}`;
+            return (
+              <div className="space-y-4 text-sm">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-base truncate">{detail.guest?.name || '—'}</p>
+                    <p className="text-xs text-gray-400">#{detail.confirmationNumber}</p>
+                  </div>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${STATUS_CHIP[detail.status] || 'bg-gray-100 text-gray-600'}`}>
+                    {detail.status.replace('_', ' ')}
+                  </span>
+                </div>
+
+                {/* Guest contact */}
+                <div className="space-y-1 text-gray-600">
+                  {detail.guest?.email && (
+                    <p className="flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                      <span className="truncate">{detail.guest.email}</span>
+                    </p>
+                  )}
+                  {detail.guest?.guestProfile?.phone && (
+                    <p className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                      <span>{detail.guest.guestProfile.phone}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Stay */}
+                <div className="rounded-lg border bg-gray-50 p-3 space-y-1.5">
+                  <p className="font-medium text-gray-800">
+                    Room {detail.room?.number}
+                    {detail.room?.name ? ` — ${detail.room.name}` : ''}
+                    <span className="text-gray-400 font-normal"> ({detail.room?.type})</span>
+                  </p>
+                  <p className="flex items-center gap-1.5 text-gray-600">
+                    <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    {new Date(detail.checkInDate).toLocaleDateString()} →{' '}
+                    {new Date(detail.checkOutDate).toLocaleDateString()}
+                    <span className="text-gray-400"> · {dn}n</span>
+                  </p>
+                  <p className="text-gray-600">
+                    {detail.adults} adult{detail.adults === 1 ? '' : 's'}
+                    {detail.children > 0 && `, ${detail.children} child${detail.children === 1 ? '' : 'ren'}`}
+                  </p>
+                  {detail.source && <p className="text-xs text-gray-400">via {detail.source}</p>}
+                </div>
+
+                {/* Money */}
+                <div className="rounded-lg border p-3 space-y-1">
+                  <div className="flex justify-between"><span className="text-gray-500">Total</span><span className="font-semibold">{money(detail.totalAmount)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Paid</span><span className="text-green-700">{money(detail.paidAmount)}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Balance</span>
+                    <span className={balance > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}>{money(balance)}</span>
+                  </div>
+                  {detail.platformFee > 0 && (
+                    <div className="flex justify-between border-t pt-1 mt-1">
+                      <span className="text-gray-400" title="Commission stay.amaldives charges you — not part of the guest's bill">Commission</span>
+                      <span className="text-gray-400">{money(detail.platformFee)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {detail.specialRequests && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-0.5">Special requests</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{detail.specialRequests}</p>
+                  </div>
+                )}
+                {detail.notes && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-0.5">Notes</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{detail.notes}</p>
+                  </div>
+                )}
+
+                {/* Payment history */}
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Payment history</p>
+                  {detail.payments && detail.payments.length > 0 ? (
+                    <div className="space-y-1">
+                      {detail.payments.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between text-xs border-b last:border-0 py-1">
+                          <span className="text-gray-600">
+                            {new Date(p.createdAt).toLocaleDateString()} · {p.method.replace('_', ' ')}
+                            <span className="text-gray-400"> ({p.status.toLowerCase()})</span>
+                          </span>
+                          <span className="font-medium">{`${p.currency === 'USD' ? '$' : `${p.currency} `}${p.amount.toFixed(2)}`}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">No payments recorded yet.</p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2 pt-1 border-t">
+                  {canChat(detail.status) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={() => { setChatBookingId(detail.id); setDetailId(null); }}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 mr-1" /> Chat with guest
+                    </Button>
+                  )}
+                  {(detail.status === 'CONFIRMED' || detail.status === 'PENDING') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+                      disabled={busyId === detail.id}
+                      onClick={() => markNoShow(detail.id)}
+                    >
+                      {busyId === detail.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (
+                        <><UserX className="h-3.5 w-3.5 mr-1" /> Mark No-Show</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
       {/* Share toast */}

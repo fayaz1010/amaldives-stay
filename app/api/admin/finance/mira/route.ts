@@ -47,14 +47,18 @@ export async function GET(request: NextRequest) {
     }),
     prisma.room.count({ where: { propertyId: property.id } }),
     // Bookings whose stay overlaps the period, for this property, that count as sales.
+    // NO_SHOW is included: a guest who never arrived still incurs the platform
+    // commission (Booking.platformFee) and the Green Tax liability for the booked
+    // nights, so those must appear in the finance/MIRA figures. CANCELLED/PENDING
+    // are still excluded, so a no-show is counted exactly once (no double-count).
     prisma.booking.findMany({
       where: {
         propertyId: property.id,
-        status: { in: ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'] },
+        status: { in: ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'NO_SHOW'] },
         checkInDate: { lt: periodEndExclusive },
         checkOutDate: { gt: periodStart },
       },
-      select: { adults: true, children: true, totalAmount: true, checkInDate: true, checkOutDate: true },
+      select: { adults: true, children: true, totalAmount: true, checkInDate: true, checkOutDate: true, platformFee: true },
     }),
   ]);
 

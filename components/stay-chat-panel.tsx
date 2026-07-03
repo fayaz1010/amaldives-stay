@@ -82,7 +82,7 @@ export function StayChatPanel({ apiPath, senderRole, emptyHint }: StayChatPanelP
   if (!chatOpen) {
     return (
       <p className="text-sm text-gray-500 py-4 text-center">
-        Chat opens on check-in day and stays available through departure day.
+        Chat is available from booking until a few days after departure.
       </p>
     );
   }

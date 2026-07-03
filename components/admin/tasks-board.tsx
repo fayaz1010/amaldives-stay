@@ -11,7 +11,11 @@ import {
   Sparkles, BedDouble, Wrench, ShoppingBag, Truck,
   User, Plane, Car, Gift, CheckCircle2, Circle,
   AlertCircle, CalendarClock, RefreshCcw, ChevronDown, ChevronRight,
+  XCircle, Ban,
 } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import Link from 'next/link';
 
 interface TaskItem {
@@ -90,24 +94,34 @@ function formatDate(d?: string | null) {
 function TaskRow({
   task,
   onStatusChange,
+  onView,
+  onCancel,
   busy,
 }: {
   task: TaskItem;
   onStatusChange: (id: string, status: string) => void;
+  onView: (task: TaskItem) => void;
+  onCancel: (id: string) => void;
   busy: boolean;
 }) {
   const catIcon = CATEGORY_ICON[task.category];
   const overdue = isOverdue(task.dueDate, task.status);
   const isOpen = openStatuses.has(task.status);
+  const isCancelled = cancelStatuses.has(task.status);
   const dateStr = formatDate(task.dueDate);
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 border-b last:border-b-0 hover:bg-gray-50 transition-colors ${overdue ? 'bg-red-50/40' : ''}`}>
+    <div
+      className={`flex items-center gap-3 px-4 py-2.5 border-b last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${overdue ? 'bg-red-50/40' : ''}`}
+      onClick={() => onView(task)}
+    >
       {/* Status indicator */}
       <div className="shrink-0 w-5 flex justify-center">
-        {isOpen
-          ? <Circle className="h-4 w-4 text-gray-300" />
-          : <CheckCircle2 className="h-4 w-4 text-green-400" />}
+        {isCancelled
+          ? <Ban className="h-4 w-4 text-gray-300" />
+          : isOpen
+            ? <Circle className="h-4 w-4 text-gray-300" />
+            : <CheckCircle2 className="h-4 w-4 text-green-400" />}
       </div>
 
       {/* Category icon */}
@@ -156,7 +170,12 @@ function TaskRow({
       )}
 
       {/* Actions */}
-      <div className="shrink-0 flex items-center gap-1.5">
+      <div className="shrink-0 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        {isCancelled && (
+          <span className="text-[10px] bg-gray-100 text-gray-500 font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5">
+            <Ban className="h-3 w-3" /> Cancelled
+          </span>
+        )}
         {task.status === 'PENDING' && (
           <Button
             size="sm"
@@ -178,6 +197,18 @@ function TaskRow({
             {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Done'}
           </Button>
         )}
+        {isOpen && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+            title="Cancel task"
+            disabled={busy}
+            onClick={() => onCancel(task.id)}
+          >
+            <XCircle className="h-3.5 w-3.5" />
+          </Button>
+        )}
         <Link href={task.link}>
           <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700">
             <ArrowRight className="h-3.5 w-3.5" />
@@ -193,12 +224,16 @@ function TaskGroup({
   source,
   tasks,
   onStatusChange,
+  onView,
+  onCancel,
   busyId,
   defaultOpen = true,
 }: {
   source: string;
   tasks: TaskItem[];
   onStatusChange: (id: string, status: string) => void;
+  onView: (task: TaskItem) => void;
+  onCancel: (id: string) => void;
   busyId: string | null;
   defaultOpen?: boolean;
 }) {
@@ -228,18 +263,18 @@ function TaskGroup({
                 <span className="text-indigo-400 font-normal">· {bookingTasks[0]?.room ? `Rm ${bookingTasks[0].room}` : ''}</span>
               </div>
               {bookingTasks.map((t) => (
-                <TaskRow key={t.id} task={t} onStatusChange={onStatusChange} busy={busyId === t.id} />
+                <TaskRow key={t.id} task={t} onStatusChange={onStatusChange} onView={onView} onCancel={onCancel} busy={busyId === t.id} />
               ))}
             </div>
           ))}
           {noBooking.map((t) => (
-            <TaskRow key={t.id} task={t} onStatusChange={onStatusChange} busy={busyId === t.id} />
+            <TaskRow key={t.id} task={t} onStatusChange={onStatusChange} onView={onView} onCancel={onCancel} busy={busyId === t.id} />
           ))}
         </>
       );
     }
     return tasks.map((t) => (
-      <TaskRow key={t.id} task={t} onStatusChange={onStatusChange} busy={busyId === t.id} />
+      <TaskRow key={t.id} task={t} onStatusChange={onStatusChange} onView={onView} onCancel={onCancel} busy={busyId === t.id} />
     ));
   };
 
@@ -288,18 +323,27 @@ function TaskGroup({
 function KanbanCard({
   task,
   onStatusChange,
+  onView,
+  onCancel,
   busy,
 }: {
   task: TaskItem;
   onStatusChange: (id: string, status: string) => void;
+  onView: (task: TaskItem) => void;
+  onCancel: (id: string) => void;
   busy: boolean;
 }) {
   const meta = SOURCE_META[task.source] ?? SOURCE_META.STAFF;
   const overdue = isOverdue(task.dueDate, task.status);
   const catIcon = CATEGORY_ICON[task.category];
+  const isOpen = openStatuses.has(task.status);
+  const isCancelled = cancelStatuses.has(task.status);
 
   return (
-    <div className={`bg-white rounded-lg border p-3 space-y-2 hover:shadow-sm transition-shadow ${overdue ? 'border-red-200' : ''}`}>
+    <div
+      className={`bg-white rounded-lg border p-3 space-y-2 hover:shadow-sm transition-shadow cursor-pointer ${overdue ? 'border-red-200' : ''}`}
+      onClick={() => onView(task)}
+    >
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.color}`}>
           {meta.icon} {task.sourceLabel}
@@ -313,6 +357,11 @@ function KanbanCard({
             <AlertCircle className="h-3 w-3" /> Overdue
           </span>
         )}
+        {isCancelled && (
+          <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+            <Ban className="h-3 w-3" /> Cancelled
+          </span>
+        )}
         <span className={`ml-auto text-[10px] font-bold ${PRIORITY_LABEL[task.priority] ?? ''}`}>{task.priority}</span>
       </div>
       <div className="flex items-center gap-1.5">
@@ -324,7 +373,7 @@ function KanbanCard({
         <span className="text-[11px] text-gray-400 flex items-center gap-1">
           <Clock className="h-3 w-3" />{formatDate(task.dueDate) ?? '—'}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {task.status === 'PENDING' && (
             <Button size="sm" variant="outline" className="h-6 text-[11px] px-2" disabled={busy} onClick={() => onStatusChange(task.id, 'IN_PROGRESS')}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Start'}
@@ -333,6 +382,11 @@ function KanbanCard({
           {(task.status === 'IN_PROGRESS' || task.status === 'REPORTED' || task.status === 'SENT' || task.status === 'IN_TRANSIT') && (
             <Button size="sm" className="h-6 text-[11px] px-2 bg-green-600 hover:bg-green-700" disabled={busy} onClick={() => onStatusChange(task.id, 'COMPLETED')}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Done'}
+            </Button>
+          )}
+          {isOpen && (
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-gray-400 hover:text-red-600" title="Cancel task" disabled={busy} onClick={() => onCancel(task.id)}>
+              <XCircle className="h-3.5 w-3.5" />
             </Button>
           )}
           <Link href={task.link}>
@@ -355,6 +409,7 @@ export function TasksBoard() {
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [detailTask, setDetailTask] = useState<TaskItem | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -393,6 +448,12 @@ export function TasksBoard() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function cancelTask(id: string) {
+    if (!window.confirm('Cancel this task?')) return;
+    await updateStatus(id, 'CANCELLED');
+    setDetailTask((cur) => (cur?.id === id ? null : cur));
   }
 
   async function syncTasks() {
@@ -547,6 +608,8 @@ export function TasksBoard() {
               source={source}
               tasks={grouped[source]}
               onStatusChange={updateStatus}
+              onView={setDetailTask}
+              onCancel={cancelTask}
               busyId={busyId}
               defaultOpen={true}
             />
@@ -555,7 +618,7 @@ export function TasksBoard() {
           {Object.keys(grouped)
             .filter((s) => !SOURCE_ORDER.includes(s))
             .map((source) => (
-              <TaskGroup key={source} source={source} tasks={grouped[source]} onStatusChange={updateStatus} busyId={busyId} />
+              <TaskGroup key={source} source={source} tasks={grouped[source]} onStatusChange={updateStatus} onView={setDetailTask} onCancel={cancelTask} busyId={busyId} />
             ))}
         </div>
       ) : (
@@ -577,7 +640,7 @@ export function TasksBoard() {
                   {colTasks.length === 0
                     ? <p className="text-sm text-gray-400 text-center py-6">No tasks</p>
                     : colTasks.map((task) => (
-                      <KanbanCard key={task.id} task={task} onStatusChange={updateStatus} busy={busyId === task.id} />
+                      <KanbanCard key={task.id} task={task} onStatusChange={updateStatus} onView={setDetailTask} onCancel={cancelTask} busy={busyId === task.id} />
                     ))}
                 </div>
               </div>
@@ -585,6 +648,115 @@ export function TasksBoard() {
           })}
         </div>
       )}
+
+      {/* Task detail modal */}
+      <TaskDetailDialog
+        task={detailTask ? (tasks.find((t) => t.id === detailTask.id) ?? detailTask) : null}
+        onClose={() => setDetailTask(null)}
+        onCancel={cancelTask}
+        onStatusChange={updateStatus}
+        busy={detailTask ? busyId === detailTask.id : false}
+      />
     </div>
+  );
+}
+
+// ---- Task Detail Dialog ----
+function DetailRow({ label, value }: { label: string; value?: React.ReactNode }) {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="flex gap-3 py-1.5 border-b last:border-b-0 border-gray-100">
+      <span className="w-28 shrink-0 text-xs font-medium text-gray-400 uppercase tracking-wide pt-0.5">{label}</span>
+      <span className="text-sm text-gray-700 min-w-0 break-words">{value}</span>
+    </div>
+  );
+}
+
+function formatTimestamp(d?: string | null) {
+  if (!d) return null;
+  return new Date(d).toLocaleString(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function TaskDetailDialog({
+  task,
+  onClose,
+  onCancel,
+  onStatusChange,
+  busy,
+}: {
+  task: TaskItem | null;
+  onClose: () => void;
+  onCancel: (id: string) => void;
+  onStatusChange: (id: string, status: string) => void;
+  busy: boolean;
+}) {
+  const meta = task ? (SOURCE_META[task.source] ?? SOURCE_META.STAFF) : null;
+  const isOpen = task ? openStatuses.has(task.status) : false;
+  const isCancelled = task ? cancelStatuses.has(task.status) : false;
+
+  return (
+    <Dialog open={!!task} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        {task && meta && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.color}`}>
+                  {meta.icon} {task.sourceLabel}
+                </span>
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  isCancelled ? 'bg-gray-100 text-gray-500'
+                  : isOpen ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-green-100 text-green-700'
+                }`}>
+                  {task.status.replace(/_/g, ' ')}
+                </span>
+                <span className={`ml-auto text-[10px] font-bold ${PRIORITY_LABEL[task.priority] ?? ''}`}>{task.priority}</span>
+              </div>
+              <DialogTitle className="text-base leading-snug">{task.title}</DialogTitle>
+              {task.description && (
+                <DialogDescription className="text-sm">{task.description}</DialogDescription>
+              )}
+            </DialogHeader>
+
+            <div className="mt-2">
+              <DetailRow label="Type" value={task.category?.replace(/_/g, ' ')} />
+              <DetailRow label="Assignee" value={task.assignedTo} />
+              <DetailRow label="Room" value={task.room ? `Rm ${task.room}` : null} />
+              <DetailRow label="Booking" value={task.bookingRef ? `#${task.bookingRef}` : null} />
+              <DetailRow label="Due" value={formatTimestamp(task.dueDate)} />
+              <DetailRow label="Created" value={formatTimestamp(task.createdAt)} />
+              <DetailRow label="Completed" value={formatTimestamp(task.completedAt)} />
+              <DetailRow label="Notes" value={task.notes} />
+            </div>
+
+            <div className="flex items-center gap-2 pt-3 mt-1 border-t">
+              {task.status === 'PENDING' && (
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatusChange(task.id, 'IN_PROGRESS')}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Start'}
+                </Button>
+              )}
+              {(task.status === 'IN_PROGRESS' || task.status === 'REPORTED' || task.status === 'SENT' || task.status === 'IN_TRANSIT') && (
+                <Button size="sm" className="bg-green-600 hover:bg-green-700" disabled={busy} onClick={() => onStatusChange(task.id, 'COMPLETED')}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Done'}
+                </Button>
+              )}
+              {isOpen && (
+                <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" disabled={busy} onClick={() => onCancel(task.id)}>
+                  <XCircle className="h-4 w-4 mr-1.5" /> Cancel Task
+                </Button>
+              )}
+              <Link href={task.link} className="ml-auto">
+                <Button size="sm" variant="ghost" className="text-gray-500">
+                  Open <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

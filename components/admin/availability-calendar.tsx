@@ -340,6 +340,9 @@ function AvailabilityCalendarInner() {
 
   function clearSelection() {
     setSelStart(null); setSelEnd(null); setSelRooms(new Set()); setShowPanel(false);
+    // Reset the cell-selection anchor too, otherwise a stale room id can orphan
+    // the next selection — with a single room that leaves nothing selectable.
+    setSelAnchorRoom(null);
   }
 
   // Determine which date keys are in the selected range
@@ -365,8 +368,13 @@ function AvailabilityCalendarInner() {
     if (selStart && selEnd && rooms) {
       const available = rooms.filter(availableInRange);
       // Cell-started selection → only the room they clicked. Header-started
-      // selection (anchor null) → all available rooms.
-      const autoSel = selAnchorRoom
+      // selection (anchor null) → all available rooms. If the anchored room is
+      // not actually available in the range (e.g. a stale anchor), fall back to
+      // all available rooms so the selection never comes back empty — otherwise
+      // a single-room property would end up with nothing selectable.
+      const anchoredAvailable =
+        selAnchorRoom && available.some((r) => r.id === selAnchorRoom);
+      const autoSel = anchoredAvailable
         ? new Set(available.filter((r) => r.id === selAnchorRoom).map((r) => r.id))
         : new Set(available.map((r) => r.id));
       setSelRooms(autoSel);

@@ -19,6 +19,7 @@ export async function PATCH(
     const body = await request.json();
     const { status } = body;
     const [type, sourceId] = params.id.split(':');
+    const isCancel = status === 'CANCELLED';
 
     if (type === 'staff') {
       await prisma.staffTask.update({
@@ -33,7 +34,7 @@ export async function PATCH(
     } else if (type === 'maint') {
       await prisma.maintenanceRequest.update({
         where: { id: sourceId },
-        data: { status: 'COMPLETED' },
+        data: { status: isCancel ? 'CANCELLED' : 'COMPLETED' },
       });
     } else if (type === 'svc') {
       await prisma.serviceOrder.update({

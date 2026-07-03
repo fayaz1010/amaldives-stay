@@ -14,6 +14,7 @@ interface MiraData {
   tgstOutput: number;
   greenTaxDue: number;
   serviceCharge: number;
+  commissionDue: number;
   totalGovTaxDue: number;
   bookingCount: number;
   greenTaxExemptNote: string;
@@ -107,13 +108,14 @@ export function MiraSummary() {
             <Card icon={<Receipt className="h-4 w-4" />} label={`TGST (${(data.config.tgstRate * 100).toFixed(0)}%)`} value={usd(data.tgstOutput)} sub={`on ${usd(data.roomRevenue)} room sales`} />
             <Card icon={<Leaf className="h-4 w-4" />} label="Green Tax" value={usd(data.greenTaxDue)} sub={`${data.guestNights} guest-nights × $${data.config.greenTaxUsdPerNight}`} />
             <Card icon={<HandCoins className="h-4 w-4" />} label={`Service charge (${(data.config.serviceChargeRate * 100).toFixed(0)}%)`} value={usd(data.serviceCharge)} sub="to staff — not a tax" />
+            <Card icon={<HandCoins className="h-4 w-4" />} label="Platform commission" value={usd(data.commissionDue)} sub="accrued — incl. no-shows" />
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 space-y-1">
             <p><strong>{data.bookingCount}</strong> bookings · <strong>{data.roomCount}</strong> rooms · period {data.period}</p>
             <p className="text-xs text-gray-400">{data.greenTaxExemptNote}</p>
             <p className="text-xs text-gray-400">
-              Figures are estimates from confirmed/checked bookings overlapping the period. Verify against MIRAconnect before filing.
+              Figures are estimates from confirmed/checked bookings (and no-shows, which still owe commission &amp; green tax) overlapping the period. Verify against MIRAconnect before filing.
             </p>
           </div>
         </>
