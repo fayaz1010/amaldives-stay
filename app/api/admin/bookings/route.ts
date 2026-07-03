@@ -252,6 +252,41 @@ export async function POST(request: NextRequest) {
       notes,
     });
 
+    // Email the guest their confirmation number + portal link. Public/self-serve
+    // and Stripe-paid bookings email from their own routes; this covers
+    // operator-created bookings. Done HERE (server-only route) rather than in
+    // lib/db (which is client-reachable and would pull email into the client bundle).
+    try {
+      const guestEmail = (booking as any).guest?.email as string | undefined;
+      const guestToken = (booking as any).guestToken as string | undefined;
+      if (guestEmail && guestToken) {
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: { subdomain: true, name: true },
+        });
+        if (tenant?.subdomain) {
+          const { queueNotification } = await import('@/lib/notifications');
+          const { staySubdomainUrl } = await import('@/lib/tenant-settings');
+          const guestUrl = staySubdomainUrl(tenant.subdomain, `/guest/${guestToken}`);
+          const fmt = (d: Date) => new Date(d).toLocaleDateString();
+          await queueNotification({
+            tenantId,
+            bookingId: booking.id,
+            type: 'BOOKING_CONFIRMATION',
+            to: guestEmail,
+            subject: `Booking confirmed — ${confirmationNumber}`,
+            body:
+              `<p>Your booking at ${tenant.name ?? 'our property'} is confirmed.</p>` +
+              `<p>Confirmation number: <strong>${confirmationNumber}</strong></p>` +
+              `<p>Check-in <strong>${fmt(checkIn)}</strong> → Check-out <strong>${fmt(checkOut)}</strong></p>` +
+              `<p><a href="${guestUrl}">Open your guest portal</a> to view your bill, check in, and message the front desk.</p>`,
+          });
+        }
+      }
+    } catch {
+      /* never block booking creation on the confirmation email */
+    }
+
     // Auto-create arrival prep tasks — fire and forget, never block the booking response
     try {
       // Fetch guest name for task titles

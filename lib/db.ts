@@ -146,30 +146,10 @@ export class TenantDb {
     }).then(async (booking) => {
       const { ensureCheckInCodes } = await import('@/lib/instant-checkin');
       await ensureCheckInCodes(booking.id);
-
-      // Hand the guest their confirmation number + portal link. Public/self-serve
-      // and Stripe-paid bookings already email confirmations from their own routes;
-      // this covers operator-created bookings, which otherwise never reach the guest.
-      // Queued through the notification outbox like other transactional mail.
-      if (booking.guest?.email && booking.guestToken && tenant?.subdomain) {
-        const { queueNotification } = await import('@/lib/notifications');
-        const { staySubdomainUrl } = await import('@/lib/tenant-settings');
-        const guestUrl = staySubdomainUrl(tenant.subdomain, `/guest/${booking.guestToken}`);
-        const fmt = (d: Date) => new Date(d).toLocaleDateString();
-        await queueNotification({
-          tenantId: this.tenantId,
-          bookingId: booking.id,
-          type: 'BOOKING_CONFIRMATION',
-          to: booking.guest.email,
-          subject: `Booking confirmed — ${booking.confirmationNumber}`,
-          body:
-            `<p>Your booking at ${tenant.name ?? 'our property'} is confirmed.</p>` +
-            `<p>Confirmation number: <strong>${booking.confirmationNumber}</strong></p>` +
-            `<p>Check-in <strong>${fmt(booking.checkInDate)}</strong> → Check-out <strong>${fmt(booking.checkOutDate)}</strong></p>` +
-            `<p><a href="${guestUrl}">Open your guest portal</a> to view your bill, check in, and message the front desk.</p>`,
-        }).catch(() => {});
-      }
-
+      // NOTE: the guest booking-confirmation email is sent by the caller
+      // (app/api/admin/bookings POST) — NOT here. lib/db is reachable from a
+      // client component (booking-engine.tsx), so importing the email/notifications
+      // chain here pulls it into the client bundle and breaks the build.
       return booking;
     });
   }
