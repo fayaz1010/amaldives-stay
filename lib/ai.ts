@@ -23,13 +23,11 @@ interface KeyCacheEntry {
 const KEY_CACHE: Record<string, KeyCacheEntry> = {};
 const KEY_TTL_MS = 10 * 60 * 1000;
 
-async function getGeminiKey(): Promise<string> {
+async function loadGeminiKeys(): Promise<string[]> {
   const now = Date.now();
   const cached = KEY_CACHE.gemini;
   if (cached && cached.expiresAt > now && cached.keys.length > 0) {
-    // Round-robin so a single hot key doesn't shoulder all quota.
-    cached.cursor = (cached.cursor + 1) % cached.keys.length;
-    return cached.keys[cached.cursor];
+    return cached.keys;
   }
 
   // Production path — pull from util-ai.
@@ -43,8 +41,8 @@ async function getGeminiKey(): Promise<string> {
       const data = (await res.json()) as { values?: string[]; keys?: string[] };
       const keys = data.values || data.keys || [];
       if (keys.length > 0) {
-        KEY_CACHE.gemini = { keys, cursor: 0, expiresAt: now + KEY_TTL_MS };
-        return keys[0];
+        KEY_CACHE.gemini = { keys, cursor: -1, expiresAt: now + KEY_TTL_MS };
+        return keys;
       }
     }
   }
@@ -57,8 +55,16 @@ async function getGeminiKey(): Promise<string> {
   if (envKeys.length === 0) {
     throw new Error('No Gemini API keys available (util-ai unreachable and no GEMINI_API_KEY env)');
   }
-  KEY_CACHE.gemini = { keys: envKeys, cursor: 0, expiresAt: now + KEY_TTL_MS };
-  return envKeys[0];
+  KEY_CACHE.gemini = { keys: envKeys, cursor: -1, expiresAt: now + KEY_TTL_MS };
+  return envKeys;
+}
+
+/** Round-robin so a single hot key doesn't shoulder all quota. */
+async function getGeminiKey(): Promise<string> {
+  const keys = await loadGeminiKeys();
+  const cached = KEY_CACHE.gemini;
+  cached.cursor = (cached.cursor + 1) % keys.length;
+  return keys[cached.cursor];
 }
 
 type GeminiPart =
@@ -83,7 +89,30 @@ export async function generateJSON<T = unknown>(
   parts: GeminiPart[],
   options: GenerateJsonOptions = {}
 ): Promise<T> {
-  const key = await getGeminiKey();
+  const keys = await loadGeminiKeys();
+  // A bad/revoked key in the util-ai pool would otherwise cause ~1-in-N
+  // random failures across every AI feature; retry with the remaining
+  // keys in the pool before giving up on 401/403 (auth-only, not rate-limit).
+  const attempts = Math.min(keys.length, 3);
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    const key = await getGeminiKey();
+    try {
+      return await callGemini<T>(key, parts, options);
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/Gemini error 40[13]/.test(msg)) throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+async function callGemini<T>(
+  key: string,
+  parts: GeminiPart[],
+  options: GenerateJsonOptions
+): Promise<T> {
   const url = `${GEMINI_BASE}/models/${MODEL}:generateContent?key=${key}`;
 
   // Gemini disallows `responseMimeType: application/json` while `tools` is
