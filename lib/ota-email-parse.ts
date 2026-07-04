@@ -190,8 +190,11 @@ export function parseOtaEmail(email: RawEmail): ParsedOtaEmail | null {
     /unit\s*[:#]\s*([A-Za-z][A-Za-z0-9 .,'/&-]{2,60})/i,
   ]);
 
-  const adults = toNum(first(body, [/(\d+)\s*adults?/i, /adults?\s*[:#]?\s*(\d+)/i]));
-  const children = toNum(first(body, [/(\d+)\s*child(?:ren)?/i, /child(?:ren)?\s*[:#]?\s*(\d+)/i]));
+  // [ \t]* (not \s*) so these never span a line break — otherwise "Booking
+  // number: 1234567890\nAdults: 2" would match the number to "adults" via
+  // the free-form "(\d+) adults" pattern's whitespace crossing the newline.
+  const adults = toNum(first(body, [/adults?[ \t]*[:#][ \t]*(\d+)/i, /(\d+)[ \t]*adults?/i, /adults?[ \t]+(\d+)/i]));
+  const children = toNum(first(body, [/child(?:ren)?[ \t]*[:#][ \t]*(\d+)/i, /(\d+)[ \t]*child(?:ren)?/i, /child(?:ren)?[ \t]+(\d+)/i]));
   const amount = (() => {
     const a = first(body, [
       /(?:total(?:\s*price|\s*amount|\s*payout)?|payout|grand total)\s*[:#]?\s*[A-Z$€£]{0,3}\s*([\d,]+(?:\.\d{2})?)/i,
