@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { parseOtaEmail, type RawEmail } from '@/lib/ota-email-parse';
-import { ingestOtaEmailBooking } from '@/lib/ota-email-ingest';
+import { verifyOtaEmail } from '@/lib/ota-email-verify';
+import { processOtaEmail, recordUnresolvedOtaEmail } from '@/lib/ota-email-process';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +11,14 @@ export const dynamic = 'force-dynamic';
  *
  * A Cloudflare Email Worker (running on OUR platform domain — never the
  * tenant's mailbox) forwards each OTA reservation email here as JSON. We
- * resolve which tenant it belongs to from the recipient address, parse the
- * reservation, and create/update/cancel a Booking. The tenant's own email
- * service is completely untouched — the OTA just sends a copy here.
+ * resolve which tenant it belongs to from the recipient address, then run
+ * the full parse → Gemini-verify → create/update/cancel pipeline
+ * (lib/ota-email-process.ts). The tenant's own email service is completely
+ * untouched — the OTA just sends a copy here.
+ *
+ * Every email that resolves to a tenant gets exactly one OtaEmailMessage
+ * audit row, whether it was auto-applied or queued for manual review at
+ * /admin/bookings/ota-review.
  *
  * Auth: shared secret in the `x-ota-ingest-secret` header (env OTA_INGEST_SECRET).
  *
@@ -40,8 +46,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing email fields (to, subject/text/html)' }, { status: 400 });
   }
 
+  const email: RawEmail = {
+    from: body.from || '',
+    to: body.to,
+    subject: body.subject || '',
+    text: body.text,
+    html: body.html,
+  };
+
   const subdomain = tenantSubdomainFromAddress(body.to);
   if (!subdomain) {
+    await recordUnresolvedOtaEmail(email, `Cannot resolve tenant from recipient "${body.to}"`);
     return NextResponse.json({ error: `Cannot resolve tenant from recipient "${body.to}"` }, { status: 422 });
   }
 
@@ -50,36 +65,29 @@ export async function POST(req: NextRequest) {
     select: { id: true, subdomain: true },
   });
   if (!tenant) {
+    await recordUnresolvedOtaEmail(email, `No tenant for subdomain "${subdomain}"`);
     return NextResponse.json({ error: `No tenant for subdomain "${subdomain}"` }, { status: 404 });
   }
 
-  const parsed = parseOtaEmail({
-    from: body.from || '',
-    to: body.to,
-    subject: body.subject || '',
-    text: body.text,
-    html: body.html,
-  });
-
-  if (!parsed) {
-    // Couldn't extract the essentials — surface for manual review rather than guess.
-    console.warn('[ota-email] unparseable email', { to: body.to, subject: body.subject });
-    return NextResponse.json(
-      { ok: false, parsed: false, reason: 'Could not extract reservation ref + dates' },
-      { status: 200 }
-    );
-  }
-
-  // Debug/testing: return what we parsed without writing anything.
+  // Debug/testing: run the full parse + verify pipeline and return what it
+  // found without writing anything (no booking, no audit row).
   if (body.dryRun) {
-    return NextResponse.json({ ok: true, dryRun: true, tenant: tenant.subdomain, parsed });
+    const regexResult = parseOtaEmail(email);
+    const verification = await verifyOtaEmail(email, regexResult, tenant.id);
+    return NextResponse.json({
+      ok: true,
+      dryRun: true,
+      tenant: tenant.subdomain,
+      regexResult,
+      verification,
+    });
   }
 
   try {
-    const result = await ingestOtaEmailBooking(tenant.id, parsed);
-    return NextResponse.json({ ok: true, tenant: tenant.subdomain, source: parsed.source, ...result });
+    const result = await processOtaEmail(email, tenant);
+    return NextResponse.json({ ok: true, tenant: tenant.subdomain, ...result });
   } catch (err) {
-    console.error('[ota-email] ingest failed', err);
+    console.error('[ota-email] processing failed', err);
     return NextResponse.json({ ok: false, error: 'Ingest failed' }, { status: 500 });
   }
 }

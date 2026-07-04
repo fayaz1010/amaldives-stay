@@ -46,6 +46,7 @@ import {
   Bot,
   QrCode,
   HelpCircle,
+  MailWarning,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TenantSwitcher } from '@/components/admin/tenant-switcher';
@@ -162,6 +163,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'amaldives Page', href: '/admin/web', icon: Globe },
       { name: 'AI Assistant', href: '/admin/assistant', icon: Bot },
       { name: 'Channel Manager', href: '/admin/web?tab=channels', icon: Wifi },
+      { name: 'OTA Import Review', href: '/admin/bookings/ota-review', icon: MailWarning },
       { name: 'Website embed', href: '/admin/embed', icon: MousePointerClick },
     ],
   },

@@ -133,6 +133,7 @@ model Tenant {
   promotions             Promotion[]
   stayConversations      StayConversation[]
   agencies               Agency[]
+  otaEmailMessages       OtaEmailMessage[]
 
   @@index([subdomain])
   @@index([status])
@@ -304,6 +305,50 @@ model ExternalCalendarBlock {
   @@index([roomId, startDate, endDate])
 }
 
+// OTA email ingest — audit trail + review queue for every inbound OTA
+// reservation email (Booking.com/Airbnb/Agoda/Expedia/Vrbo notification
+// copies). One row per email: the raw content, what the regex parser
+// (lib/ota-email-parse.ts) extracted, what Gemini's independent
+// verification pass (lib/ota-email-verify.ts) determined, and — once a
+// staff member reviews it — the final outcome. This is both the manual
+// review queue AND a ready-made labeled dataset for training a dedicated
+// extraction model later, once more properties are onboarded.
+enum OtaMessageStatus {
+  CREATED
+  UPDATED
+  CANCELLED
+  NEEDS_REVIEW
+  REJECTED
+  FAILED
+}
+
+model OtaEmailMessage {
+  id            String   @id @default(cuid())
+  tenantId      String?  // null if the recipient address couldn't be resolved to a tenant
+  fromAddress   String
+  toAddress     String
+  subject       String
+  rawText       String?  @db.Text
+  rawHtml       String?  @db.Text
+  source        String   // booking.com | airbnb | agoda | expedia | vrbo | ota
+  regexResult   Json?    // ParsedOtaEmail from lib/ota-email-parse.ts, or null
+  aiResult      Json?    // Gemini-reconciled struct from lib/ota-email-verify.ts
+  discrepancies Json?    // fields where regex and Gemini disagreed
+  confidence    Float?   // Gemini's 0-1 confidence in aiResult
+  status        OtaMessageStatus
+  bookingId     String?
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  tenant  Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([createdAt])
+  @@index([bookingId])
+}
+
 // Booking System
 model Booking {
   id            String        @id @default(cuid())
@@ -357,6 +402,7 @@ model Booking {
   minIBarUsages MinIBarUsage[]
   staffTasks    StaffTask[]
   stayConversation StayConversation?
+  otaEmailMessages OtaEmailMessage[]
 
   @@index([tenantId])
   @@index([confirmationNumber])
