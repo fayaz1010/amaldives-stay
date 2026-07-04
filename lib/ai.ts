@@ -124,6 +124,12 @@ async function callGemini<T>(
   const generationConfig: Record<string, unknown> = {
     temperature: options.temperature ?? 0.2,
     maxOutputTokens: options.maxTokens ?? 4096,
+    // gemini-2.5-flash spends part of maxOutputTokens on invisible "thinking"
+    // tokens by default, which can silently truncate the visible JSON when
+    // maxTokens is tight. None of our generateJSON use cases need reasoning
+    // — they're structured extraction or short scripted replies — so switch
+    // it off and give the full budget to the actual answer.
+    thinkingConfig: { thinkingBudget: 0 },
   };
   if (!useGrounding) {
     generationConfig.responseMimeType = 'application/json';
@@ -149,7 +155,7 @@ async function callGemini<T>(
     throw new Error(`Gemini error ${res.status}: ${text.slice(0, 300)}`);
   }
   const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
     promptFeedback?: { blockReason?: string };
   };
   if (data.promptFeedback?.blockReason) {
@@ -158,6 +164,9 @@ async function callGemini<T>(
   const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') ?? '';
   if (!text) {
     throw new Error('Gemini returned an empty response');
+  }
+  if (data.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+    throw new Error(`Gemini output truncated by maxTokens (${generationConfig.maxOutputTokens}); raise GenerateJsonOptions.maxTokens`);
   }
   // responseMimeType=application/json guarantees parseable JSON, but we
   // still strip any accidental ```json fences just in case Gemini gets
