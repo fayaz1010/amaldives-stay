@@ -135,7 +135,8 @@ export function WelcomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <span className="text-xl font-bold tracking-tight text-cyan-700">Vayves</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/vayves-logo.svg" alt="Vayves" className="h-9 w-auto" />
             </div>
             <nav className="hidden md:flex space-x-8">
               <Link href="#features" className="text-gray-600 hover:text-cyan-600 transition-colors">
@@ -441,7 +442,8 @@ export function WelcomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <span className="text-xl font-bold tracking-tight text-cyan-400">Vayves</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/vayves-logo-light.svg" alt="Vayves" className="h-9 w-auto" />
             </div>
             <p className="text-gray-400 mb-6">
               The modern way to manage your hotel & property operations
