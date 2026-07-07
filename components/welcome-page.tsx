@@ -174,11 +174,11 @@ export function WelcomePage() {
             className="text-center"
           >
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Modern Guest House
-              <span className="block text-cyan-600">Management Platform</span>
+              Modern Hotel
+              <span className="block text-cyan-600">Management Software</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              The free property management system for Maldives guesthouses. Accept direct bookings from amaldives.com — no OTA commissions.
+              All-in-one management software for independent hotels, guesthouses & resorts — reservations, channel manager, payments and your own commission-free direct-booking website.
             </p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Link href="/claim">
@@ -214,7 +214,7 @@ export function WelcomePage() {
               Everything You Need to Run Your Property
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our platform provides all the tools you need to manage your guest house efficiently
+              Our platform provides all the tools you need to manage your property efficiently
               and deliver exceptional guest experiences.
             </p>
           </motion.div>
@@ -444,7 +444,7 @@ export function WelcomePage() {
               <span className="text-xl font-bold tracking-tight text-cyan-400">Vayves</span>
             </div>
             <p className="text-gray-400 mb-6">
-              The modern way to manage your guest house operations
+              The modern way to manage your hotel & property operations
             </p>
             <div className="flex justify-center space-x-6">
               <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">

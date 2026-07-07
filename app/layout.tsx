@@ -9,8 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 const GA_MEASUREMENT_ID = 'G-04P06J8Z99';
 
 export const metadata = {
-  title: 'Guest House Management System',
-  description: 'Comprehensive multi-tenant guest house management platform',
+  title: 'Vayves — Hotel Management Software',
+  description:
+    'Vayves is all-in-one hotel & property management software: reservations, channel manager, payments, staff and your own direct-booking website — for independent hotels, guesthouses and resorts.',
 };
 
 export default function RootLayout({
