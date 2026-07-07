@@ -63,7 +63,7 @@ async function createProvisionedTenant(
         country: 'Maldives',
         zipCode: '—',
         phone: gh.phone || '—',
-        email: gh.email || `contact@${subdomain}.stay.amaldives.com`,
+        email: gh.email || `contact@${subdomain}.vayves.com`,
         currency: 'USD',
         timezone: 'Indian/Maldives',
       },
@@ -73,7 +73,7 @@ async function createProvisionedTenant(
   });
 
   try {
-    await addDomain(`${tenant.subdomain}.stay.amaldives.com`);
+    await addDomain(`${tenant.subdomain}.vayves.com`);
   } catch (domainError) {
     console.error(`[auto-provision] Vercel domain registration failed for ${tenant.subdomain}`, domainError);
   }

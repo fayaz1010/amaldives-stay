@@ -31,7 +31,7 @@ export function WelcomePage() {
     {
       icon: Calendar,
       title: 'Direct Booking Engine',
-      description: 'Book on amaldives.com, your stay.amaldives.com page, or one line of code on any website or social bio.',
+      description: 'Book on amaldives.com, your vayves.com page, or one line of code on any website or social bio.',
     },
     {
       icon: Globe,
@@ -375,7 +375,7 @@ export function WelcomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
             {[
               { title: 'amaldives.com', desc: 'Guests discover you and book direct from your listing.' },
-              { title: 'Your stay page', desc: '{name}.stay.amaldives.com with full booking & pay.' },
+              { title: 'Your stay page', desc: '{name}.vayves.com with full booking & pay.' },
               { title: 'Website embed', desc: 'One script tag — floating Book button on any site.' },
               { title: 'Payments', desc: 'Stripe cards, Maya, BML Connect, or pay at property.' },
             ].map((item) => (
@@ -460,7 +460,7 @@ export function WelcomePage() {
               </Link>
             </div>
             <div className="mt-8 text-gray-400">
-              © 2026 amaldives STAY · by AMaldives
+              © 2026 Vayves · by AMaldives
             </div>
           </div>
         </div>

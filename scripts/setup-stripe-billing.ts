@@ -19,7 +19,7 @@ if (!key) {
 }
 const stripe = new Stripe(key, { apiVersion: '2025-02-24.acacia' });
 
-const WEBHOOK_URL = 'https://stay.amaldives.com/api/webhooks/stripe';
+const WEBHOOK_URL = 'https://vayves.com/api/webhooks/stripe';
 const WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
   'checkout.session.completed',
   'customer.subscription.created',

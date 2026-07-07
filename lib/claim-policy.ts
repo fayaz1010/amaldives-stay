@@ -29,7 +29,7 @@ const FREE_EMAIL_DOMAINS = new Set([
   'zoho.com',
 ]);
 
-const PLATFORM_DOMAINS = new Set(['stay.amaldives.com', 'amaldives.com']);
+const PLATFORM_DOMAINS = new Set(['vayves.com', 'stay.amaldives.com', 'amaldives.com']);
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

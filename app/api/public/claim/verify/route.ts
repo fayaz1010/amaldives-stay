@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       {
         error: 'Already claimed — sign in instead',
         valid: false,
-        loginUrl: `https://${tenant.subdomain}.stay.amaldives.com/auth/signin`,
+        loginUrl: `https://${tenant.subdomain}.vayves.com/auth/signin`,
       },
       { status: 409 }
     );
@@ -59,6 +59,6 @@ export async function GET(request: NextRequest) {
     email: normalizeEmail(email),
     guesthouseName: tenant.name,
     subdomain: tenant.subdomain,
-    stayUrl: `https://${tenant.subdomain}.stay.amaldives.com`,
+    stayUrl: `https://${tenant.subdomain}.vayves.com`,
   });
 }

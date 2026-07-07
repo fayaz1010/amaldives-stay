@@ -18,6 +18,7 @@ import {
   Tag,
   Users,
   CreditCard,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ interface Props {
   propertyId?: string;
   stripePlatformConfigured?: boolean;
   tenantSettings?: unknown;
+  otaIngestDomain?: string | null;
   onComplete: () => void;
 }
 
@@ -68,7 +70,7 @@ const emptyRoomType = (): RoomTypeDraft => ({
 });
 
 const CONFETTI_COLORS = ['#0d9488', '#facc15', '#ec4899', '#a855f7', '#f97316'];
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 export function OnboardingWizard({
   propertyName,
@@ -76,6 +78,7 @@ export function OnboardingWizard({
   propertyId,
   stripePlatformConfigured = false,
   tenantSettings,
+  otaIngestDomain = null,
   onComplete,
 }: Props) {
   const initialPayments = getPaymentsConfig(tenantSettings);
@@ -84,6 +87,7 @@ export function OnboardingWizard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [otaEmailCopied, setOtaEmailCopied] = useState(false);
 
   const [name, setName] = useState(propertyName ?? '');
   const [tagline, setTagline] = useState('');
@@ -101,8 +105,9 @@ export function OnboardingWizard({
     initialPayments.enabledProviders?.includes('pay_at_property') ?? true,
   );
 
-  const bookingUrl = `https://${subdomain}.stay.amaldives.com/`;
+  const bookingUrl = `https://${subdomain}.vayves.com/`;
   const amaldivesListingUrl = `https://www.amaldives.com/guesthouses/${subdomain}`;
+  const otaIngestEmail = otaIngestDomain ? `ota-${subdomain}@${otaIngestDomain}` : null;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(bookingUrl)}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
     `Book your stay at ${name || propertyName} — ${bookingUrl}`,
@@ -255,6 +260,17 @@ export function OnboardingWizard({
     }
   };
 
+  const copyOtaEmail = async () => {
+    if (!otaIngestEmail) return;
+    try {
+      await navigator.clipboard.writeText(otaIngestEmail);
+      setOtaEmailCopied(true);
+      setTimeout(() => setOtaEmailCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
   const finish = async () => {
     setLoading(true);
     try {
@@ -338,7 +354,7 @@ export function OnboardingWizard({
             <div className="mx-auto h-20 w-20 rounded-2xl bg-teal-50 flex items-center justify-center">
               <Building2 className="h-10 w-10 text-teal-600" />
             </div>
-            <h1 className="text-3xl font-bold text-teal-600">Welcome to amaldives STAY!</h1>
+            <h1 className="text-3xl font-bold text-teal-600">Welcome to Vayves!</h1>
             <p className="text-gray-600">
               Set up rooms, Stripe payments, and your amaldives.com listing in about 10 minutes.
             </p>
@@ -470,7 +486,7 @@ export function OnboardingWizard({
             </h2>
             <div className="rounded-lg border bg-teal-50 border-teal-200 p-4 text-sm text-teal-900 space-y-2">
               <p><strong>10%</strong> platform fee when guests book from your amaldives.com listing (STAY-live properties).</p>
-              <p><strong>4%</strong> when they book direct on <code className="bg-white/60 px-1 rounded">{subdomain}.stay.amaldives.com</code>.</p>
+              <p><strong>4%</strong> when they book direct on <code className="bg-white/60 px-1 rounded">{subdomain}.vayves.com</code>.</p>
               <p className="text-xs text-teal-800">Booking.com and other OTAs typically charge 18%+ — STAY keeps more revenue with you.</p>
             </div>
             <p className="text-sm text-gray-600 break-all">
@@ -482,6 +498,56 @@ export function OnboardingWizard({
 
         {step === 6 && (
           <div key="s6" className="onb-step space-y-5">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Mail className="h-6 w-6 text-teal-600" />
+              Connect your booking channels
+            </h2>
+            <p className="text-sm text-gray-600">
+              Already listed on Booking.com, Airbnb, Agoda or others? Get their reservations pushed straight into
+              STAY — automatically, verified by AI — so nothing is ever double-booked or missed.
+            </p>
+            {otaIngestEmail ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                <p className="text-sm font-semibold text-gray-800">Your private auto-import address</p>
+                <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-2">
+                  <code className="text-xs text-gray-700 flex-1 break-all">{otaIngestEmail}</code>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={copyOtaEmail}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {otaEmailCopied && <p className="text-xs text-emerald-700">Copied!</p>}
+                <div className="rounded-lg border border-emerald-200 bg-white p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-gray-800">Easiest setup (1 minute, covers every OTA):</p>
+                  <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1">
+                    <li>Open the inbox where your OTAs already email you</li>
+                    <li>Add a filter that forwards mail from Booking.com/Airbnb/Agoda/Expedia to the address above</li>
+                    <li>Done — new reservations start appearing in STAY automatically</li>
+                  </ol>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Full instructions and per-OTA options are in <strong>Web & Distribution → Channel Manager</strong>{' '}
+                  anytime — this step is just to get the address in your hands early.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border p-4 bg-gray-50 text-sm text-gray-700">
+                You can set this up anytime from <strong>Web & Distribution → Channel Manager</strong> — including
+                iCal calendar sync to block dates from other OTAs.
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button variant="outline" className="min-h-12 flex-1" onClick={goBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button className="min-h-12 flex-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setStep(7)}>
+                {otaIngestEmail ? "I'll do this now / later" : 'Continue'} <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 7 && (
+          <div key="s7" className="onb-step space-y-5">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Users className="h-6 w-6 text-teal-600" />
               Travel agents (optional)
@@ -498,15 +564,15 @@ export function OnboardingWizard({
               <Button variant="outline" className="min-h-12 flex-1" onClick={goBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
-              <Button className="min-h-12 flex-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setStep(7)}>
+              <Button className="min-h-12 flex-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setStep(8)}>
                 Skip for now <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {step === 7 && (
-          <div key="s7" className="onb-step space-y-5 text-center">
+        {step === 8 && (
+          <div key="s8" className="onb-step space-y-5 text-center">
             <h2 className="text-2xl font-bold text-gray-900">Your booking page is ready!</h2>
             <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-mono break-all text-gray-700">
               {bookingUrl}
@@ -528,15 +594,15 @@ export function OnboardingWizard({
               <Button variant="outline" className="min-h-12 flex-1" onClick={goBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
-              <Button className="min-h-12 flex-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setStep(8)}>
+              <Button className="min-h-12 flex-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setStep(9)}>
                 Finish <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {step === 8 && (
-          <div key="s8" className="onb-step text-center space-y-6 relative">
+        {step === 9 && (
+          <div key="s9" className="onb-step text-center space-y-6 relative">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               {confetti.map((c, i) => (
                 <span
@@ -559,6 +625,7 @@ export function OnboardingWizard({
             <h1 className="text-3xl font-bold text-teal-600">You are all set!</h1>
             <div className="grid grid-cols-2 gap-3 text-left">
               <NextStepCard href="/admin/reservations/new" icon={CalendarPlus} title="Create booking" />
+              <NextStepCard href="/admin/web?tab=channels" icon={Mail} title="Connect OTAs" />
               <NextStepCard href="/admin/promotions" icon={Tag} title="Promotions" />
               <NextStepCard href="/admin/agencies" icon={Users} title="Travel agents" />
               <NextStepCard href="/admin/settings/payments" icon={CreditCard} title="Payments" />

@@ -273,7 +273,7 @@ function SidebarContent({
               </div>
             )}
             <span className="font-bold text-gray-900 text-sm truncate">
-              {tenantName || 'amaldives STAY'}
+              {tenantName || 'Vayves'}
             </span>
           </div>
         )}

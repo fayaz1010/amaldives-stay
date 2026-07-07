@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     expiresAt: Date.now() + CLAIM_TOKEN_TTL_MS,
   });
 
-  const origin = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'https://stay.amaldives.com';
+  const origin = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'https://vayves.com';
   const verifyUrl = `${origin}/claim?guesthouse=${encodeURIComponent(slug)}&token=${encodeURIComponent(token)}`;
 
   const emailResult = await sendClaimVerificationEmail({

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
+import { tenantUrl } from '@/lib/domain';
 
 interface Props {
   token: string;
@@ -56,7 +57,7 @@ export function AcceptInviteForm({ token, email, subdomain }: Props) {
       // Hard navigation to /admin on the correct subdomain so the JWT
       // hydrates with the right tenant context.
       const target = subdomain
-        ? `https://${subdomain}.stay.amaldives.com/admin`
+        ? tenantUrl(subdomain, '/admin')
         : '/admin';
       window.location.href = target;
     } catch (e: any) {

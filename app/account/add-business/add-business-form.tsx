@@ -41,7 +41,7 @@ export function AddBusinessForm() {
       // Brief delay then hard-redirect to the new tenant's admin so the
       // session cookie hydrates the right tenantId.
       setTimeout(() => {
-        window.location.href = `https://${j.subdomain}.stay.amaldives.com/admin`;
+        window.location.href = `https://${j.subdomain}.vayves.com/admin`;
       }, 1500);
     } catch (e: any) {
       setError(e?.message || 'Something went wrong');
@@ -59,7 +59,7 @@ export function AddBusinessForm() {
         <p className="text-sm text-gray-600">
           Redirecting to{' '}
           <span className="font-mono text-teal-700">
-            {success.subdomain}.stay.amaldives.com/admin
+            {success.subdomain}.vayves.com/admin
           </span>
           …
         </p>
@@ -102,13 +102,13 @@ export function AddBusinessForm() {
             className="flex-1 px-3 py-2 text-sm font-mono focus:outline-none"
           />
           <span className="px-3 py-2 bg-gray-50 text-gray-500 text-xs font-mono border-l border-gray-300 flex items-center">
-            .stay.amaldives.com
+            .vayves.com
           </span>
         </div>
         <p className="mt-1 text-[11px] text-gray-500">
           Your admin will be at{' '}
           <span className="font-mono text-teal-700">
-            {finalSubdomain}.stay.amaldives.com/admin
+            {finalSubdomain}.vayves.com/admin
           </span>
         </p>
       </div>

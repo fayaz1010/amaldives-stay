@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Maya Business webhook — per-tenant subdomain endpoint.
  * Configure in Maya portal:
- *   https://<subdomain>.stay.amaldives.com/api/webhooks/maya/<subdomain>
+ *   https://<subdomain>.vayves.com/api/webhooks/maya/<subdomain>
  */
 export async function POST(
   request: NextRequest,
@@ -82,5 +82,5 @@ export async function POST(
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'ok', service: 'amaldives STAY / Maya webhook' });
+  return NextResponse.json({ status: 'ok', service: 'Vayves / Maya webhook' });
 }

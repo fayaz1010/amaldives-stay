@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ROOT_DOMAIN } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,7 +8,7 @@ export async function POST(_request: NextRequest) {
   return NextResponse.json(
     {
       error:
-        'Direct signup is disabled. Go to stay.amaldives.com/claim and verify with your business email.',
+        `Direct signup is disabled. Go to ${ROOT_DOMAIN}/claim and verify with your business email.`,
     },
     { status: 410 }
   );

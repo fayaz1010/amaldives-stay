@@ -69,7 +69,7 @@ async function ensureTenant() {
     },
     include: { properties: { take: 1 } },
   });
-  console.log(`Created tenant ${tenant.subdomain}.stay.amaldives.com`);
+  console.log(`Created tenant ${tenant.subdomain}.vayves.com`);
   return tenant;
 }
 
@@ -191,7 +191,7 @@ async function main() {
   console.log('  CNAME  www    cname.vercel-dns.com');
   console.log('\nAfter DNS propagates, the site will be live at:');
   console.log(`  https://${RIVETHI_BEACH_CONFIG.domain}`);
-  console.log(`  https://${tenant.subdomain}.stay.amaldives.com (always works)`);
+  console.log(`  https://${tenant.subdomain}.vayves.com (always works)`);
 }
 
 main()

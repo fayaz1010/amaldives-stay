@@ -95,7 +95,7 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [defaultsSaved, setDefaultsSaved] = useState(false);
 
-  const webhookUrl = `https://${tenant.subdomain}.stay.amaldives.com/api/webhooks/fpos`;
+  const webhookUrl = `https://${tenant.subdomain}.vayves.com/api/webhooks/fpos`;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -236,7 +236,7 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
             <div className="grid grid-cols-2 gap-4 text-sm pt-2">
               <div>
                 <Label className="text-gray-500">Subdomain</Label>
-                <p className="font-medium text-cyan-700">{tenant.subdomain}.stay.amaldives.com</p>
+                <p className="font-medium text-cyan-700">{tenant.subdomain}.vayves.com</p>
               </div>
               <div>
                 <Label className="text-gray-500">Plan</Label>
@@ -509,9 +509,9 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
                     </p>
                     <div className="flex items-center gap-2 bg-white border rounded px-2 py-1.5">
                       <code className="text-xs text-sky-700 flex-1 break-all">
-                        {`https://stay.amaldives.com/api/webhooks/bml-connect/${tenant.subdomain}`}
+                        {`https://vayves.com/api/webhooks/bml-connect/${tenant.subdomain}`}
                       </code>
-                      <CopyButton text={`https://stay.amaldives.com/api/webhooks/bml-connect/${tenant.subdomain}`} />
+                      <CopyButton text={`https://vayves.com/api/webhooks/bml-connect/${tenant.subdomain}`} />
                     </div>
                     <div className="text-[11px] text-sky-600 space-y-0.5">
                       <p>In BML Connect portal: <strong>Settings → Webhook URL</strong> → paste the URL above</p>

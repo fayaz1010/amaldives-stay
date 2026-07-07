@@ -62,6 +62,7 @@ export default async function AdminDashboard() {
       propertyId={property?.id ?? ''}
       stripePlatformConfigured={isStripeConfigured()}
       tenantSettings={tenant?.settings}
+      otaIngestDomain={process.env.OTA_INGEST_DOMAIN ?? null}
     />
   );
 }

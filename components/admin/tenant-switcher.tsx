@@ -49,9 +49,9 @@ export function TenantSwitcher({
         return;
       }
       // Hard navigation across subdomains — the session cookie set on
-      // ".stay.amaldives.com" will still authenticate us, but the new
+      // ".vayves.com" will still authenticate us, but the new
       // subdomain hosts the new tenant's content.
-      window.location.href = `https://${subdomain}.stay.amaldives.com/admin`;
+      window.location.href = `https://${subdomain}.vayves.com/admin`;
     } catch (e) {
       setBusyId(null);
       alert('Network error while switching tenant');
@@ -79,7 +79,7 @@ export function TenantSwitcher({
           </div>
         )}
         <span className="font-bold text-gray-900 text-sm truncate flex-1">
-          {active?.tenantName || 'amaldives STAY'}
+          {active?.tenantName || 'Vayves'}
         </span>
         {/* Add another business — discoverable from day 1, even for owners
             who only have one tenant today. Sits inline with the tenant
@@ -123,7 +123,7 @@ export function TenantSwitcher({
         )}
         <div className="flex-1 min-w-0 text-left">
           <span className="block font-bold text-gray-900 text-sm truncate">
-            {active?.tenantName || 'amaldives STAY'}
+            {active?.tenantName || 'Vayves'}
           </span>
           <span className="block text-[10px] text-gray-500">
             {memberships.length} accounts · switch
@@ -164,7 +164,7 @@ export function TenantSwitcher({
                         {active.tenantName}
                       </p>
                       <p className="text-[11px] text-gray-500 truncate">
-                        {active.subdomain}.stay.amaldives.com · {active.role.toLowerCase().replace('_', ' ')}
+                        {active.subdomain}.vayves.com · {active.role.toLowerCase().replace('_', ' ')}
                       </p>
                     </div>
                   </div>
@@ -188,7 +188,7 @@ export function TenantSwitcher({
                         {m.tenantName}
                       </p>
                       <p className="text-[11px] text-gray-500 truncate">
-                        {m.subdomain}.stay.amaldives.com · {m.role.toLowerCase().replace('_', ' ')}
+                        {m.subdomain}.vayves.com · {m.role.toLowerCase().replace('_', ' ')}
                       </p>
                     </div>
                   </button>

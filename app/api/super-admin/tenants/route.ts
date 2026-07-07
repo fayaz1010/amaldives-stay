@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { addDomain } from '@/lib/vercel-domains';
+import { tenantHost } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,10 +91,10 @@ export async function POST(request: NextRequest) {
     // Register the subdomain on this Vercel project so it gets a TLS cert.
     // Non-fatal: a Vercel API hiccup must not fail the tenant creation.
     try {
-      await addDomain(`${tenant.subdomain}.stay.amaldives.com`);
+      await addDomain(tenantHost(tenant.subdomain));
     } catch (domainError) {
       console.error(
-        `Failed to register Vercel domain for ${tenant.subdomain}.stay.amaldives.com:`,
+        `Failed to register Vercel domain for ${tenantHost(tenant.subdomain)}:`,
         domainError
       );
     }

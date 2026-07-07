@@ -16,7 +16,7 @@ import { getResend } from '@/lib/email';
 import type { Notification, NotificationChannel } from '@prisma/client';
 
 const MAX_ATTEMPTS = 3;
-const FROM_NAME = 'amaldives STAY';
+const FROM_NAME = 'Vayves';
 
 export interface QueueNotificationInput {
   tenantId: string;

@@ -121,10 +121,10 @@ export async function POST(request: NextRequest) {
     // Register the subdomain on this Vercel project so it gets a TLS cert.
     // Non-fatal: a Vercel API hiccup must not fail the tenant creation.
     try {
-      await addDomain(`${result.tenant.subdomain}.stay.amaldives.com`);
+      await addDomain(`${result.tenant.subdomain}.vayves.com`);
     } catch (domainError) {
       console.error(
-        `Failed to register Vercel domain for ${result.tenant.subdomain}.stay.amaldives.com:`,
+        `Failed to register Vercel domain for ${result.tenant.subdomain}.vayves.com:`,
         domainError
       );
     }
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         success: true,
         tenantId: result.tenant.id,
         subdomain: result.tenant.subdomain,
-        loginUrl: `https://${result.tenant.subdomain}.stay.amaldives.com/admin`,
+        loginUrl: `https://${result.tenant.subdomain}.vayves.com/admin`,
       },
       { status: 201 },
     );

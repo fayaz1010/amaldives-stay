@@ -60,7 +60,7 @@ export default function SignInPage() {
           <div className="flex justify-center mb-4">
             <img src="/images/logo.png" alt="aMaldives" className="h-14 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to amaldives STAY</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to Vayves</CardTitle>
           <CardDescription>
             Sign in to your account to continue
           </CardDescription>

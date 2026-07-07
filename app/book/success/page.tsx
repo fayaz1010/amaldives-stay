@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PMS_BASE } from '@/lib/domain';
 
 export default function BookSuccessPage({
   searchParams,
@@ -26,7 +27,7 @@ export default function BookSuccessPage({
           ) : null}
           .
         </p>
-        <Link href={subdomain ? '/' : 'https://stay.amaldives.com'}>
+        <Link href={subdomain ? '/' : PMS_BASE}>
           <Button className="bg-cyan-600 hover:bg-cyan-700">Back to property</Button>
         </Link>
       </div>

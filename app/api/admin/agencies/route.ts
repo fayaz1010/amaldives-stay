@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateInviteToken } from '@/lib/staff-invite';
 import { sendAgentInviteEmail } from '@/lib/send-agent-invite';
+import { PMS_BASE } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       expiresAt: Date.now() + INVITE_TTL_MS,
     });
-    const origin = request.headers.get('origin') ?? 'https://stay.amaldives.com';
+    const origin = request.headers.get('origin') ?? PMS_BASE;
     const inviteUrl = `${origin}/auth/invite/${inviteToken}`;
     const emailResult = await sendAgentInviteEmail({
       to: user.email,

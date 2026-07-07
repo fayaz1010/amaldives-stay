@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateInviteToken } from '@/lib/staff-invite';
 import { sendStaffInviteEmail } from '@/lib/send-staff-invite';
+import { ROOT_DOMAIN } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,8 +157,8 @@ export async function POST(request: NextRequest) {
 
     // Build the absolute invite URL using the current request's host so
     // the link works on the tenant's subdomain (e.g.,
-    // reef-view-stay.stay.amaldives.com/auth/invite/...).
-    const origin = request.headers.get('origin') ?? `https://${request.headers.get('host') ?? 'stay.amaldives.com'}`;
+    // reef-view-stay.vayves.com/auth/invite/...).
+    const origin = request.headers.get('origin') ?? `https://${request.headers.get('host') ?? ROOT_DOMAIN}`;
     const inviteUrl = `${origin}/auth/invite/${inviteToken}`;
     const ttlMs = 7 * 24 * 60 * 60 * 1000;
 

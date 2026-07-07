@@ -39,6 +39,15 @@ interface WebManagerProps {
   defaultTab?: string;
   /** Domain that receives OTA booking emails for auto-import. Null hides the card. */
   otaIngestDomain?: string | null;
+  /** A pending Gmail/Outlook/Yahoo "confirm this forwarding address" code
+   *  addressed to the tenant's OTA ingest mailbox, surfaced here since the
+   *  tenant can't check that inbox themselves. Null if none pending. */
+  otaForwardingConfirmation?: {
+    provider: string;
+    code: string | null;
+    link: string | null;
+    receivedAt: string;
+  } | null;
 }
 
 const COMMON_AMENITIES = [
@@ -89,12 +98,24 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function WebManager({ tenant, property, subdomain, plan, allRooms = [], defaultTab = 'profile', otaIngestDomain = null }: WebManagerProps) {
+export function WebManager({ tenant, property, subdomain, plan, allRooms = [], defaultTab = 'profile', otaIngestDomain = null, otaForwardingConfirmation = null }: WebManagerProps) {
   const isLocked = plan === 'basic';
   const otaIngestEmail = otaIngestDomain ? `ota-${subdomain}@${otaIngestDomain}` : null;
-  const icalUrl = `https://stay.amaldives.com/api/public/${subdomain}/calendar.ics`;
+  const [forwardConfirmation, setForwardConfirmation] = useState(otaForwardingConfirmation);
+  const [dismissingConfirmation, setDismissingConfirmation] = useState(false);
+
+  async function dismissForwardConfirmation() {
+    setDismissingConfirmation(true);
+    try {
+      await fetch('/api/admin/ota-forward-confirmation', { method: 'DELETE' });
+      setForwardConfirmation(null);
+    } finally {
+      setDismissingConfirmation(false);
+    }
+  }
+  const icalUrl = `https://vayves.com/api/public/${subdomain}/calendar.ics`;
   const amaldivesUrl = `https://www.amaldives.com/guesthouses/${tenant?.amaldivesSlug ?? subdomain}`;
-  const stayUrl = `https://${subdomain}.stay.amaldives.com`;
+  const stayUrl = `https://${subdomain}.vayves.com`;
 
   // Profile form state
   const [profile, setProfile] = useState({
@@ -333,19 +354,11 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
     );
   }
 
-  if (isLocked) {
-    return (
-      <div className="space-y-5">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Globe className="h-5 w-5 text-teal-600" /> Web & Distribution
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage your amaldives.com page and channel manager sync</p>
-        </div>
-        <UpgradeBanner />
-      </div>
-    );
-  }
+  // Channel Manager (iCal + OTA email auto-import) is available on every
+  // plan — it drives adoption and every tenant benefits from never missing
+  // an OTA booking. Only the amaldives.com page-editing tabs (profile,
+  // branding, photos, rooms showcase) stay behind the Web plan.
+  const effectiveDefaultTab = isLocked && defaultTab === 'profile' ? 'channels' : defaultTab;
 
   return (
     <div className="space-y-5">
@@ -370,17 +383,26 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="bg-white rounded-xl border overflow-hidden">
+      <Tabs defaultValue={effectiveDefaultTab} className="bg-white rounded-xl border overflow-hidden">
         <TabsList className="w-full rounded-none border-b bg-gray-50 h-10 flex-wrap">
-          <TabsTrigger value="profile" className="flex-1 text-xs">Web Profile</TabsTrigger>
-          <TabsTrigger value="branding" className="flex-1 text-xs">Branding</TabsTrigger>
-          <TabsTrigger value="photos" className="flex-1 text-xs">Photos</TabsTrigger>
-          <TabsTrigger value="rooms" className="flex-1 text-xs">Rooms & Rates</TabsTrigger>
+          <TabsTrigger value="profile" className="flex-1 text-xs gap-1">
+            {isLocked && <Lock className="h-3 w-3" />} Web Profile
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="flex-1 text-xs gap-1">
+            {isLocked && <Lock className="h-3 w-3" />} Branding
+          </TabsTrigger>
+          <TabsTrigger value="photos" className="flex-1 text-xs gap-1">
+            {isLocked && <Lock className="h-3 w-3" />} Photos
+          </TabsTrigger>
+          <TabsTrigger value="rooms" className="flex-1 text-xs gap-1">
+            {isLocked && <Lock className="h-3 w-3" />} Rooms & Rates
+          </TabsTrigger>
           <TabsTrigger value="channels" className="flex-1 text-xs">Channel Manager</TabsTrigger>
         </TabsList>
 
         {/* Web Profile tab */}
         <TabsContent value="profile" className="m-0 p-5 space-y-5">
+          {isLocked ? <UpgradeBanner /> : (<>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Display Name</label>
@@ -487,11 +509,13 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
               {saved ? 'Saved!' : 'Save Profile'}
             </Button>
           </div>
+          </>)}
         </TabsContent>
 
         {/* Branding tab — logo + colors + hero image. Applied on the
             public storefront and the admin sidebar. */}
         <TabsContent value="branding" className="m-0 p-5 space-y-6">
+          {isLocked ? <UpgradeBanner /> : (<>
           <div>
             <h2 className="text-sm font-semibold text-gray-900 mb-1">Your brand</h2>
             <p className="text-xs text-gray-500">
@@ -682,10 +706,12 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
               {brandingSaved ? 'Saved!' : 'Save Branding'}
             </Button>
           </div>
+          </>)}
         </TabsContent>
 
         {/* Photos tab */}
         <TabsContent value="photos" className="m-0 p-5">
+          {isLocked ? <UpgradeBanner /> : (<>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''} uploaded</p>
             <div>
@@ -738,10 +764,12 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
               </div>
             </div>
           )}
+          </>)}
         </TabsContent>
 
         {/* Rooms & Rates tab */}
         <TabsContent value="rooms" className="m-0 p-5">
+          {isLocked ? <UpgradeBanner /> : (<>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-600">Room types shown on amaldives.com. Manage rates in Rooms.</p>
             <a href="/admin/rooms">
@@ -779,6 +807,7 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
               ))}
             </div>
           )}
+          </>)}
         </TabsContent>
 
         {/* Channel Manager tab */}
@@ -853,20 +882,64 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
                 <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Recommended</Badge>
               </div>
               <p className="text-sm text-gray-600 mb-3">
-                Works for <strong>Booking.com and every OTA</strong> (including hotel listings that don&apos;t support
-                calendar links). Add your private address below as an extra <em>reservation notification</em> email in
-                each channel — new bookings then appear here automatically.
+                Works for <strong>every OTA</strong> — Booking.com, Airbnb, Agoda, Expedia, Vrbo — the moment they
+                email you about a reservation. New bookings appear here automatically, verified by AI, usually
+                within a minute.
               </p>
               <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-2">
                 <code className="text-xs text-gray-700 flex-1 break-all">{otaIngestEmail}</code>
                 <CopyButton text={otaIngestEmail} />
               </div>
+
+              {forwardConfirmation && (
+                <div className="mt-3 rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
+                  <p className="text-sm font-semibold text-amber-900">
+                    📧 {forwardConfirmation.provider === 'gmail' ? 'Gmail' : forwardConfirmation.provider === 'outlook' ? 'Outlook' : forwardConfirmation.provider === 'yahoo' ? 'Yahoo' : 'Your email provider'} needs you to confirm the forward
+                  </p>
+                  {forwardConfirmation.code && (
+                    <div className="mt-2 flex items-center gap-2 bg-white rounded-lg border px-3 py-2">
+                      <code className="text-sm font-mono text-gray-800 flex-1">{forwardConfirmation.code}</code>
+                      <CopyButton text={forwardConfirmation.code} />
+                    </div>
+                  )}
+                  <p className="text-xs text-amber-800 mt-2">
+                    Paste this code back into the "Forwarding and POP/IMAP" tab in your inbox settings
+                    {forwardConfirmation.link ? (
+                      <> — or <a href={forwardConfirmation.link} target="_blank" rel="noopener noreferrer" className="underline">open the confirmation link</a></>
+                    ) : null}{' '}to finish connecting.
+                  </p>
+                  <button
+                    onClick={dismissForwardConfirmation}
+                    disabled={dismissingConfirmation}
+                    className="mt-2 text-xs text-amber-700 underline hover:text-amber-900"
+                  >
+                    {dismissingConfirmation ? 'Dismissing…' : 'Done, dismiss this'}
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-4 rounded-lg border border-emerald-200 bg-white p-3 space-y-2">
+                <p className="text-sm font-semibold text-gray-800">✓ Easiest: forward from your own inbox (1 minute, works for every OTA)</p>
+                <p className="text-xs text-gray-600">
+                  Set up one filter in the inbox you already get OTA emails at — it covers Booking.com, Airbnb, Agoda,
+                  Expedia and Vrbo at once, no need to log in to each OTA separately.
+                </p>
+                <ul className="list-decimal list-inside space-y-1 text-xs text-gray-600">
+                  <li>In Gmail: Settings → See all settings → Filters and Blocked Addresses → Create a new filter</li>
+                  <li>From field: <code className="bg-gray-100 px-1 rounded">booking.com OR airbnb.com OR agoda.com OR expedia.com OR vrbo.com</code></li>
+                  <li>Click Create filter → check <strong>Forward it to</strong> → add the address above → Create filter</li>
+                  <li>Gmail will email a confirmation code to that address the first time — refresh this page in a minute and we&apos;ll show it to you right here</li>
+                </ul>
+              </div>
+
               <div className="mt-3 space-y-2 text-sm text-gray-700">
-                <p className="font-medium text-gray-800">Where to add it:</p>
+                <p className="font-medium text-gray-800">Or add it directly in the OTA (if you&apos;d rather not touch your inbox):</p>
                 <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  <li><strong>Booking.com:</strong> Account → Contacts → Reservations → add this email</li>
-                  <li><strong>Airbnb:</strong> Account → Notifications → add this as a reservation email</li>
-                  <li><strong>Agoda / Expedia / others:</strong> add it under reservation/notification emails</li>
+                  <li><strong>Booking.com:</strong> Extranet → Account → Contacts → Reservations → add this email</li>
+                  <li><strong>Agoda:</strong> YCS Extranet → Property Settings → Notifications → add this email</li>
+                  <li><strong>Expedia:</strong> Partner Central → Property settings → Notification emails</li>
+                  <li><strong>Airbnb / Vrbo:</strong> these don&apos;t support a second notification email — use the inbox
+                    forwarding method above instead</li>
                 </ul>
                 <p className="text-xs text-gray-400 pt-1">
                   Private to your property — don&apos;t share it. We only read reservation details to create bookings.

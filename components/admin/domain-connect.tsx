@@ -56,14 +56,14 @@ export function DomainConnect() {
   }
 
   async function disconnect() {
-    if (!confirm('Disconnect this domain? The site will stay live on your stay.amaldives.com address.')) return;
+    if (!confirm('Disconnect this domain? The site will stay live on your vayves.com address.')) return;
     setBusy(true);
     await fetch('/api/admin/domain', { method: 'DELETE' });
     await load();
     setBusy(false);
   }
 
-  const subdomainUrl = status?.subdomain ? `${status.subdomain}.stay.amaldives.com` : null;
+  const subdomainUrl = status?.subdomain ? `${status.subdomain}.vayves.com` : null;
 
   return (
     <Card>
@@ -78,7 +78,7 @@ export function DomainConnect() {
               {subdomainUrl}
             </a>
           ) : (
-            'your stay.amaldives.com address'
+            'your vayves.com address'
           )}
           . Connect your own domain (e.g. <span className="font-mono">yourguesthouse.com</span>) to use it instead.
         </CardDescription>

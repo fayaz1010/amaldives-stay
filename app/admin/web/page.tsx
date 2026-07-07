@@ -24,6 +24,7 @@ export default async function WebAdminPage({ searchParams }: WebPageProps) {
       subdomain: true,
       plan: true,
       amaldivesSlug: true,
+      settings: true,
       properties: {
         select: {
           id: true,
@@ -71,6 +72,11 @@ export default async function WebAdminPage({ searchParams }: WebPageProps) {
   // Set OTA_INGEST_DOMAIN once the inbound email transport is live; until then
   // the self-serve "auto-import by email" card stays hidden.
   const otaIngestDomain = process.env.OTA_INGEST_DOMAIN ?? null;
+  const tenantSettings = (tenant.settings as Record<string, unknown> | null) ?? null;
+  const otaForwardingConfirmation =
+    (tenantSettings?.otaForwardingConfirmation as
+      | { provider: string; code: string | null; link: string | null; receivedAt: string }
+      | undefined) ?? null;
 
   return (
     <WebManager
@@ -81,6 +87,7 @@ export default async function WebAdminPage({ searchParams }: WebPageProps) {
       allRooms={allRooms}
       defaultTab={searchParams.tab ?? 'profile'}
       otaIngestDomain={otaIngestDomain}
+      otaForwardingConfirmation={otaForwardingConfirmation}
     />
   );
 }

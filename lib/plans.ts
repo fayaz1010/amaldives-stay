@@ -1,5 +1,5 @@
 /**
- * amaldives STAY subscription tiers.
+ * Vayves subscription tiers.
  *
  * basic    – all operational features (bookings, housekeeping, staff, finance, etc.)
  * web      – basic + amaldives.com page editing + iCal export for channel managers

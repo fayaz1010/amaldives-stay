@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       verificationRequired: claimable,
       subdomain: existing.subdomain,
       name: existing.name,
-      stayUrl: `https://${existing.subdomain}.stay.amaldives.com`,
+      stayUrl: `https://${existing.subdomain}.vayves.com`,
       amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
       emailHint: claimPolicy ? claimPolicyHint(claimPolicy) : undefined,
     });
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       autoProvisioned: provision.created,
       subdomain: provision.subdomain,
       name: tenant?.name,
-      stayUrl: `https://${provision.subdomain}.stay.amaldives.com`,
+      stayUrl: `https://${provision.subdomain}.vayves.com`,
       amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
       emailHint: claimPolicyHint(provision.claimPolicy),
     });
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       claimed: true,
       subdomain: tenant?.subdomain,
       name: tenant?.name,
-      stayUrl: tenant ? `https://${tenant.subdomain}.stay.amaldives.com` : undefined,
+      stayUrl: tenant ? `https://${tenant.subdomain}.vayves.com` : undefined,
       error: 'Already claimed — sign in instead.',
     });
   }
@@ -105,6 +105,6 @@ export async function GET(request: NextRequest) {
     name: humanName,
     suggestedSubdomain: slug.replace(/[^a-z0-9-]/g, '').slice(0, 48),
     amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
-    claimUrl: `https://stay.amaldives.com/claim?guesthouse=${encodeURIComponent(slug)}`,
+    claimUrl: `https://vayves.com/claim?guesthouse=${encodeURIComponent(slug)}`,
   });
 }

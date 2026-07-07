@@ -6,7 +6,7 @@
 // anyway — proper photos, real addresses, and a stable contract.
 //
 // The Places API key lives in GOOGLE_PLACES_API_KEY and is restricted in
-// the Cloud Console to the stay.amaldives.com referrer.
+// the Cloud Console to the vayves.com referrer.
 
 const TEXTSEARCH_URL = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
 const PHOTO_URL = 'https://maps.googleapis.com/maps/api/place/photo';

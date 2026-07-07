@@ -5,7 +5,7 @@
  *   - Marketplace bookings (source = amaldives.com) on a STAY-live tenant
  *     pay STAY_MARKETPLACE_COMMISSION (10%) — this funds the marketplace
  *     surface that delivers the booking.
- *   - Direct bookings (any other source) on the tenant's stay.amaldives.com
+ *   - Direct bookings (any other source) on the tenant's vayves.com
  *     subdomain pay tenant.commissionRate (default 4%).
  *
  * A tenant is "STAY-live for marketplace" when its account is ACTIVE

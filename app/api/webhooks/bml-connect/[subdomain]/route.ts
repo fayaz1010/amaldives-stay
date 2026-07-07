@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
  *
  * BML Connect sends an HTTP POST to this URL after a successful card payment
  * on their IPG. Configure the webhook URL in your BML Connect merchant portal:
- *   https://<subdomain>.stay.amaldives.com/api/webhooks/bml-connect
+ *   https://<subdomain>.vayves.com/api/webhooks/bml-connect
  *
  * BML Connect webhook payload (standard fields):
  * {
@@ -94,5 +94,5 @@ export async function POST(
 
 // BML Connect may send GET to verify the endpoint
 export async function GET() {
-  return NextResponse.json({ status: 'ok', service: 'amaldives STAY / BML Connect webhook' });
+  return NextResponse.json({ status: 'ok', service: 'Vayves / BML Connect webhook' });
 }

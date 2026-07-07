@@ -37,7 +37,7 @@ async function seedGuesthouses() {
     const subdomain = gh.slug;
     const existing = await prisma.tenant.findUnique({ where: { subdomain } });
     if (existing) { console.log('SKIP:', gh.name); continue; }
-    const ownerEmail = 'manager@' + subdomain + '.stay.amaldives.com';
+    const ownerEmail = 'manager@' + subdomain + '.vayves.com';
     const tenant = await prisma.tenant.create({
       data: {
         name: gh.name,
@@ -101,12 +101,12 @@ async function seedGuesthouses() {
         }
       }
     });
-    console.log('Created:', gh.name, '->', subdomain + '.stay.amaldives.com', '| login:', ownerEmail);
+    console.log('Created:', gh.name, '->', subdomain + '.vayves.com', '| login:', ownerEmail);
   }
 }
 
 async function main() {
-  console.log('amaldives STAY — Seeding');
+  console.log('Vayves — Seeding');
   await seedSuperAdmin();
   await seedGuesthouses();
   console.log('Done!');

@@ -61,6 +61,6 @@ export function amaldivesListingUrl(slug: string): string {
 }
 
 export function staySubdomainUrl(subdomain: string, path = ''): string {
-  const base = `https://${subdomain}.stay.amaldives.com`;
+  const base = `https://${subdomain}.vayves.com`;
   return path ? `${base}${path.startsWith('/') ? path : `/${path}`}` : base;
 }

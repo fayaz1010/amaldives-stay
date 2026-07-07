@@ -75,7 +75,7 @@ export async function finalizeTenantClaim(input: {
     });
   });
 
-  const stayUrl = `https://${tenant.subdomain}.stay.amaldives.com`;
+  const stayUrl = `https://${tenant.subdomain}.vayves.com`;
   return {
     subdomain: tenant.subdomain,
     stayUrl,

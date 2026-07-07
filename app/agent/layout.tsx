@@ -15,7 +15,7 @@ export default async function AgentLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b px-6 py-3">
-        <p className="text-sm font-semibold text-teal-700">amaldives STAY · Agent portal</p>
+        <p className="text-sm font-semibold text-teal-700">Vayves · Agent portal</p>
       </header>
       {children}
     </div>

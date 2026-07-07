@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { parseOtaEmail, type RawEmail } from '@/lib/ota-email-parse';
 import { verifyOtaEmail } from '@/lib/ota-email-verify';
 import { processOtaEmail, recordUnresolvedOtaEmail } from '@/lib/ota-email-process';
+import { detectForwardingConfirmation } from '@/lib/mail-forward-confirmation';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,22 @@ export async function POST(req: NextRequest) {
   if (!tenant) {
     await recordUnresolvedOtaEmail(email, `No tenant for subdomain "${subdomain}"`);
     return NextResponse.json({ error: `No tenant for subdomain "${subdomain}"` }, { status: 404 });
+  }
+
+  // A tenant set up an inbox forwarding rule (Gmail/Outlook/Yahoo) targeting
+  // this address — the provider is asking to confirm the target, but the
+  // tenant can't see this mailbox. Surface the code/link in the admin UI
+  // instead of letting it fall through as an unparseable OTA email.
+  const forwardConfirmation = detectForwardingConfirmation(email);
+  if (forwardConfirmation) {
+    const current = (
+      await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { settings: true } })
+    )?.settings as Record<string, unknown> | null;
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: { settings: { ...(current ?? {}), otaForwardingConfirmation: forwardConfirmation } as never },
+    });
+    return NextResponse.json({ ok: true, tenant: tenant.subdomain, forwardConfirmation: true });
   }
 
   // Debug/testing: run the full parse + verify pipeline and return what it

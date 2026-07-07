@@ -6,7 +6,7 @@ import { Hotel, AlertCircle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
-  title: 'Set your password · amaldives STAY',
+  title: 'Set your password · Vayves',
   robots: { index: false, follow: false },
 };
 
@@ -61,7 +61,7 @@ export default async function InvitePage({
           <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center">
             <Hotel className="h-5 w-5 text-white" />
           </div>
-          <span className="font-bold text-gray-900">amaldives STAY</span>
+          <span className="font-bold text-gray-900">Vayves</span>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6">

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getStripe, isStripeConfigured, STRIPE_PLAN_PRICES } from '@/lib/stripe';
+import { tenantUrl } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const origin = request.headers.get('origin') ?? `https://${tenant.subdomain}.stay.amaldives.com`;
+  const origin = request.headers.get('origin') ?? tenantUrl(tenant.subdomain);
   // Store the real tier (growth/business/channel/web) so the plan is recorded accurately.
   const planTier = String(planKey).toLowerCase();
 

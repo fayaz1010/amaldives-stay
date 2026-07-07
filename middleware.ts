@@ -2,14 +2,29 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-
-const ROOT_DOMAIN = 'stay.amaldives.com';
+import { ROOT_DOMAIN, LEGACY_ROOT_DOMAIN } from '@/lib/domain';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
+  const bareHost = hostname.split(':')[0];
 
-  // Only treat as a tenant subdomain when the host is exactly {slug}.stay.amaldives.com.
+  // Migration: permanently redirect the legacy stay.amaldives.com domain (root and
+  // every {slug}.stay.amaldives.com tenant subdomain) to the same path on the new
+  // Vayves root domain. Keeps live customer links, embeds and SEO intact.
+  const isLegacyTenant =
+    bareHost.endsWith(`.${LEGACY_ROOT_DOMAIN}`) && bareHost !== LEGACY_ROOT_DOMAIN;
+  if (bareHost === LEGACY_ROOT_DOMAIN || isLegacyTenant) {
+    const target = request.nextUrl.clone();
+    target.protocol = 'https:';
+    target.port = '';
+    target.host = isLegacyTenant
+      ? bareHost.replace(`.${LEGACY_ROOT_DOMAIN}`, `.${ROOT_DOMAIN}`)
+      : ROOT_DOMAIN;
+    return NextResponse.redirect(target, 301);
+  }
+
+  // Only treat as a tenant subdomain when the host is exactly {slug}.{ROOT_DOMAIN}.
   // This prevents Vercel preview URLs (*.vercel.app) and the root domain itself from
   // being incorrectly identified as tenant subdomains.
   const isTenantSubdomain =
@@ -20,7 +35,6 @@ export async function middleware(request: NextRequest) {
   // platform root, a tenant subdomain, a Vercel preview URL, or localhost is
   // treated as a custom tenant domain — the public site resolves the tenant by
   // matching Tenant.domain to this host (see app/page.tsx).
-  const bareHost = hostname.split(':')[0];
   const isPlatformHost =
     bareHost === ROOT_DOMAIN ||
     bareHost.endsWith('.vercel.app') ||

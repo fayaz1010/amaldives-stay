@@ -360,7 +360,7 @@ export async function POST(request: NextRequest) {
           const { bookingConfirmationHtml } = await import('@/lib/email-templates');
           const { resend } = await import('@/lib/email');
           await resend.emails.send({
-            from: `amaldives STAY <${process.env.RESEND_FROM_EMAIL}>`,
+            from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
             to: guestRec.email,
             subject: `Booking Confirmed - ${confirmationNumber}`,
             html: bookingConfirmationHtml({

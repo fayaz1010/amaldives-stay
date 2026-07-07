@@ -6,7 +6,7 @@ import { ArrowLeft, Building2 } from 'lucide-react';
 import { AddBusinessForm } from './add-business-form';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Add another business · amaldives STAY' };
+export const metadata = { title: 'Add another business · Vayves' };
 
 export default async function AddBusinessPage() {
   const session = await getServerSession(authOptions);
@@ -55,7 +55,7 @@ export default async function AddBusinessPage() {
                   <div className="min-w-0">
                     <p className="font-medium text-gray-900 truncate">{m.tenantName}</p>
                     <p className="text-[11px] text-gray-500 truncate">
-                      {m.subdomain}.stay.amaldives.com · {m.role.toLowerCase().replace('_', ' ')}
+                      {m.subdomain}.vayves.com · {m.role.toLowerCase().replace('_', ' ')}
                     </p>
                   </div>
                   {m.isDefault && (

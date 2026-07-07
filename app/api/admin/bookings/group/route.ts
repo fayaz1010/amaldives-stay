@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9FAFB;padding:24px 0;">
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;">
-        <tr><td style="background:#14B8A6;padding:28px 32px;"><div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">amaldives STAY</div></td></tr>
+        <tr><td style="background:#14B8A6;padding:28px 32px;"><div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">Vayves</div></td></tr>
         <tr><td style="padding:32px;">
           <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">Booking Confirmed!</h1>
           <p style="margin:0 0 8px;font-size:16px;color:#111827;">Dear ${displayName},</p>
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
 
           <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5;">We look forward to welcoming your group. Reply to this email with any questions or special requests.</p>
         </td></tr>
-        <tr><td style="padding:20px 32px;background:#F9FAFB;border-top:1px solid #E5E7EB;text-align:center;"><div style="font-size:12px;color:#6B7280;">Powered by <strong style="color:#0F766E;">amaldives STAY</strong></div></td></tr>
+        <tr><td style="padding:20px 32px;background:#F9FAFB;border-top:1px solid #E5E7EB;text-align:center;"><div style="font-size:12px;color:#6B7280;">Powered by <strong style="color:#0F766E;">Vayves</strong></div></td></tr>
       </table>
     </td></tr>
   </table>
@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
 
         const { resend } = await import('@/lib/email');
         await resend.emails.send({
-          from: `amaldives STAY <${process.env.RESEND_FROM_EMAIL}>`,
+          from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
           to: guestRec.email,
           subject: `Booking Confirmed - ${rooms.length} room${rooms.length === 1 ? '' : 's'} at ${propertyName}`,
           html,

@@ -32,7 +32,7 @@ export async function sendBookingConfirmationEmail(args: {
   );
 
   await client.emails.send({
-    from: `amaldives STAY <${from}>`,
+    from: `Vayves <${from}>`,
     to: args.to,
     subject: `Booking confirmed — ${args.confirmationNumber}`,
     html: bookingConfirmationHtml({

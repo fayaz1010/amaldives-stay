@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { generateJSON } from '@/lib/ai';
 import { buildPropertyKnowledgeBySubdomain } from '@/lib/property-knowledge';
 import { readAssistantConfig } from '@/lib/assistant-config';
+import { tenantUrl } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,7 @@ export async function POST(
     const assistant = readAssistantConfig(tenant.settings, tenant.name);
     const aiName = assistant.name; // owner-chosen name (default "Maya")
     const knowledge = await buildPropertyKnowledgeBySubdomain(subdomain);
-    const bookUrl = `https://${tenant.subdomain}.stay.amaldives.com/book`;
+    const bookUrl = tenantUrl(tenant.subdomain, '/book');
 
     const systemPrompt =
       `You are ${aiName}, the friendly booking assistant for ${tenant.name}, a guesthouse in the Maldives. ` +

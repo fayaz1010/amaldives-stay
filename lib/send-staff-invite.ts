@@ -53,9 +53,9 @@ export async function sendStaffInviteEmail(args: Args): Promise<SendResult> {
 
   try {
     const result = await client.emails.send({
-      from: `amaldives STAY <${from}>`,
+      from: `Vayves <${from}>`,
       to: args.to,
-      subject: `You're invited to ${args.tenantName} on amaldives STAY`,
+      subject: `You're invited to ${args.tenantName} on Vayves`,
       html: staffInviteHtml({
         recipientName: args.recipientName,
         tenantName: args.tenantName,

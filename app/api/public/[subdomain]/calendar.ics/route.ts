@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { ROOT_DOMAIN, BRAND } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,7 +82,7 @@ export async function GET(
     const lines: string[] = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      `PRODID:-//amaldives STAY//stay.amaldives.com//EN`,
+      `PRODID:-//${BRAND}//${ROOT_DOMAIN}//EN`,
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       `X-WR-CALNAME:${escapeIcal(tenant.name + roomLabel)} – Blocked Dates`,
@@ -98,7 +99,7 @@ export async function GET(
       const dtstamp = toISODate(b.updatedAt);
 
       lines.push('BEGIN:VEVENT');
-      lines.push(foldLine(`UID:${b.id}@stay.amaldives.com`));
+      lines.push(foldLine(`UID:${b.id}@${ROOT_DOMAIN}`));
       lines.push(`DTSTAMP:${dtstamp}`);
       lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
       lines.push(`DTEND;VALUE=DATE:${dtEnd}`);

@@ -128,7 +128,7 @@ export function AssistantWidget({ subdomain, propertyName, name, avatarUrl, gree
             <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message…" style={{ flex: 1, border: '1px solid #ddd', borderRadius: 20, padding: '9px 14px', fontSize: 13.5, outline: 'none' }} />
             <button type="submit" disabled={busy || !input.trim()} style={{ background: accentColor, color: '#fff', border: 'none', borderRadius: 20, padding: '0 16px', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', opacity: busy || !input.trim() ? 0.5 : 1 }}>Send</button>
           </form>
-          <div style={{ textAlign: 'center', fontSize: 10, color: '#aaa', padding: '4px 0 6px' }}>Powered by amaldives STAY</div>
+          <div style={{ textAlign: 'center', fontSize: 10, color: '#aaa', padding: '4px 0 6px' }}>Powered by Vayves</div>
         </div>
       )}
     </div>

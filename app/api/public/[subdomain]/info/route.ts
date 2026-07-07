@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { tenantUrl } from '@/lib/domain';
 import { getPaymentsConfig } from '@/lib/tenant-settings';
 import { isStripeConfigured } from '@/lib/stripe';
 import {
@@ -100,7 +101,7 @@ export async function GET(
         amaldivesSlug: tenant.amaldivesSlug,
         plan: tenant.plan,
         isVerifiedDirect: tenant.isVerifiedDirect,
-        bookUrl: `https://${tenant.subdomain}.stay.amaldives.com/book`,
+        bookUrl: tenantUrl(tenant.subdomain, '/book'),
         payments: {
           currency: payments.currency,
           enabledProviders: enabledPayments,

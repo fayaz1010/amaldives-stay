@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { readAssistantConfig } from '@/lib/assistant-config';
+import { tenantUrl } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,7 @@ async function loadTenant(tenantId: string) {
 }
 
 function snippet(subdomain: string) {
-  return `<script src="https://${subdomain}.stay.amaldives.com/maya.js" async></script>`;
+  return `<script src="${tenantUrl(subdomain, '/maya.js')}" async></script>`;
 }
 
 export async function GET() {
@@ -35,7 +36,7 @@ export async function GET() {
     config: readAssistantConfig(t.settings, t.name),
     subdomain: t.subdomain,
     embedSnippet: snippet(t.subdomain),
-    embedUrl: `https://${t.subdomain}.stay.amaldives.com/embed/assistant/${t.subdomain}`,
+    embedUrl: tenantUrl(t.subdomain, `/embed/assistant/${t.subdomain}`),
   });
 }
 

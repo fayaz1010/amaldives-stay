@@ -19,7 +19,7 @@ export async function sendClaimVerificationEmail(args: {
 
   try {
     const result = await client.emails.send({
-      from: `amaldives STAY <${process.env.RESEND_FROM_EMAIL}>`,
+      from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
       to: args.to,
       subject: `Verify ownership — ${args.guesthouseName}`,
       html: claimVerificationHtml({

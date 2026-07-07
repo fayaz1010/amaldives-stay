@@ -92,7 +92,7 @@ async function main() {
 
   console.log(`✅ TENANT_ADMIN ready for ${tenant.name} (${tenant.subdomain})`);
   console.log(`   Claim:    ${keepClaimable ? 'left OPEN (--keep-claimable)' : 'locked (claimable=false)'}`);
-  console.log(`   Login:    https://${tenant.subdomain}.stay.amaldives.com/auth/signin`);
+  console.log(`   Login:    https://${tenant.subdomain}.vayves.com/auth/signin`);
   console.log(`   Email:    ${email}`);
   if (generated) {
     console.log(`   Password: ${password}   ← generated, share securely; owner should change it`);

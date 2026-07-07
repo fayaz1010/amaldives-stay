@@ -177,7 +177,7 @@ async function notifyStaffOfReview(tenantId: string, messageId: string, source: 
         `<p>An inbound OTA (${source}) reservation email couldn't be auto-confirmed and is waiting in your ` +
         `<strong>OTA Import Review</strong> queue.</p>` +
         (reason ? `<p>Reason: ${escapeHtml(reason)}</p>` : '') +
-        `<p><a href="https://stay.amaldives.com/admin/bookings/ota-review">Review it now</a></p>`,
+        `<p><a href="https://vayves.com/admin/bookings/ota-review">Review it now</a></p>`,
       payload: { otaMessageId: messageId },
     });
   } catch {

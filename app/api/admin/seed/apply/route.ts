@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { ROOT_DOMAIN } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     const country = String(body.country ?? extracted?.country ?? 'Maldives').trim() || 'Maldives';
     const address = String(body.address ?? extracted?.address ?? '').trim() || '—';
     const description = String(body.description ?? extracted?.description ?? '').trim()
-      || `${name} — direct booking page on stay.amaldives.com. Edit this description in /admin/web before publishing.`;
+      || `${name} — direct booking page on ${ROOT_DOMAIN}. Edit this description in /admin/web before publishing.`;
     const amenities = Array.isArray(body.amenities ?? extracted?.amenities)
       ? ((body.amenities ?? extracted?.amenities) as unknown[]).map(String).filter(Boolean).slice(0, 30)
       : [];

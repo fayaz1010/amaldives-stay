@@ -75,8 +75,8 @@ export function PaymentsSettings({ tenant, stripePlatformConfigured }: PaymentsS
     depositInitial.minAmount != null ? String(depositInitial.minAmount) : '',
   );
 
-  const bmlWebhook = `https://stay.amaldives.com/api/webhooks/bml-connect/${tenant.subdomain}`;
-  const mayaWebhook = `https://${tenant.subdomain}.stay.amaldives.com/api/webhooks/maya/${tenant.subdomain}`;
+  const bmlWebhook = `https://vayves.com/api/webhooks/bml-connect/${tenant.subdomain}`;
+  const mayaWebhook = `https://${tenant.subdomain}.vayves.com/api/webhooks/maya/${tenant.subdomain}`;
 
   async function save() {
     setSaving(true);

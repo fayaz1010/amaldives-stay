@@ -32,13 +32,13 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function EmbedKit({ subdomain, primaryColor = '#0d9488', amaldivesSlug }: EmbedKitProps) {
-  const stayUrl = `https://${subdomain}.stay.amaldives.com`;
+  const stayUrl = `https://${subdomain}.vayves.com`;
   const bookUrl = `${stayUrl}/book`;
   const amaldivesUrl = amaldivesSlug
     ? `https://www.amaldives.com/guesthouses/${amaldivesSlug}`
     : `https://www.amaldives.com`;
 
-  const embedScript = `<script src="https://stay.amaldives.com/embed.js" data-subdomain="${subdomain}" data-color="${primaryColor}" data-label="Book direct" async></script>`;
+  const embedScript = `<script src="https://vayves.com/embed.js" data-subdomain="${subdomain}" data-color="${primaryColor}" data-label="Book direct" async></script>`;
 
   const whatsappText = encodeURIComponent(
     `Book directly with us (no OTA fees): ${bookUrl}`
