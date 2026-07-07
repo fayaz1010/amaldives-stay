@@ -1,8 +1,8 @@
 /**
- * Idempotently provision STAY subscription billing in Stripe.
+ * Idempotently provision Vayves subscription billing in Stripe.
  *
  * Creates (or reuses, via price lookup_keys) the recurring monthly prices for
- * the STAY plans + Web Presence add-on, and ensures a webhook endpoint pointing
+ * the Vayves plans + Web Presence add-on, and ensures a webhook endpoint pointing
  * at the production /api/webhooks/stripe. Prints the price IDs and (if newly
  * created) the webhook signing secret so they can be set as env vars.
  *
@@ -28,10 +28,10 @@ const WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
 ];
 
 const PLANS = [
-  { key: 'growth', name: 'STAY Growth', amount: 1900, lookup: 'stay_growth_monthly', desc: 'Channel sync + SMS' },
-  { key: 'business', name: 'STAY Business', amount: 4900, lookup: 'stay_business_monthly', desc: 'API + multi-property' },
-  { key: 'channel', name: 'STAY Channel Plus', amount: 7900, lookup: 'stay_channel_monthly', desc: 'Priority sync + Stripe direct' },
-  { key: 'web', name: 'STAY Web Presence', amount: 2900, lookup: 'stay_web_monthly', desc: 'Own-domain website + brand email + hosting' },
+  { key: 'growth', name: 'Vayves Growth', amount: 1900, lookup: 'stay_growth_monthly', desc: 'Channel sync + SMS' },
+  { key: 'business', name: 'Vayves Business', amount: 4900, lookup: 'stay_business_monthly', desc: 'API + multi-property' },
+  { key: 'channel', name: 'Vayves Channel Plus', amount: 7900, lookup: 'stay_channel_monthly', desc: 'Priority sync + Stripe direct' },
+  { key: 'web', name: 'Vayves Web Presence', amount: 2900, lookup: 'stay_web_monthly', desc: 'Own-domain website + brand email + hosting' },
 ] as const;
 
 async function ensurePrice(plan: (typeof PLANS)[number]): Promise<string> {
@@ -69,7 +69,7 @@ async function ensureWebhook(): Promise<string | null> {
     const created = await stripe.webhookEndpoints.create({
       url: WEBHOOK_URL,
       enabled_events: WEBHOOK_EVENTS,
-      description: 'STAY subscriptions + booking checkout',
+      description: 'Vayves subscriptions + booking checkout',
     });
     console.log(`  + webhook: created ${created.id}`);
     return created.secret ?? null;

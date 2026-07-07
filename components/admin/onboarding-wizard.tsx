@@ -485,9 +485,9 @@ export function OnboardingWizard({
               amaldives.com distribution
             </h2>
             <div className="rounded-lg border bg-teal-50 border-teal-200 p-4 text-sm text-teal-900 space-y-2">
-              <p><strong>10%</strong> platform fee when guests book from your amaldives.com listing (STAY-live properties).</p>
+              <p><strong>10%</strong> platform fee when guests book from your amaldives.com listing (Vayves-live properties).</p>
               <p><strong>4%</strong> when they book direct on <code className="bg-white/60 px-1 rounded">{subdomain}.vayves.com</code>.</p>
-              <p className="text-xs text-teal-800">Booking.com and other OTAs typically charge 18%+ — STAY keeps more revenue with you.</p>
+              <p className="text-xs text-teal-800">Booking.com and other OTAs typically charge 18%+ — Vayves keeps more revenue with you.</p>
             </div>
             <p className="text-sm text-gray-600 break-all">
               Listing: <a href={amaldivesListingUrl} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">{amaldivesListingUrl}</a>
@@ -504,7 +504,7 @@ export function OnboardingWizard({
             </h2>
             <p className="text-sm text-gray-600">
               Already listed on Booking.com, Airbnb, Agoda or others? Get their reservations pushed straight into
-              STAY — automatically, verified by AI — so nothing is ever double-booked or missed.
+              Vayves — automatically, verified by AI — so nothing is ever double-booked or missed.
             </p>
             {otaIngestEmail ? (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
@@ -521,7 +521,7 @@ export function OnboardingWizard({
                   <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1">
                     <li>Open the inbox where your OTAs already email you</li>
                     <li>Add a filter that forwards mail from Booking.com/Airbnb/Agoda/Expedia to the address above</li>
-                    <li>Done — new reservations start appearing in STAY automatically</li>
+                    <li>Done — new reservations start appearing in Vayves automatically</li>
                   </ol>
                 </div>
                 <p className="text-xs text-gray-500">

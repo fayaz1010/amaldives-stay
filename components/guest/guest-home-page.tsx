@@ -735,10 +735,9 @@ export function GuestHomePage({
                 <Heart className="h-4 w-4 text-teal-400" />
                 <span className="text-sm text-gray-300">
                   Powered by{' '}
-                  <a href="https://amaldives.com" target="_blank" rel="noopener" className="text-gray-200 hover:text-white underline-offset-2 hover:underline">
-                    amaldives
-                  </a>{' '}
-                  STAY
+                  <a href="https://vayves.com" target="_blank" rel="noopener" className="text-gray-200 hover:text-white underline-offset-2 hover:underline">
+                    Vayves
+                  </a>
                 </span>
               </div>
             </div>

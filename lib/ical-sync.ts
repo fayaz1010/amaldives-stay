@@ -33,7 +33,7 @@ export async function syncFeed(feedId: string): Promise<SyncResult> {
     const res = await fetch(feed.icalUrl, {
       // Pretend to be a calendar app so OTAs that gate on User-Agent
       // (Airbnb does) still serve us the feed.
-      headers: { 'User-Agent': 'amaldives-STAY/1.0 (iCal sync)' },
+      headers: { 'User-Agent': 'Vayves/1.0 (iCal sync)' },
       cache: 'no-store',
     });
     if (!res.ok) {

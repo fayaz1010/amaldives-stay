@@ -1,14 +1,14 @@
 /**
- * Platform commission policy for STAY bookings.
+ * Platform commission policy for Vayves bookings.
  *
  * Two-tier model:
- *   - Marketplace bookings (source = amaldives.com) on a STAY-live tenant
+ *   - Marketplace bookings (source = amaldives.com) on a Vayves-live tenant
  *     pay STAY_MARKETPLACE_COMMISSION (10%) — this funds the marketplace
  *     surface that delivers the booking.
  *   - Direct bookings (any other source) on the tenant's vayves.com
  *     subdomain pay tenant.commissionRate (default 4%).
  *
- * A tenant is "STAY-live for marketplace" when its account is ACTIVE
+ * A tenant is "Vayves-live for marketplace" when its account is ACTIVE
  * (paid/active subscription) AND a non-null amaldivesSlug links it to a
  * listing on amaldives.com — both are required for the 10% rate to apply.
  */
@@ -23,7 +23,7 @@ export type CommissionTenant = {
 };
 
 /**
- * True when the tenant has an active STAY subscription AND is wired
+ * True when the tenant has an active Vayves subscription AND is wired
  * up to an amaldives.com listing.
  */
 export function isStayLiveForMarketplace(
@@ -55,7 +55,7 @@ export function isAmaldivesMarketplaceSource(
 
 /**
  * Compute the platform commission rate (0..1) for a booking. Marketplace
- * bookings on a STAY-live tenant get 10%; anything else falls back to the
+ * bookings on a Vayves-live tenant get 10%; anything else falls back to the
  * tenant's stored commissionRate (default 4%).
  */
 export function getPlatformCommissionRate(

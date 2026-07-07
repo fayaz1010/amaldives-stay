@@ -343,10 +343,7 @@ export default function GuestPortalPage({
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-bold tracking-tight" style={{ color: TEAL }}>
-              amaldives
-            </span>
-            <span className="text-lg font-light text-gray-700 tracking-widest">
-              STAY
+              Vayves
             </span>
           </div>
           {booking.room && (

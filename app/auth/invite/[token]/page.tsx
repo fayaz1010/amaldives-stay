@@ -70,7 +70,7 @@ export default async function InvitePage({
           </h1>
           <p className="text-sm text-gray-600 mb-4">
             You&apos;ve been invited to{' '}
-            <strong>{tenant?.name ?? 'a STAY account'}</strong> as{' '}
+            <strong>{tenant?.name ?? 'a Vayves account'}</strong> as{' '}
             <strong>{user.name ?? user.email}</strong>. Choose a password to
             finish setting up your account.
           </p>

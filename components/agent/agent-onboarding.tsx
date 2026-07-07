@@ -49,7 +49,7 @@ export function AgentOnboarding({ agencyName, markupPercent, onComplete }: Agent
             <Users className="h-14 w-14 text-teal-600 mx-auto" />
             <h1 className="text-2xl font-bold">Welcome, {agencyName}</h1>
             <p className="text-gray-600">
-              Book guesthouses on contracted B2B rates — rack ± your agency markup, confirmed instantly in STAY.
+              Book guesthouses on contracted B2B rates — rack ± your agency markup, confirmed instantly in Vayves.
             </p>
             <Button className="w-full min-h-12 bg-teal-600" onClick={() => setStep(2)}>
               Continue <ArrowRight className="ml-2 h-4 w-4" />

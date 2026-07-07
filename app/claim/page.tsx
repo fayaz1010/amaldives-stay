@@ -279,7 +279,7 @@ function ClaimForm() {
         <CardDescription>
           {guesthouseParam ? (
             <>
-              Verify ownership with your business email. We auto-set up your STAY account from your{' '}
+              Verify ownership with your business email. We auto-set up your Vayves account from your{' '}
               <a
                 href={amaldivesUrl || `https://www.amaldives.com/guesthouses/${guesthouseParam}`}
                 target="_blank"

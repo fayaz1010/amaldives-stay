@@ -1,7 +1,7 @@
 /**
  * POST /api/account/add-tenant
  *
- * Lets an already-signed-in user create a brand-new STAY tenant under
+ * Lets an already-signed-in user create a brand-new Vayves tenant under
  * their existing email — for owners who run multiple guesthouses.
  *
  * Body: {

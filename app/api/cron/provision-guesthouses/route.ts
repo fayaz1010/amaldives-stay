@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 /**
- * Cron — auto-provision STAY tenants for amaldives.com guesthouses that
+ * Cron — auto-provision Vayves tenants for amaldives.com guesthouses that
  * have a verifiable business email or website on file.
  */
 export async function GET(request: NextRequest) {

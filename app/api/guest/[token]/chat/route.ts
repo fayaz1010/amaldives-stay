@@ -87,7 +87,7 @@ export async function POST(
       type: 'STAY_CHAT_GUEST_MESSAGE',
       to: notifyEmail,
       subject: `Guest message — ${booking.confirmationNumber}`,
-      body: `<p>A guest sent a message via STAY chat:</p><blockquote>${body.trim()}</blockquote>`,
+      body: `<p>A guest sent a message via Vayves chat:</p><blockquote>${body.trim()}</blockquote>`,
     }).catch(() => {});
   }
 
