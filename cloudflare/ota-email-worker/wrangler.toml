@@ -4,7 +4,7 @@ compatibility_date = "2024-11-01"
 
 # Dispatch targets. Both are public webhook URLs.
 [vars]
-OTA_WEBHOOK_URL = "https://stay.amaldives.com/api/webhooks/ota-email"
+OTA_WEBHOOK_URL = "https://vayves.com/api/webhooks/ota-email"
 INBOUND_WEBHOOK_URL = "https://amaldives.com/api/inbound/cloudflare"
 
 # Secrets (NOT vars) — set each with `wrangler secret put <NAME>`:
