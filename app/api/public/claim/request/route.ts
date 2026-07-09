@@ -7,6 +7,7 @@ import {
 } from '@/lib/claim-policy';
 import { generateClaimToken, CLAIM_TOKEN_TTL_MS } from '@/lib/claim-token';
 import { sendClaimVerificationEmail } from '@/lib/send-claim-verification';
+import { notifyHqLead } from '@/lib/ozsystems-lead';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,15 @@ export async function POST(request: NextRequest) {
       { status: 503 }
     );
   }
+
+  // Lead capture → Oz Systems HQ (fire-safe, never breaks the flow)
+  await notifyHqLead({
+    intent: 'demo_request',
+    email,
+    company: tenant.name,
+    message: `Property claim requested for "${tenant.name}" (${slug}) on vayves.com`,
+    metadata: { entry_point: 'claim_request', slug, subdomain: tenant.subdomain },
+  });
 
   return NextResponse.json({
     success: true,

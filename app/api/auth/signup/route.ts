@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidEmail } from '@/lib/utils';
+import { notifyHqLead } from '@/lib/ozsystems-lead';
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +61,14 @@ export async function POST(request: NextRequest) {
         firstName: name.split(' ')[0] || name,
         lastName: name.split(' ').slice(1).join(' ') || '',
       },
+    });
+
+    // Lead capture → Oz Systems HQ (fire-safe, never breaks the flow)
+    await notifyHqLead({
+      intent: 'signup',
+      name,
+      email,
+      metadata: { entry_point: 'auth_signup', role: 'GUEST' },
     });
 
     return NextResponse.json(

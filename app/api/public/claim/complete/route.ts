@@ -3,6 +3,7 @@ import { verifyClaimToken } from '@/lib/claim-token';
 import { ensureGuesthouseProvisioned } from '@/lib/auto-provision-guesthouse';
 import { emailMatchesClaimPolicy, normalizeEmail } from '@/lib/claim-policy';
 import { finalizeTenantClaim } from '@/lib/claim-owner';
+import { notifyHqLead } from '@/lib/ozsystems-lead';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,16 @@ export async function POST(request: NextRequest) {
       email: normalizedEmail,
       password,
       ownerName: ownerName || normalizedEmail.split('@')[0],
+    });
+
+    // Lead capture → Oz Systems HQ (fire-safe, never breaks the flow)
+    await notifyHqLead({
+      intent: 'signup',
+      name: ownerName || normalizedEmail.split('@')[0],
+      email: normalizedEmail,
+      company: slug,
+      message: `Property claim COMPLETED for "${slug}" on vayves.com — tenant live at ${result.subdomain}`,
+      metadata: { entry_point: 'claim_complete', slug, subdomain: result.subdomain },
     });
 
     return NextResponse.json({
