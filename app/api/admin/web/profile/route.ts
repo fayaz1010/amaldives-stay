@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isOwner } from '@/lib/requireOwner';
+import { slugify } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ export async function GET() {
         subdomain: true,
         plan: true,
         amaldivesSlug: true,
+        amaldivesFeatured: true,
         properties: {
           select: {
             id: true,
@@ -68,6 +70,8 @@ export async function PATCH(request: NextRequest) {
       propertyName, propertyDescription, propertyPhone, propertyEmail,
       propertyWebsite, propertyAddress, propertyCity, propertyCountry,
       amenities, images, tagline, highlights,
+      // amaldives.com featuring opt-in
+      amaldivesFeatured, amaldivesSlug,
     } = body;
 
     // Update tenant
@@ -76,17 +80,80 @@ export async function PATCH(request: NextRequest) {
     if (tenantDescription !== undefined) tenantUpdate.description = tenantDescription;
     if (tenantLogo !== undefined) tenantUpdate.logo = tenantLogo;
 
+    // ── amaldives.com featuring ────────────────────────────────────────────
+    // Owner opt-in to be promoted in the "Book Direct — Verified" grid on
+    // amaldives.com. Turning it ON requires an amaldivesSlug (the public URL
+    // slug + join key); if none is set we derive one from the subdomain. The
+    // slug is normalised and must be unique across tenants.
+    const current = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { subdomain: true, amaldivesSlug: true },
+    });
+
+    if (amaldivesSlug !== undefined) {
+      const normalised =
+        typeof amaldivesSlug === 'string' && amaldivesSlug.trim()
+          ? slugify(amaldivesSlug)
+          : null;
+      if (normalised && normalised !== current?.amaldivesSlug) {
+        const clash = await prisma.tenant.findFirst({
+          where: { amaldivesSlug: normalised, NOT: { id: tenantId } },
+          select: { id: true },
+        });
+        if (clash) {
+          return NextResponse.json(
+            { error: `The amaldives.com slug "${normalised}" is already taken. Pick another.` },
+            { status: 409 },
+          );
+        }
+      }
+      tenantUpdate.amaldivesSlug = normalised;
+    }
+
+    if (amaldivesFeatured !== undefined) {
+      const wantFeatured = Boolean(amaldivesFeatured);
+      if (wantFeatured) {
+        // Featuring needs a slug — reuse whatever we're about to set, else the
+        // existing one, else derive from the subdomain.
+        const effectiveSlug =
+          tenantUpdate.amaldivesSlug ??
+          current?.amaldivesSlug ??
+          (current?.subdomain ? slugify(current.subdomain) : null);
+        if (!effectiveSlug) {
+          return NextResponse.json(
+            { error: 'Cannot feature on amaldives.com without an amaldives slug.' },
+            { status: 400 },
+          );
+        }
+        // Ensure the derived slug is unique before committing.
+        if (tenantUpdate.amaldivesSlug === undefined && effectiveSlug !== current?.amaldivesSlug) {
+          const clash = await prisma.tenant.findFirst({
+            where: { amaldivesSlug: effectiveSlug, NOT: { id: tenantId } },
+            select: { id: true },
+          });
+          if (clash) {
+            return NextResponse.json(
+              { error: `The amaldives.com slug "${effectiveSlug}" is already taken. Set a custom slug first.` },
+              { status: 409 },
+            );
+          }
+        }
+        tenantUpdate.amaldivesSlug = effectiveSlug;
+      }
+      tenantUpdate.amaldivesFeatured = wantFeatured;
+    }
+
     const themePatch: Record<string, unknown> = {};
     if (primaryColor !== undefined) themePatch.primaryColor = primaryColor;
     if (accentColor !== undefined) themePatch.accentColor = accentColor;
     if (heroImageUrl !== undefined) themePatch.heroImageUrl = heroImageUrl;
     if (heroImageFocalPoint !== undefined) themePatch.heroImageFocalPoint = heroImageFocalPoint;
     if (Object.keys(themePatch).length > 0) {
-      const current = await prisma.tenant.findUnique({
+      const themeCurrent = await prisma.tenant.findUnique({
         where: { id: tenantId },
         select: { theme: true },
       });
-      const existingTheme = (current?.theme as Record<string, unknown> | null) ?? {};
+      const existingTheme = (themeCurrent?.theme as Record<string, unknown> | null) ?? {};
       tenantUpdate.theme = { ...existingTheme, ...themePatch };
     }
 
