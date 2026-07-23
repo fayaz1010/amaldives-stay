@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Lock,
   Hotel,
+  Star,
   Mail,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -134,6 +135,11 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
   const [saved, setSaved] = useState(false);
   const [newHighlight, setNewHighlight] = useState('');
 
+  // amaldives.com featuring opt-in
+  const [amaldivesFeatured, setAmaldivesFeatured] = useState<boolean>(Boolean(tenant?.amaldivesFeatured));
+  const [amaldivesSlug, setAmaldivesSlug] = useState<string>(tenant?.amaldivesSlug ?? '');
+  const [featureError, setFeatureError] = useState<string | null>(null);
+
   // Photo state
   const [photos, setPhotos] = useState<string[]>(property?.images ?? []);
   const [uploading, setUploading] = useState(false);
@@ -145,12 +151,26 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
 
   async function saveProfile() {
     setSaving(true);
+    setFeatureError(null);
     try {
-      await fetch('/api/admin/web/profile', {
+      const res = await fetch('/api/admin/web/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...profile, highlights, amenities }),
+        body: JSON.stringify({
+          ...profile,
+          highlights,
+          amenities,
+          amaldivesFeatured,
+          amaldivesSlug: amaldivesSlug.trim() || undefined,
+        }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        // A slug clash / missing-slug error should not be silently swallowed —
+        // the featuring toggle is the most failure-prone field on this form.
+        setFeatureError(data?.error ?? 'Could not save. Please try again.');
+        return;
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } finally {
@@ -403,6 +423,62 @@ export function WebManager({ tenant, property, subdomain, plan, allRooms = [], d
         {/* Web Profile tab */}
         <TabsContent value="profile" className="m-0 p-5 space-y-5">
           {isLocked ? <UpgradeBanner /> : (<>
+          {/* amaldives.com featuring opt-in — surfaces this property in the
+              "Book Direct — Verified" grid on amaldives.com and sends
+              commission-free direct bookings your way. */}
+          <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <Star className="h-5 w-5 text-teal-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Feature on amaldives.com</p>
+                  <p className="text-xs text-gray-600 mt-0.5 max-w-md">
+                    Get promoted in the <strong>Book Direct — Verified</strong> grid on
+                    amaldives.com. Travellers book you directly (no OTA fees); amaldives.com
+                    takes a small commission only on bookings it sends you.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={amaldivesFeatured}
+                onClick={() => setAmaldivesFeatured((v) => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  amaldivesFeatured ? 'bg-teal-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    amaldivesFeatured ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+            {amaldivesFeatured && (
+              <div className="mt-3">
+                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                  amaldives.com URL slug
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">amaldives.com/guesthouses/</span>
+                  <Input
+                    placeholder={subdomain}
+                    value={amaldivesSlug}
+                    onChange={(e) => setAmaldivesSlug(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Leave blank to use your subdomain (<code>{subdomain}</code>). Must be unique.
+                </p>
+              </div>
+            )}
+            {featureError && (
+              <p className="text-xs text-red-600 mt-2">{featureError}</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Display Name</label>

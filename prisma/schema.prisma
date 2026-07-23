@@ -100,6 +100,11 @@ model Tenant {
   commissionRate Float    @default(0.04)
   isVerifiedDirect Boolean @default(false)
   amaldivesSlug String?   @unique
+  // Owner opt-in: when true (and amaldivesSlug is set) this property is surfaced
+  // in the "Book Direct — Verified" featured grid on amaldives.com via the public
+  // /api/public/amaldives/listings endpoint. Off by default (existing tenants keep
+  // their per-page book-direct widget but are not promoted until they opt in).
+  amaldivesFeatured Boolean @default(false)
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?
   status      TenantStatus @default(ACTIVE)
@@ -137,6 +142,7 @@ model Tenant {
 
   @@index([subdomain])
   @@index([status])
+  @@index([amaldivesFeatured])
 }
 
 /// Junction table linking Users → Tenants with a role per tenant.
