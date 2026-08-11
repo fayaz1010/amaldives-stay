@@ -1,4 +1,5 @@
 import { getResend } from '@/lib/email';
+import { vayvesFrom, VAYVES_REPLY_TO } from './email-from';
 import { claimVerificationHtml } from '@/lib/email-templates';
 
 export async function sendClaimVerificationEmail(args: {
@@ -7,7 +8,7 @@ export async function sendClaimVerificationEmail(args: {
   verifyUrl: string;
   ttlMs: number;
 }): Promise<{ sent: boolean; reason?: string }> {
-  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+  if (!process.env.RESEND_API_KEY) {
     console.warn('[claim-verify] email not configured');
     return { sent: false, reason: 'no_api_key' };
   }
@@ -19,7 +20,8 @@ export async function sendClaimVerificationEmail(args: {
 
   try {
     const result = await client.emails.send({
-      from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
+      from: vayvesFrom(),
+      replyTo: VAYVES_REPLY_TO,
       to: args.to,
       subject: `Verify ownership — ${args.guesthouseName}`,
       html: claimVerificationHtml({

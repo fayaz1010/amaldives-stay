@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { vayvesFrom, VAYVES_REPLY_TO } from '@/lib/email-from';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
@@ -360,7 +361,8 @@ export async function POST(request: NextRequest) {
           const { bookingConfirmationHtml } = await import('@/lib/email-templates');
           const { resend } = await import('@/lib/email');
           await resend.emails.send({
-            from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
+            from: vayvesFrom(),
+            replyTo: VAYVES_REPLY_TO,
             to: guestRec.email,
             subject: `Booking Confirmed - ${confirmationNumber}`,
             html: bookingConfirmationHtml({

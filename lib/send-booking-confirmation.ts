@@ -1,4 +1,5 @@
 import { bookingConfirmationHtml } from '@/lib/email-templates';
+import { VAYVES_FROM_EMAIL, VAYVES_REPLY_TO } from './email-from';
 import { getResend } from '@/lib/email';
 
 export async function sendBookingConfirmationEmail(args: {
@@ -15,7 +16,7 @@ export async function sendBookingConfirmationEmail(args: {
   propertyEmail?: string;
 }) {
   const client = getResend();
-  const from = process.env.RESEND_FROM_EMAIL;
+  const from = VAYVES_FROM_EMAIL;
   if (!client || !from) return { sent: false };
 
   const fmt = (d: Date) =>
@@ -33,6 +34,7 @@ export async function sendBookingConfirmationEmail(args: {
 
   await client.emails.send({
     from: `Vayves <${from}>`,
+    replyTo: VAYVES_REPLY_TO,
     to: args.to,
     subject: `Booking confirmed — ${args.confirmationNumber}`,
     html: bookingConfirmationHtml({

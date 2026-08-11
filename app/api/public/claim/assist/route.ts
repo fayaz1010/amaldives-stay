@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { vayvesFrom, VAYVES_REPLY_TO } from '@/lib/email-from';
 import { prisma } from '@/lib/db';
 import { getResend } from '@/lib/email';
 import { normalizeEmail } from '@/lib/claim-policy';
@@ -55,9 +56,10 @@ export async function POST(request: NextRequest) {
   // Notify the team (fire-safe — the request row is the source of truth).
   try {
     const resend = getResend();
-    if (resend && process.env.RESEND_FROM_EMAIL) {
+    if (resend) {
       await resend.emails.send({
-        from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
+        from: vayvesFrom(),
+        replyTo: VAYVES_REPLY_TO,
         to: ASSIST_NOTIFY_TO,
         subject: `Claim verification needed: ${body.propertyName || slug}`,
         html: [

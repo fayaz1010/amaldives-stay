@@ -12,6 +12,7 @@
  * tasks (TASK-06 flight ETA, TASK-08 pre-arrival) can already enqueue.
  */
 import { prisma } from '@/lib/db';
+import { VAYVES_FROM_EMAIL, VAYVES_REPLY_TO } from './email-from';
 import { getResend } from '@/lib/email';
 import type { Notification, NotificationChannel } from '@prisma/client';
 
@@ -119,12 +120,12 @@ interface DispatchResult {
 async function dispatchEmail(n: Notification): Promise<DispatchResult> {
   const client = getResend();
   if (!client) return { ok: false, error: 'no_api_key' };
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!from) return { ok: false, error: 'no_from_email' };
+  const from = VAYVES_FROM_EMAIL;
 
   try {
     const result = await client.emails.send({
       from: `${FROM_NAME} <${from}>`,
+      replyTo: VAYVES_REPLY_TO,
       to: n.to,
       subject: n.subject ?? '(no subject)',
       html: n.body,

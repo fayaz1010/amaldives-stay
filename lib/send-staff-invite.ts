@@ -7,6 +7,7 @@
  * the JSON response so they can copy-paste it manually.
  */
 import { getResend } from '@/lib/email';
+import { VAYVES_FROM_EMAIL, VAYVES_REPLY_TO } from './email-from';
 import { staffInviteHtml } from '@/lib/email-templates';
 
 interface Args {
@@ -40,11 +41,7 @@ export async function sendStaffInviteEmail(args: Args): Promise<SendResult> {
     console.warn('[invite] RESEND_API_KEY not set — skipping email send');
     return { sent: false, reason: 'no_api_key' };
   }
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!from) {
-    console.warn('[invite] RESEND_FROM_EMAIL not set — skipping email send');
-    return { sent: false, reason: 'no_from_email' };
-  }
+  const from = VAYVES_FROM_EMAIL;
 
   const client = getResend();
   if (!client) {
@@ -54,6 +51,7 @@ export async function sendStaffInviteEmail(args: Args): Promise<SendResult> {
   try {
     const result = await client.emails.send({
       from: `Vayves <${from}>`,
+    replyTo: VAYVES_REPLY_TO,
       to: args.to,
       subject: `You're invited to ${args.tenantName} on Vayves`,
       html: staffInviteHtml({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { vayvesFrom, VAYVES_REPLY_TO } from '@/lib/email-from';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
@@ -318,7 +319,8 @@ export async function POST(request: NextRequest) {
 
         const { resend } = await import('@/lib/email');
         await resend.emails.send({
-          from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
+          from: vayvesFrom(),
+          replyTo: VAYVES_REPLY_TO,
           to: guestRec.email,
           subject: `Booking Confirmed - ${rooms.length} room${rooms.length === 1 ? '' : 's'} at ${propertyName}`,
           html,

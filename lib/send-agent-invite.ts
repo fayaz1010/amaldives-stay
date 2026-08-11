@@ -1,4 +1,5 @@
 import { getResend } from '@/lib/email';
+import { vayvesFrom, VAYVES_REPLY_TO } from './email-from';
 import { staffInviteHtml } from '@/lib/email-templates';
 
 interface Args {
@@ -12,7 +13,7 @@ interface Args {
 }
 
 export async function sendAgentInviteEmail(args: Args) {
-  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+  if (!process.env.RESEND_API_KEY) {
     return { sent: false, reason: 'no_email_config' as const };
   }
   const client = getResend();
@@ -23,7 +24,8 @@ export async function sendAgentInviteEmail(args: Args) {
 
   try {
     await client.emails.send({
-      from: `Vayves <${process.env.RESEND_FROM_EMAIL}>`,
+      from: vayvesFrom(),
+      replyTo: VAYVES_REPLY_TO,
       to: args.to,
       subject: `Agent portal access — ${args.agencyName}`,
       html: staffInviteHtml({
