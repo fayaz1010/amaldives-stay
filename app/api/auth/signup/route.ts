@@ -4,10 +4,15 @@ import { hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidEmail } from '@/lib/utils';
 import { notifyHqLead } from '@/lib/ozsystems-lead';
+import { clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json();
+    const rl = await rateLimit(`signup:${clientIp(request)}`, 5, 60 * 60 * 1000);
+    if (!rl.ok) return tooManyRequests();
+
+    const { name, email: rawEmail, password } = await request.json();
+    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
 
     // Validation
     if (!name || !email || !password) {
@@ -31,9 +36,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Check if user already exists (case-insensitive: legacy rows may be mixed-case)
+    const existingUser = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
     });
 
     if (existingUser) {

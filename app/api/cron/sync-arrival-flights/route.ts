@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireCronAuth } from '@/lib/cron-auth';
 import { syncArrivalEtasFromFlightBoard } from '@/lib/flight-arrival-sync';
 
 export const dynamic = 'force-dynamic';
@@ -13,11 +14,8 @@ export const maxDuration = 60;
  * triggered directly.
  */
 export async function GET(request: NextRequest) {
-  const auth = request.headers.get('authorization') || '';
-  const secret = process.env.CRON_SECRET;
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCronAuth(request);
+  if (denied) return denied;
 
   const t0 = Date.now();
   try {

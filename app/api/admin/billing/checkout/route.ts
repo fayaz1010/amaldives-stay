@@ -52,7 +52,26 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const origin = request.headers.get('origin') ?? tenantUrl(tenant.subdomain);
+  // Only trust the Origin header when it's one of our own hosts — an
+  // attacker-controlled value would redirect the Stripe return (with
+  // session_id) to an arbitrary host. Session cookies are host-only, so the
+  // return URL must stay on whichever of our hosts the admin is browsing.
+  const rawOrigin = request.headers.get('origin');
+  let origin = tenantUrl(tenant.subdomain);
+  if (rawOrigin) {
+    try {
+      const host = new URL(rawOrigin).hostname;
+      const ok =
+        host === 'vayves.com' ||
+        host.endsWith('.vayves.com') ||
+        host === 'stay.amaldives.com' ||
+        host.endsWith('.stay.amaldives.com') ||
+        host === 'localhost';
+      if (ok) origin = rawOrigin.replace(/\/$/, '');
+    } catch {
+      // keep fallback
+    }
+  }
   // Store the real tier (growth/business/channel/web) so the plan is recorded accurately.
   const planTier = String(planKey).toLowerCase();
 

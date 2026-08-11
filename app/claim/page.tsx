@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Hotel, AlertCircle, CheckCircle2, ExternalLink, Mail } from 'lucide-react';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-type Step = 'email' | 'sent' | 'password' | 'success' | 'blocked';
+type Step = 'email' | 'sent' | 'password' | 'success' | 'blocked' | 'assist' | 'assistSent';
 
 function ClaimForm() {
   const searchParams = useSearchParams();
@@ -32,6 +32,10 @@ function ClaimForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<{ stayUrl: string; amaldivesUrl?: string | null } | null>(null);
+  const [assistName, setAssistName] = useState('');
+  const [assistPhone, setAssistPhone] = useState('');
+  const [assistMessage, setAssistMessage] = useState('');
+  const [canAssist, setCanAssist] = useState(false);
 
   useEffect(() => {
     if (!guesthouseParam) return;
@@ -43,11 +47,14 @@ function ClaimForm() {
         if (data.amaldivesUrl) setAmaldivesUrl(data.amaldivesUrl);
         if (data.emailHint) setEmailHint(data.emailHint);
         if (data.claimed) {
-          setError(`Already claimed — sign in at ${data.stayUrl}`);
+          setError(data.stayUrl ? `Already claimed — sign in at ${data.stayUrl}` : 'Already claimed — sign in instead.');
           setStep('blocked');
         } else if (data.canClaim === false && data.error) {
           setError(data.error);
+          setCanAssist(Boolean(data.canRequestAssist));
           setStep('blocked');
+        } else {
+          setCanAssist(true);
         }
       })
       .catch(() => {});
@@ -96,6 +103,36 @@ function ClaimForm() {
         return;
       }
       setStep('sent');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/public/claim/assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: guesthouseParam,
+          propertyName: guesthouseName,
+          email,
+          contactName: assistName,
+          phone: assistPhone,
+          message: assistMessage,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Could not submit the request. Try again shortly.');
+        return;
+      }
+      setStep('assistSent');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -176,6 +213,88 @@ function ClaimForm() {
           <Link href="/auth/signin" className="block">
             <Button className="w-full bg-cyan-600 hover:bg-cyan-700">Sign in to dashboard</Button>
           </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (step === 'assistSent') {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-cyan-600 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-white" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold">Request received</CardTitle>
+          <CardDescription>
+            Our team will call or WhatsApp you to verify ownership of{' '}
+            <strong>{guesthouseName || guesthouseParam}</strong> — usually within 1 business day.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (step === 'assist') {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Verify another way</CardTitle>
+          <CardDescription>
+            Can&apos;t use the email on file? Leave your details and our team verifies ownership of{' '}
+            <strong>{guesthouseName || guesthouseParam}</strong> by phone — free, no obligation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleAssist} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="assistName">Your name</Label>
+              <Input id="assistName" value={assistName} onChange={(e) => setAssistName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assistEmail">Email</Label>
+              <Input
+                id="assistEmail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assistPhone">Phone / WhatsApp</Label>
+              <Input
+                id="assistPhone"
+                value={assistPhone}
+                onChange={(e) => setAssistPhone(e.target.value)}
+                placeholder="+960 …"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assistMessage">Anything we should know? (optional)</Label>
+              <Input
+                id="assistMessage"
+                value={assistMessage}
+                onChange={(e) => setAssistMessage(e.target.value)}
+                placeholder="e.g. our listed email is out of date"
+              />
+            </div>
+            <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
+              {loading ? 'Submitting…' : 'Request manual verification'}
+            </Button>
+            <Button type="button" variant="outline" className="w-full" onClick={() => setStep('email')}>
+              Back
+            </Button>
+          </form>
         </CardContent>
       </Card>
     );
@@ -297,10 +416,17 @@ function ClaimForm() {
       </CardHeader>
       <CardContent>
         {step === 'blocked' ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            {canAssist && (
+              <Button className="w-full bg-cyan-600 hover:bg-cyan-700" onClick={() => setStep('assist')}>
+                Request manual verification
+              </Button>
+            )}
+          </div>
         ) : (
           <form onSubmit={handleRequestEmail} className="space-y-4">
             {error && (
@@ -340,6 +466,16 @@ function ClaimForm() {
             >
               {loading ? 'Sending…' : 'Send verification email'}
             </Button>
+
+            {guesthouseParam && (
+              <button
+                type="button"
+                onClick={() => setStep('assist')}
+                className="w-full text-center text-sm text-cyan-700 hover:underline"
+              >
+                Can&apos;t use that email? Request manual verification
+              </button>
+            )}
           </form>
         )}
 

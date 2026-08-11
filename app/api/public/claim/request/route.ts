@@ -9,6 +9,7 @@ import { generateClaimToken, CLAIM_TOKEN_TTL_MS } from '@/lib/claim-token';
 import { sendClaimVerificationEmail } from '@/lib/send-claim-verification';
 import { notifyHqLead } from '@/lib/ozsystems-lead';
 import { prisma } from '@/lib/db';
+import { clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,15 @@ export async function POST(request: NextRequest) {
 
   if (!slug || !email) {
     return NextResponse.json({ error: 'slug and email are required' }, { status: 400 });
+  }
+
+  // Per-IP guard against enumeration/provisioning abuse, plus a per-slug cap
+  // so the legitimate owner's inbox can't be mail-bombed.
+  const ipLimit = await rateLimit(`claim-request:${clientIp(request)}`, 10, 60 * 60 * 1000);
+  if (!ipLimit.ok) return tooManyRequests();
+  const slugLimit = await rateLimit(`claim-send:${slug}`, 3, 24 * 60 * 60 * 1000);
+  if (!slugLimit.ok) {
+    return tooManyRequests('Verification limit reached for this property today. Try again tomorrow or contact support.');
   }
 
   const provision = await ensureGuesthouseProvisioned(slug);

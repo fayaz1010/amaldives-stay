@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ensureGuesthouseProvisioned } from '@/lib/auto-provision-guesthouse';
-import { prisma } from '@/lib/db';
-import {
-  claimPolicyHint,
-  readClaimPolicy,
-} from '@/lib/claim-policy';
+import { previewGuesthouseClaim } from '@/lib/auto-provision-guesthouse';
+import { claimPolicyHint } from '@/lib/claim-policy';
 import { fetchAmaldivesGuesthouse } from '@/lib/amaldives-guesthouse';
+import { clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Resolve amaldives.com guesthouse slug → claim prefill data.
- * Auto-provisions an unclaimed tenant when verifiable contact data exists.
+ * READ-ONLY: never provisions tenants or domains (that happens in the
+ * claim request flow after the email passes the claim policy).
  * Query: ?slug=reef-view-guesthouse
  */
 export async function GET(request: NextRequest) {
@@ -20,60 +18,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'slug required' }, { status: 400 });
   }
 
-  const existing = await prisma.tenant.findFirst({
-    where: {
-      OR: [{ amaldivesSlug: slug }, { subdomain: slug }],
-    },
-    select: { subdomain: true, name: true, settings: true },
-  });
+  const rl = await rateLimit(`claim-lookup:${clientIp(request)}`, 20, 60 * 60 * 1000);
+  if (!rl.ok) return tooManyRequests();
 
-  if (existing) {
-    const settings = (existing.settings as Record<string, unknown> | null) ?? {};
-    const claimable = settings.claimable !== false;
-    const claimPolicy = readClaimPolicy(settings);
+  const preview = await previewGuesthouseClaim(slug);
 
-    return NextResponse.json({
-      provisioned: claimable,
-      claimed: !claimable,
-      verificationRequired: claimable,
-      subdomain: existing.subdomain,
-      name: existing.name,
-      stayUrl: `https://${existing.subdomain}.vayves.com`,
-      amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
-      emailHint: claimPolicy ? claimPolicyHint(claimPolicy) : undefined,
-    });
-  }
-
-  // Lazy auto-provision from amaldives.com listing data.
-  const provision = await ensureGuesthouseProvisioned(slug);
-  if (provision.ok) {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: provision.tenantId },
-      select: { name: true, subdomain: true },
-    });
+  if (preview.ok) {
     return NextResponse.json({
       provisioned: true,
       claimed: false,
       verificationRequired: true,
-      autoProvisioned: provision.created,
-      subdomain: provision.subdomain,
-      name: tenant?.name,
-      stayUrl: `https://${provision.subdomain}.vayves.com`,
+      subdomain: preview.subdomain,
+      name: preview.name,
+      stayUrl: preview.exists ? `https://${preview.subdomain}.vayves.com` : undefined,
       amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
-      emailHint: claimPolicyHint(provision.claimPolicy),
+      emailHint: claimPolicyHint(preview.claimPolicy),
     });
   }
 
-  if (provision.reason === 'already_claimed') {
-    const tenant = await prisma.tenant.findFirst({
-      where: { OR: [{ amaldivesSlug: slug }, { subdomain: slug }] },
-      select: { subdomain: true, name: true },
-    });
+  if (preview.reason === 'already_claimed') {
     return NextResponse.json({
       claimed: true,
-      subdomain: tenant?.subdomain,
-      name: tenant?.name,
-      stayUrl: tenant ? `https://${tenant.subdomain}.vayves.com` : undefined,
       error: 'Already claimed — sign in instead.',
     });
   }
@@ -87,15 +52,16 @@ export async function GET(request: NextRequest) {
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
 
-  if (provision.reason === 'no_verification_data') {
+  if (preview.reason === 'no_verification_data') {
     return NextResponse.json({
       claimed: false,
       canClaim: false,
+      canRequestAssist: true,
       slug,
       name: humanName,
       amaldivesUrl: `https://www.amaldives.com/guesthouses/${slug}`,
       error:
-        'We need a business website or owner email on your amaldives.com listing before you can claim automatically. Contact support@amaldives.com.',
+        'We could not verify ownership automatically. Request a manual verification and our team will call you.',
     });
   }
 

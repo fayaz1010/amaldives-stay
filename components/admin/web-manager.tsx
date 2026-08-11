@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { hasWebFeatures } from '@/lib/plans';
 import {
   Globe,
   Wifi,
@@ -100,7 +101,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function WebManager({ tenant, property, subdomain, plan, allRooms = [], defaultTab = 'profile', otaIngestDomain = null, otaForwardingConfirmation = null }: WebManagerProps) {
-  const isLocked = plan === 'basic';
+  const isLocked = !hasWebFeatures(plan);
   const otaIngestEmail = otaIngestDomain ? `ota-${subdomain}@${otaIngestDomain}` : null;
   const [forwardConfirmation, setForwardConfirmation] = useState(otaForwardingConfirmation);
   const [dismissingConfirmation, setDismissingConfirmation] = useState(false);

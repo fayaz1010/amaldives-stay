@@ -22,8 +22,9 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        // Case-insensitive: legacy rows may be stored mixed-case.
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: credentials.email.trim(), mode: 'insensitive' } },
           include: {
             tenant: true,
             guestProfile: true,

@@ -113,8 +113,9 @@ export function emailMatchesClaimPolicy(email: string, policy: ClaimPolicy): boo
 
 export function claimPolicyHint(policy: ClaimPolicy): string {
   if (policy.allowedDomains.length > 0) {
-    const primary = policy.allowedDomains[0];
-    return `Use your business email @${primary}`;
+    // Don't name the domain — this hint is served unauthenticated and the
+    // owner already knows their own website domain.
+    return 'Use your business email (same domain as your website)';
   }
   if (policy.allowedEmails.length > 0) {
     const masked = policy.allowedEmails[0].replace(/^(.{2}).*(@.*)$/, '$1***$2');

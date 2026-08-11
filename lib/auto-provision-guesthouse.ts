@@ -81,6 +81,73 @@ async function createProvisionedTenant(
   return { tenantId: tenant.id, subdomain: tenant.subdomain };
 }
 
+export type ClaimPreview =
+  | {
+      ok: true;
+      exists: boolean;
+      subdomain: string | null;
+      name: string | null;
+      claimPolicy: ClaimPolicy;
+    }
+  | { ok: false; reason: 'not_found' | 'no_verification_data' | 'already_claimed' | 'inactive' };
+
+/**
+ * READ-ONLY claimability check for a guesthouse slug. Never creates tenants,
+ * never writes settings, never registers domains — safe for the public,
+ * unauthenticated lookup endpoint. Provisioning happens only in the claim
+ * request flow (POST) after the email passes the claim policy.
+ */
+export async function previewGuesthouseClaim(slug: string): Promise<ClaimPreview> {
+  const normalizedSlug = slug.trim().toLowerCase();
+  if (!normalizedSlug) return { ok: false, reason: 'not_found' };
+
+  const existing = await prisma.tenant.findFirst({
+    where: { OR: [{ amaldivesSlug: normalizedSlug }, { subdomain: slugToSubdomain(normalizedSlug) }] },
+    select: { name: true, subdomain: true, settings: true },
+  });
+
+  if (existing) {
+    const settings = (existing.settings as Record<string, unknown> | null) ?? {};
+    if (settings.claimable === false) {
+      return { ok: false, reason: 'already_claimed' };
+    }
+    let claimPolicy = readClaimPolicy(settings);
+    if (!claimPolicy) {
+      const gh = await fetchAmaldivesGuesthouse(normalizedSlug);
+      claimPolicy = gh ? buildClaimPolicy({ email: gh.email, website: gh.website }) : null;
+    }
+    if (!claimPolicy) {
+      return { ok: false, reason: 'no_verification_data' };
+    }
+    return {
+      ok: true,
+      exists: true,
+      subdomain: existing.subdomain,
+      name: existing.name,
+      claimPolicy,
+    };
+  }
+
+  const gh = await fetchAmaldivesGuesthouse(normalizedSlug);
+  if (!gh) return { ok: false, reason: 'not_found' };
+  if (gh.adminStatus && gh.adminStatus !== 'active') {
+    return { ok: false, reason: 'inactive' };
+  }
+
+  const claimPolicy = buildClaimPolicy({ email: gh.email, website: gh.website });
+  if (!claimPolicy) {
+    return { ok: false, reason: 'no_verification_data' };
+  }
+
+  return {
+    ok: true,
+    exists: false,
+    subdomain: slugToSubdomain(normalizedSlug),
+    name: gh.name,
+    claimPolicy,
+  };
+}
+
 /**
  * Ensure a claimable tenant exists for an amaldives.com guesthouse slug.
  * Idempotent — skips if already provisioned and claimed.

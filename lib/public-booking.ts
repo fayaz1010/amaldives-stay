@@ -97,14 +97,17 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     throw new Error('Room is not available for the selected dates');
   }
 
-  let guest = await prisma.user.findUnique({ where: { email: guestEmail } });
+  const normalizedGuestEmail = guestEmail.trim().toLowerCase();
+  let guest = await prisma.user.findFirst({
+    where: { email: { equals: normalizedGuestEmail, mode: 'insensitive' } },
+  });
   if (!guest) {
     const parts = guestName.trim().split(/\s+/);
     const firstName = parts[0] || '—';
     const lastName = parts.slice(1).join(' ') || '—';
     guest = await prisma.user.create({
       data: {
-        email: guestEmail,
+        email: normalizedGuestEmail,
         name: guestName,
         password: await bcrypt.hash(randomUUID(), 10),
         role: 'GUEST',

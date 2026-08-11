@@ -1560,3 +1560,31 @@ model AgencyUser {
 
   @@index([agencyId])
 }
+
+// Sliding-window rate limiting (no external service). Rows are pruned
+// opportunistically by lib/rate-limit.ts.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+// "Verify me another way" requests from owners who can't pass the
+// domain/exact-email claim policy (65% of guesthouse contacts are free-email).
+// Staff verify by phone, then provision via scripts/create-tenant-admin.ts.
+model ClaimAssistRequest {
+  id           String   @id @default(cuid())
+  slug         String
+  propertyName String?
+  contactName  String?
+  email        String
+  phone        String?
+  message      String?
+  status       String   @default("new") // new | verified | rejected
+  createdAt    DateTime @default(now())
+
+  @@index([slug, createdAt])
+  @@index([status])
+}
