@@ -36,6 +36,18 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Email verification gate — new GUEST self-signups only. The cutoff
+        // keeps every pre-existing account (tenant admins, staff, legacy
+        // guests) signing in unchanged; claim/invite flows verify elsewhere.
+        const VERIFY_CUTOFF = new Date('2026-08-13T00:00:00Z');
+        if (
+          user.role === 'GUEST' &&
+          !user.emailVerified &&
+          user.createdAt >= VERIFY_CUTOFF
+        ) {
+          throw new Error('email_unverified');
+        }
+
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
           return null;

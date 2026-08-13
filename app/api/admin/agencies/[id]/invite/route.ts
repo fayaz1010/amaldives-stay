@@ -62,7 +62,7 @@ export async function POST(
   const emailResult = await sendAgentInviteEmail({
     to: user.email,
     recipientName: user.name ?? user.email,
-    tenantName: agency.tenant.name,
+    tenantName: agency.tenant?.name ?? agency.name,
     inviterName: session.user.name ?? session.user.email ?? 'Admin',
     agencyName: agency.name,
     inviteUrl,

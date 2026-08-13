@@ -1532,7 +1532,9 @@ enum AgencyRole {
 
 model Agency {
   id            String   @id @default(cuid())
-  tenantId      String
+  // null = PLATFORM agency (e.g. amaldives/Lateral Investments) that can book
+  // across every ACTIVE tenant; set = agency scoped to one tenant's inventory.
+  tenantId      String?
   name          String
   // Markup on rack total: +10 = agent pays 110% of rack, -15 = 15% below rack
   markupPercent Float    @default(0)
@@ -1541,7 +1543,7 @@ model Agency {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   members  AgencyUser[]
   bookings Booking[]
 

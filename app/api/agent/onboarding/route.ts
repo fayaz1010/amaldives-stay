@@ -21,6 +21,10 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Platform agencies (no tenant) have nowhere to persist the marker; the
+  // portal simply skips onboarding for them.
+  if (!ctx.tenantId) return NextResponse.json({ ok: true });
+
   // Persist on user via a lightweight marker — guestProfile not applicable; use tenant settings on agency tenant
   const tenant = await prisma.tenant.findUnique({
     where: { id: ctx.tenantId },
@@ -48,6 +52,10 @@ export async function GET() {
   const ctx = await getAgentContext(session);
   if (!ctx) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!ctx.tenantId) {
+    return NextResponse.json({ complete: true });
   }
 
   const tenant = await prisma.tenant.findUnique({

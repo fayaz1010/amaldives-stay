@@ -5,6 +5,10 @@ import { prisma } from '@/lib/db';
 import { isValidEmail } from '@/lib/utils';
 import { notifyHqLead } from '@/lib/ozsystems-lead';
 import { clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import {
+  createSignupVerification,
+  sendSignupVerificationEmail,
+} from '@/lib/send-signup-verification';
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,6 +72,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Email verification (fire-safe — account exists either way; sign-in is
+    // gated on emailVerified for new GUEST accounts in lib/auth.ts)
+    try {
+      const token = await createSignupVerification(email);
+      await sendSignupVerificationEmail({ to: email, name, token });
+    } catch (err) {
+      console.error('[signup] verification email failed:', err);
+    }
+
     // Lead capture → Oz Systems HQ (fire-safe, never breaks the flow)
     await notifyHqLead({
       intent: 'signup',
@@ -77,7 +90,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: 'User created successfully' },
+      { message: 'Account created — check your email to confirm your address before signing in.' },
       { status: 201 }
     );
   } catch (error) {
