@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     phone?: string;
     message?: string;
     propertyName?: string;
+    website?: string;
   };
   try {
     body = await request.json();
@@ -36,10 +37,50 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  // Honeypot — a hidden field no human fills in.
+  if (typeof body.website === 'string' && body.website.trim() !== '') {
+    return NextResponse.json({ ok: true, requestId: null });
+  }
+
   const slug = String(body.slug || '').trim().toLowerCase().slice(0, 120);
   const email = normalizeEmail(String(body.email || '')).slice(0, 200);
   if (!slug || !email || !email.includes('@')) {
     return NextResponse.json({ error: 'slug and a valid email are required' }, { status: 400 });
+  }
+
+  // Form-spam bots fill every field with random character soup. Real property
+  // and contact names contain a space or separator and aren't a coin-flip of
+  // upper/lower case; a message that merely repeats the email is another tell.
+  const looksRandom = (s: string): boolean => {
+    const v = s.trim();
+    if (v.length < 12) return false;
+    if (/[\s._'\-]/.test(v)) return false;
+    const switches = v.split('').filter((ch, i, arr) => i > 0 && /[a-z]/i.test(ch) && /[a-z]/i.test(arr[i - 1]) && (ch === ch.toUpperCase()) !== (arr[i - 1] === arr[i - 1].toUpperCase())).length;
+    return switches >= 4;
+  };
+
+  const propertyName = String(body.propertyName || '').slice(0, 200);
+  const contactName = String(body.contactName || '').slice(0, 200);
+  const message = String(body.message || '').slice(0, 2000);
+  const spam =
+    looksRandom(propertyName) ||
+    looksRandom(contactName) ||
+    (message.trim() !== '' && normalizeEmail(message) === email);
+
+  if (spam) {
+    // Record it (so the pattern stays visible) but never page a human.
+    await prisma.claimAssistRequest.create({
+      data: {
+        slug,
+        email,
+        propertyName: propertyName || null,
+        contactName: contactName || null,
+        phone: String(body.phone || '').slice(0, 60) || null,
+        message: message || null,
+        status: 'spam',
+      },
+    });
+    return NextResponse.json({ ok: true, requestId: null });
   }
 
   const req = await prisma.claimAssistRequest.create({
