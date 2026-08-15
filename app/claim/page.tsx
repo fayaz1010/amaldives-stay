@@ -35,7 +35,19 @@ function ClaimForm() {
   const [assistName, setAssistName] = useState('');
   const [assistPhone, setAssistPhone] = useState('');
   const [assistMessage, setAssistMessage] = useState('');
+  // Visitors who arrive at a bare /claim (organic, WhatsApp, a shared link)
+  // have no listing slug, so they have to tell us which property they own.
+  const [assistProperty, setAssistProperty] = useState('');
   const [canAssist, setCanAssist] = useState(false);
+
+  // Without a listing slug the email step is unusable: its input and its submit
+  // button are both disabled. Every CTA on the site links to a bare /claim, so
+  // organic, WhatsApp and shared traffic all landed on a dead form — on the one
+  // product we are actively selling. Derive the step instead of storing it, so
+  // a slug-less visitor gets the open lead form (same endpoint, still persists
+  // and still notifies) without a hydration mismatch or a flash of the old UI.
+  const effectiveStep: Step = !guesthouseParam && step === 'email' ? 'assist' : step;
+
 
   useEffect(() => {
     if (!guesthouseParam) return;
@@ -119,8 +131,11 @@ function ClaimForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          slug: guesthouseParam,
-          propertyName: guesthouseName,
+          // The API requires a slug. Visitors with no listing link get a
+          // sentinel one so the request still persists and still notifies —
+          // staff match it to a property from the name/phone they gave.
+          slug: guesthouseParam || 'unlisted-enquiry',
+          propertyName: guesthouseName || assistProperty,
           email,
           contactName: assistName,
           phone: assistPhone,
@@ -218,7 +233,7 @@ function ClaimForm() {
     );
   }
 
-  if (step === 'assistSent') {
+  if (effectiveStep === 'assistSent') {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -237,14 +252,20 @@ function ClaimForm() {
     );
   }
 
-  if (step === 'assist') {
+  if (effectiveStep === 'assist') {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Verify another way</CardTitle>
           <CardDescription>
-            Can&apos;t use the email on file? Leave your details and our team verifies ownership of{' '}
-            <strong>{guesthouseName || guesthouseParam}</strong> by phone — free, no obligation.
+            {guesthouseParam ? (
+              <>
+                Can&apos;t use the email on file? Leave your details and our team verifies ownership of{' '}
+                <strong>{guesthouseName || guesthouseParam}</strong> by phone — free, no obligation.
+              </>
+            ) : (
+              <>Leave your details and our team verifies ownership by phone — free, no obligation.</>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -259,6 +280,18 @@ function ClaimForm() {
               <Label htmlFor="assistName">Your name</Label>
               <Input id="assistName" value={assistName} onChange={(e) => setAssistName(e.target.value)} required />
             </div>
+            {!guesthouseParam && (
+              <div className="space-y-2">
+                <Label htmlFor="assistProperty">Property name</Label>
+                <Input
+                  id="assistProperty"
+                  value={assistProperty}
+                  onChange={(e) => setAssistProperty(e.target.value)}
+                  placeholder="e.g. Rivethi Beach"
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="assistEmail">Email</Label>
               <Input
@@ -291,16 +324,18 @@ function ClaimForm() {
             <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
               {loading ? 'Submitting…' : 'Request manual verification'}
             </Button>
-            <Button type="button" variant="outline" className="w-full" onClick={() => setStep('email')}>
-              Back
-            </Button>
+            {guesthouseParam && (
+              <Button type="button" variant="outline" className="w-full" onClick={() => setStep('email')}>
+                Back
+              </Button>
+            )}
           </form>
         </CardContent>
       </Card>
     );
   }
 
-  if (step === 'sent') {
+  if (effectiveStep === 'sent') {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -327,7 +362,7 @@ function ClaimForm() {
     );
   }
 
-  if (step === 'password') {
+  if (effectiveStep === 'password') {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -415,7 +450,7 @@ function ClaimForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {step === 'blocked' ? (
+        {effectiveStep === 'blocked' ? (
           <div className="space-y-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
