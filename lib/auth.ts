@@ -5,6 +5,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { getServerSession } from 'next-auth/next';
 import bcrypt from 'bcryptjs';
 import { prisma } from './db';
+import { canonicalEmail } from './email-canonical';
 import { UserRole } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
@@ -22,9 +23,19 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Case-insensitive: legacy rows may be stored mixed-case.
+        // Case-insensitive: legacy rows may be stored mixed-case. Both the
+        // typed and canonical forms are tried because signup now stores Gmail
+        // addresses canonically, so someone who registered `a.b@gmail.com` is
+        // on file as `ab@gmail.com` but may well type the dotted form here.
+        const typed = credentials.email.trim();
+        const canonical = canonicalEmail(typed);
         const user = await prisma.user.findFirst({
-          where: { email: { equals: credentials.email.trim(), mode: 'insensitive' } },
+          where: {
+            OR: [
+              { email: { equals: typed, mode: 'insensitive' } },
+              { email: { equals: canonical, mode: 'insensitive' } },
+            ],
+          },
           include: {
             tenant: true,
             guestProfile: true,

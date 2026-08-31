@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Hotel, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { TurnstileWidget } from '@/components/turnstile-widget';
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -21,6 +22,8 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [challengeReset, setChallengeReset] = useState(0);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +52,7 @@ export default function SignUpPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
+          turnstileToken,
         }),
       });
 
@@ -57,9 +61,12 @@ export default function SignUpPage() {
       } else {
         const data = await response.json();
         setError(data.message || 'An error occurred');
+        // Turnstile tokens are single-use, so a retry needs a fresh challenge.
+        setChallengeReset((n) => n + 1);
       }
     } catch (err) {
       setError('An error occurred during sign up');
+      setChallengeReset((n) => n + 1);
     } finally {
       setLoading(false);
     }
@@ -160,6 +167,8 @@ export default function SignUpPage() {
               />
             </div>
             
+            <TurnstileWidget onToken={setTurnstileToken} resetSignal={challengeReset} />
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating Account...' : 'Create Account'}
             </Button>

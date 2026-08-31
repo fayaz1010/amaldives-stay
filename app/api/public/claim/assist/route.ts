@@ -5,6 +5,7 @@ import { getResend } from '@/lib/email';
 import { normalizeEmail } from '@/lib/claim-policy';
 import { notifyHqLead } from '@/lib/ozsystems-lead';
 import { clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { challengeFailed, verifyTurnstile } from '@/lib/turnstile';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,8 @@ const ASSIST_NOTIFY_TO = process.env.CLAIM_ASSIST_NOTIFY_EMAIL || 'partnerships@
  * Staff verify by phone, then provision via scripts/create-tenant-admin.ts.
  */
 export async function POST(request: NextRequest) {
-  const rl = await rateLimit(`claim-assist:${clientIp(request)}`, 3, 60 * 60 * 1000);
+  const ip = clientIp(request);
+  const rl = await rateLimit(`claim-assist:${ip}`, 3, 60 * 60 * 1000);
   if (!rl.ok) return tooManyRequests();
 
   let body: {
@@ -30,11 +32,20 @@ export async function POST(request: NextRequest) {
     message?: string;
     propertyName?: string;
     website?: string;
+    turnstileToken?: string;
   };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // The honeypot and looksRandom checks below missed 85 automated submissions —
+  // the fake names contain spaces, which makes looksRandom bail immediately.
+  const challenge = await verifyTurnstile(body.turnstileToken, ip);
+  if (!challenge.ok) {
+    console.warn('[claim-assist] turnstile rejected:', challenge.reason);
+    return challengeFailed();
   }
 
   // Honeypot — a hidden field no human fills in.

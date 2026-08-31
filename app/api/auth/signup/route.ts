@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidEmail } from '@/lib/utils';
-import { notifyHqLead } from '@/lib/ozsystems-lead';
+import { canonicalEmail } from '@/lib/email-canonical';
 import { clientIp, rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { challengeFailed, verifyTurnstile } from '@/lib/turnstile';
 import {
   createSignupVerification,
   sendSignupVerificationEmail,
@@ -12,11 +13,22 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const rl = await rateLimit(`signup:${clientIp(request)}`, 5, 60 * 60 * 1000);
+    const ip = clientIp(request);
+    const rl = await rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000);
     if (!rl.ok) return tooManyRequests();
 
-    const { name, email: rawEmail, password } = await request.json();
-    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+    const { name, email: rawEmail, password, turnstileToken } = await request.json();
+
+    const challenge = await verifyTurnstile(turnstileToken, ip);
+    if (!challenge.ok) {
+      console.warn('[signup] turnstile rejected:', challenge.reason);
+      return challengeFailed();
+    }
+
+    const typedEmail = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+    // Stored canonical so Gmail dot and +tag variants cannot open one account
+    // per variant. Sign-in canonicalises the same way before lookup.
+    const email = canonicalEmail(typedEmail);
 
     // Validation
     if (!name || !email || !password) {
@@ -40,9 +52,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists (case-insensitive: legacy rows may be mixed-case)
+    // Case-insensitive because legacy rows may be mixed-case; both forms are
+    // checked because rows predating canonicalisation store the address as typed.
     const existingUser = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
+      where: {
+        OR: [
+          { email: { equals: email, mode: 'insensitive' } },
+          { email: { equals: typedEmail, mode: 'insensitive' } },
+        ],
+      },
     });
 
     if (existingUser) {
@@ -81,13 +99,9 @@ export async function POST(request: NextRequest) {
       console.error('[signup] verification email failed:', err);
     }
 
-    // Lead capture → Oz Systems HQ (fire-safe, never breaks the flow)
-    await notifyHqLead({
-      intent: 'signup',
-      name,
-      email,
-      metadata: { entry_point: 'auth_signup', role: 'GUEST' },
-    });
+    // Lead capture deliberately does NOT happen here. An unconfirmed signup is
+    // not a lead — 251 of them reached HQ as junk. It fires from the email
+    // verification route instead, so HQ only ever sees a working address.
 
     return NextResponse.json(
       { message: 'Account created — check your email to confirm your address before signing in.' },

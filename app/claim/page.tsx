@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { TurnstileWidget } from '@/components/turnstile-widget';
 
 type Step = 'email' | 'sent' | 'password' | 'success' | 'blocked' | 'assist' | 'assistSent';
 
@@ -38,6 +39,8 @@ function ClaimForm() {
   // Visitors who arrive at a bare /claim (organic, WhatsApp, a shared link)
   // have no listing slug, so they have to tell us which property they own.
   const [assistProperty, setAssistProperty] = useState('');
+  const [assistToken, setAssistToken] = useState('');
+  const [assistChallengeReset, setAssistChallengeReset] = useState(0);
   const [canAssist, setCanAssist] = useState(false);
 
   // Without a listing slug the email step is unusable: its input and its submit
@@ -140,16 +143,20 @@ function ClaimForm() {
           contactName: assistName,
           phone: assistPhone,
           message: assistMessage,
+          turnstileToken: assistToken,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Could not submit the request. Try again shortly.');
+        setError(data?.error || data?.message || 'Could not submit the request. Try again shortly.');
+        // Turnstile tokens are single-use, so a retry needs a fresh challenge.
+        setAssistChallengeReset((n) => n + 1);
         return;
       }
       setStep('assistSent');
     } catch {
       setError('Network error. Please try again.');
+      setAssistChallengeReset((n) => n + 1);
     } finally {
       setLoading(false);
     }
@@ -321,6 +328,7 @@ function ClaimForm() {
                 placeholder="e.g. our listed email is out of date"
               />
             </div>
+            <TurnstileWidget onToken={setAssistToken} resetSignal={assistChallengeReset} />
             <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={loading}>
               {loading ? 'Submitting…' : 'Request manual verification'}
             </Button>
