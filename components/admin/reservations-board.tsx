@@ -147,7 +147,7 @@ interface BookingDetail {
 
 function grandTotal(b: Booking): number {
   // The amount the GUEST owes — room nights + service orders. The
-  // platformFee is what stay.amaldives charges the owner (commission)
+  // platformFee is what Vayves charges the owner (commission)
   // and must not be added to the guest's bill; it's surfaced separately
   // on the card so the owner can see their net.
   const n = nights(b.checkInDate, b.checkOutDate);
@@ -374,7 +374,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                               {b.platformFee > 0 && (
                                 <span
                                   className="text-gray-400"
-                                  title="Commission stay.amaldives charges you — not added to the guest's bill"
+                                  title="Commission Vayves charges you — not added to the guest's bill"
                                 >
                                   (comm ${b.platformFee.toFixed(0)})
                                 </span>
@@ -618,7 +618,7 @@ export function ReservationsBoard({ bookings }: { bookings: Booking[] }) {
                   </div>
                   {detail.platformFee > 0 && (
                     <div className="flex justify-between border-t pt-1 mt-1">
-                      <span className="text-gray-400" title="Commission stay.amaldives charges you — not part of the guest's bill">Commission</span>
+                      <span className="text-gray-400" title="Commission Vayves charges you — not part of the guest's bill">Commission</span>
                       <span className="text-gray-400">{money(detail.platformFee)}</span>
                     </div>
                   )}

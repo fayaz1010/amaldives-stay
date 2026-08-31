@@ -437,7 +437,7 @@ export function SettingsForm({ tenant, property }: SettingsFormProps) {
                   <Label className="text-sm">Expected Payload Format (POST to webhook URL)</Label>
                   <pre className="text-xs bg-gray-900 text-green-400 rounded-lg p-3 overflow-x-auto">{`{
   "subdomain": "${tenant.subdomain}",
-  "bookingRef": "STAY-XXXXXXXX",
+  "bookingRef": "VYV-XXXXXXXX",
   "amount": 150.00,
   "currency": "USD",
   "method": "CARD",

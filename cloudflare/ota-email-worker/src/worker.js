@@ -59,7 +59,7 @@ function buildAttachments(emailAttachments) {
  * (catch-all → this worker), this worker handles EVERY inbound email and
  * dispatches by recipient:
  *
- *   ota-<subdomain>@amaldives.com  →  stay.amaldives.com OTA ingest webhook
+ *   ota-<subdomain>@amaldives.com  →  vayves.com OTA ingest webhook
  *   ota+<subdomain>@amaldives.com  →  (sub-addressing variant of the above)
  *   anything else @amaldives.com   →  amaldives.com /api/inbound/cloudflare,
  *                                     which runs the same customer-vs-resort
@@ -69,7 +69,7 @@ function buildAttachments(emailAttachments) {
  * while adding zero-config OTA booking ingest for every stay tenant.
  *
  * Bindings (wrangler.toml vars + secrets):
- *   OTA_WEBHOOK_URL        (var)    = https://stay.amaldives.com/api/webhooks/ota-email
+ *   OTA_WEBHOOK_URL        (var)    = https://vayves.com/api/webhooks/ota-email
  *   INBOUND_WEBHOOK_URL    (var)    = https://amaldives.com/api/inbound/cloudflare
  *   OTA_INGEST_SECRET      (secret) = same value as stay project's OTA_INGEST_SECRET
  *   INBOUND_WEBHOOK_SECRET (secret) = same value as amaldives project's INBOUND_WEBHOOK_SECRET

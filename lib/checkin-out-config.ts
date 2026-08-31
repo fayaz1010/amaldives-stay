@@ -1,3 +1,5 @@
+import { tenantUrl } from '@/lib/domain';
+
 export interface CheckInOutConfig {
   instantCheckInEnabled?: boolean;
   sendQrHoursBeforeCheckIn?: number;
@@ -26,11 +28,11 @@ export function getCheckInOutConfig(settings: unknown): CheckInOutConfig {
 }
 
 export function checkInQrPayload(subdomain: string, checkInCode: string): string {
-  return `https://${subdomain}.vayves.com/checkin/${checkInCode}`;
+  return tenantUrl(subdomain, `/checkin/${checkInCode}`);
 }
 
 export function checkoutQrPayload(subdomain: string, checkoutCode: string): string {
-  return `https://${subdomain}.vayves.com/checkout/${checkoutCode}`;
+  return tenantUrl(subdomain, `/checkout/${checkoutCode}`);
 }
 
 /** Extract CI-/CO- code or confirmation from a raw scan (URL or plain text). */

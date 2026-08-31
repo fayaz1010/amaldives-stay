@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>amaldives STAY — Backend Help</title>
+  <title>Vayves — Backend Help</title>
   <style>
     :root {
       --teal: #0d9488;
@@ -241,7 +241,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <h1>amaldives STAY</h1>
+      <h1>Vayves</h1>
       <p class="subtitle">Backend &amp; admin guide</p>
       <nav>
         <div class="group">Start</div>
@@ -269,20 +269,20 @@
 
     <main class="main">
       <div class="hero">
-        <h2>Stay backend help</h2>
-        <p>How to run your guesthouse on amaldives STAY — reservations, website, OTAs, payments, and day-to-day operations.</p>
+        <h2>Vayves backend help</h2>
+        <p>How to run your guesthouse on Vayves — reservations, website, OTAs, payments, and day-to-day operations.</p>
       </div>
 
       <section id="intro">
         <h2>Introduction</h2>
         <p>
-          <strong>amaldives STAY</strong> is your property management system: admin dashboard, guest website,
+          <strong>Vayves</strong> is your property management system: admin dashboard, guest website,
           direct bookings, OTA calendar sync, housekeeping, finance, and guest services.
         </p>
         <p>Your property can be reached on:</p>
         <ul>
           <li><strong>Custom domain</strong> (e.g. <code id="sample-domain">rivethibeach.com</code>) — guest marketing site + sign-in</li>
-          <li><strong>STAY subdomain</strong> — <code id="sample-stay-url">https://<span class="subdomain">your-slug</span>.stay.amaldives.com</code></li>
+          <li><strong>Vayves subdomain</strong> — <code id="sample-site-url">https://<span class="subdomain">your-slug</span>.vayves.com</code></li>
         </ul>
         <div class="tip">
           This page personalizes URLs when opened from <strong>Admin → Help</strong>. You can also pass
@@ -418,7 +418,7 @@
         <ul>
           <li><strong>Profile</strong> tab — property story, stats, gallery.</li>
           <li><strong>Branding</strong> — logo, colors, hero image.</li>
-          <li><strong>Domain</strong> — point your custom domain (e.g. rivethibeach.com) to STAY.</li>
+          <li><strong>Domain</strong> — point your custom domain (e.g. rivethibeach.com) to Vayves.</li>
         </ul>
       </section>
 
@@ -448,12 +448,12 @@
               <th>Platform</th>
               <th>Copy <em>from</em> (export URL)</th>
               <th>Paste <em>into</em> (import URL)</th>
-              <th>Paste into Stay</th>
+              <th>Paste into Vayves</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>Stay</strong></td>
+              <td><strong>Vayves</strong></td>
               <td>Channel Manager → <strong>Your iCal Availability Feed</strong> (copy icon)</td>
               <td>Channel Manager → <strong>Add an iCal feed</strong> URL field</td>
               <td>—</td>
@@ -461,45 +461,45 @@
             <tr>
               <td><strong>Booking.com</strong></td>
               <td>Extranet → Rates &amp; availability → <strong>Calendar</strong> → room → <strong>Sync calendars</strong> → <strong>Export calendar</strong> → copy link</td>
-              <td>Same screen → <strong>Import calendar</strong> → paste Stay URL</td>
+              <td>Same screen → <strong>Import calendar</strong> → paste Vayves URL</td>
               <td>Source: Booking.com · Room dropdown · URL field · <strong>Add feed</strong></td>
             </tr>
             <tr>
               <td><strong>Airbnb</strong></td>
               <td>Listing → <strong>Calendar</strong> → <strong>Availability settings</strong> → <strong>Export calendar</strong> → copy link</td>
-              <td>Same panel → <strong>Import calendar</strong> → paste Stay URL</td>
+              <td>Same panel → <strong>Import calendar</strong> → paste Vayves URL</td>
               <td>Source: Airbnb · Room · URL · <strong>Add feed</strong></td>
             </tr>
             <tr>
               <td><strong>Expedia</strong></td>
               <td>Partner Central → property → <strong>Rooms and rates</strong> → room → <strong>Calendar sync</strong> → <strong>Export</strong></td>
-              <td>Same → <strong>Import calendar</strong> / iCal import → paste Stay URL</td>
+              <td>Same → <strong>Import calendar</strong> / iCal import → paste Vayves URL</td>
               <td>Source: Other · Room · URL · <strong>Add feed</strong></td>
             </tr>
             <tr>
               <td><strong>Vrbo</strong></td>
               <td>Listing → <strong>Calendar</strong> → <strong>Import &amp; export</strong> → <strong>Export calendar</strong></td>
-              <td>Same → <strong>Import calendar</strong> → paste Stay URL</td>
+              <td>Same → <strong>Import calendar</strong> → paste Vayves URL</td>
               <td>Source: Vrbo · Room · URL · <strong>Add feed</strong></td>
             </tr>
           </tbody>
         </table>
 
-        <h3>Stay — open Channel Manager (screenshots)</h3>
+        <h3>Vayves — open Channel Manager (screenshots)</h3>
         <ol>
           <li>Sign in → left sidebar <strong>Web &amp; Distribution</strong> (click to expand).</li>
           <li>Click <strong>Channel Manager</strong> (not “amaldives Page”).</li>
           <li>Or open <code>/admin/web?tab=channels</code> directly.</li>
         </ol>
         <figure class="figure">
-          <img src="/help/images/stay-sidebar-web-menu.png" alt="Stay admin sidebar showing Web and Distribution menu with Channel Manager" loading="lazy" />
+          <img src="/help/images/vayves-sidebar-web-menu.png" alt="Vayves admin sidebar showing Web and Distribution menu with Channel Manager" loading="lazy" />
           <figcaption>Screenshot: sidebar → <strong>Web &amp; Distribution</strong> → <strong>Channel Manager</strong></figcaption>
         </figure>
 
-        <h4>A) Copy Stay URL → paste into OTAs</h4>
+        <h4>A) Copy Vayves URL → paste into OTAs</h4>
         <p>Top green box: <strong>Your iCal Availability Feed</strong>. Click the <strong>copy</strong> icon next to the URL (or use <strong>Test Feed</strong>).</p>
         <div class="code-row">
-          <code id="ical-export-url">https://stay.amaldives.com/api/public/your-slug/calendar.ics</code>
+          <code id="ical-export-url">https://vayves.com/api/public/your-slug/calendar.ics</code>
           <button type="button" class="btn-copy" data-copy="ical-export-url">Copy</button>
         </div>
         <p>Custom domain (same file):</p>
@@ -508,48 +508,48 @@
           <button type="button" class="btn-copy" data-copy="ical-export-custom">Copy</button>
         </div>
         <figure class="figure">
-          <img src="/help/images/stay-export-url-box.png" alt="Stay Channel Manager export URL box with copy button" loading="lazy" />
+          <img src="/help/images/vayves-export-url-box.png" alt="Vayves Channel Manager export URL box with copy button" loading="lazy" />
           <figcaption>Screenshot: <strong>Your iCal Availability Feed</strong> — copy this URL into each OTA’s <em>Import calendar</em> field</figcaption>
         </figure>
 
-        <h4>B) Copy OTA URL → paste into Stay</h4>
+        <h4>B) Copy OTA URL → paste into Vayves</h4>
         <p>Scroll to <strong>Block dates from Booking.com / Airbnb</strong>:</p>
         <ol>
           <li><strong>Source</strong> dropdown (Booking.com / Airbnb / Vrbo / Other).</li>
-          <li><strong>Room</strong> dropdown — pick the matching Stay room (not “All rooms” unless whole property closed).</li>
+          <li><strong>Room</strong> dropdown — pick the matching Vayves room (not “All rooms” unless whole property closed).</li>
           <li>Paste OTA export URL in the long URL field (placeholder shows <code>ical.booking.com</code>).</li>
           <li>Optional <strong>Label</strong> (e.g. “Booking.com — Deluxe Sea View”).</li>
           <li>Click teal <strong>Add feed</strong>.</li>
         </ol>
         <figure class="figure">
-          <img src="/help/images/stay-import-ota-form.png" alt="Stay form to add OTA iCal feed with source, room, and URL fields" loading="lazy" />
+          <img src="/help/images/vayves-import-ota-form.png" alt="Vayves form to add OTA iCal feed with source, room, and URL fields" loading="lazy" />
           <figcaption>Screenshot: paste each OTA <strong>export</strong> link here · click <strong>Add feed</strong></figcaption>
         </figure>
         <p>After adding: use <strong>Sync now</strong> on each row; check <strong>Last sync</strong> and block count.</p>
         <figure class="figure">
-          <img src="/help/images/stay-channel-manager-full.png" alt="Full Stay Channel Manager page" loading="lazy" />
+          <img src="/help/images/vayves-channel-manager-full.png" alt="Full Vayves Channel Manager page" loading="lazy" />
           <figcaption>Full Channel Manager page (export at top, OTA import feeds below)</figcaption>
         </figure>
 
         <div class="warn">
-          <strong>Multi-room:</strong> Stay’s export URL is <em>property-wide</em> (all confirmed bookings). Each OTA <em>import</em> feed should map to one Stay room. Re-importing the same Stay URL on every Booking.com room type can over-block.
+          <strong>Multi-room:</strong> Vayves’s export URL is <em>property-wide</em> (all confirmed bookings). Each OTA <em>import</em> feed should map to one Vayves room. Re-importing the same Vayves URL on every Booking.com room type can over-block.
         </div>
 
         <h3>Booking.com — exact clicks</h3>
         <div class="ota-block">
           <p class="path">Login: <a href="https://admin.booking.com" target="_blank" rel="noopener">admin.booking.com</a></p>
-          <h4>Find export link (Booking.com → Stay)</h4>
+          <h4>Find export link (Booking.com → Vayves)</h4>
           <ol>
             <li><strong>Rates &amp; availability</strong> (left menu).</li>
             <li><strong>Calendar</strong> → select the <strong>room/rate plan</strong> you sell on Booking.com.</li>
             <li><strong>Sync calendars</strong> (or calendar sync icon).</li>
             <li>Under <strong>Export calendar</strong> → <strong>Copy link</strong> (URL like <code>https://ical.booking.com/v1/export?…</code>).</li>
-            <li>Paste into Stay → <strong>Add an iCal feed</strong> (see screenshot above).</li>
+            <li>Paste into Vayves → <strong>Add an iCal feed</strong> (see screenshot above).</li>
           </ol>
-          <h4>Paste Stay link (Stay → Booking.com)</h4>
+          <h4>Paste Vayves link (Vayves → Booking.com)</h4>
           <ol>
             <li>Same <strong>Sync calendars</strong> screen.</li>
-            <li><strong>Import calendar</strong> → paste Stay export URL → confirm.</li>
+            <li><strong>Import calendar</strong> → paste Vayves export URL → confirm.</li>
             <li>Booking.com refreshes imports about every <strong>6–12 hours</strong> (their schedule).</li>
           </ol>
           <figure class="figure">
@@ -561,18 +561,18 @@
         <h3>Airbnb — exact clicks</h3>
         <div class="ota-block">
           <p class="path">Login: <a href="https://www.airbnb.com/hosting" target="_blank" rel="noopener">airbnb.com/hosting</a> → select listing</p>
-          <h4>Find export link (Airbnb → Stay)</h4>
+          <h4>Find export link (Airbnb → Vayves)</h4>
           <ol>
             <li>Open the <strong>listing</strong> → tab <strong>Calendar</strong>.</li>
             <li><strong>Availability settings</strong> (gear / settings on calendar).</li>
             <li><strong>Connect calendars</strong> or <strong>Connect to another website</strong>.</li>
             <li><strong>Export calendar</strong> → copy the link (often <code>https://www.airbnb.com/calendar/ical/…</code>).</li>
-            <li>Paste into Stay <strong>Add feed</strong> · source <strong>Airbnb</strong> · matching room.</li>
+            <li>Paste into Vayves <strong>Add feed</strong> · source <strong>Airbnb</strong> · matching room.</li>
           </ol>
-          <h4>Paste Stay link (Stay → Airbnb)</h4>
+          <h4>Paste Vayves link (Vayves → Airbnb)</h4>
           <ol>
             <li>Same <strong>Availability settings</strong> panel.</li>
-            <li><strong>Import calendar</strong> → paste Stay URL → name the calendar (e.g. “Stay PMS”) → Import.</li>
+            <li><strong>Import calendar</strong> → paste Vayves URL → name the calendar (e.g. “Vayves PMS”) → Import.</li>
             <li>Airbnb typically refreshes every <strong>~2 hours</strong>.</li>
           </ol>
           <figure class="figure">
@@ -584,17 +584,17 @@
         <h3>Expedia / Hotels.com — exact clicks</h3>
         <div class="ota-block">
           <p class="path">Login: <a href="https://www.expediapartnercentral.com" target="_blank" rel="noopener">expediapartnercentral.com</a></p>
-          <h4>Find export link (Expedia → Stay)</h4>
+          <h4>Find export link (Expedia → Vayves)</h4>
           <ol>
             <li>Select <strong>property</strong> → <strong>Rooms and rates</strong> (or Inventory).</li>
             <li>Open the <strong>room type</strong> → <strong>Calendar sync</strong> / <strong>iCal</strong>.</li>
             <li><strong>Export calendar</strong> → copy URL.</li>
-            <li>Stay: source <strong>Other</strong>, label “Expedia — …”, paste URL, <strong>Add feed</strong>.</li>
+            <li>Vayves: source <strong>Other</strong>, label “Expedia — …”, paste URL, <strong>Add feed</strong>.</li>
           </ol>
-          <h4>Paste Stay link (Stay → Expedia)</h4>
+          <h4>Paste Vayves link (Vayves → Expedia)</h4>
           <ol>
             <li>Same calendar sync area → <strong>Import calendar</strong> / <strong>Add external calendar</strong>.</li>
-            <li>Paste Stay export URL → save.</li>
+            <li>Paste Vayves export URL → save.</li>
           </ol>
           <figure class="figure">
             <img src="/help/images/ota-expedia-help-calendar.png" alt="Expedia Partner Central calendar sync help" loading="lazy" />
@@ -605,29 +605,29 @@
         <h3>Vrbo / HomeAway — exact clicks</h3>
         <div class="ota-block">
           <p class="path">Login: <a href="https://www.vrbo.com/traveler/th/account" target="_blank" rel="noopener">vrbo.com</a> → host dashboard → listing</p>
-          <h4>Find export link (Vrbo → Stay)</h4>
+          <h4>Find export link (Vrbo → Vayves)</h4>
           <ol>
             <li>Listing <strong>Calendar</strong>.</li>
             <li><strong>Import &amp; export</strong> or <strong>Sync calendars</strong>.</li>
             <li><strong>Export calendar</strong> → copy link.</li>
-            <li>Stay: source <strong>Vrbo</strong>, room, paste URL, <strong>Add feed</strong>.</li>
+            <li>Vayves: source <strong>Vrbo</strong>, room, paste URL, <strong>Add feed</strong>.</li>
           </ol>
-          <h4>Paste Stay link (Stay → Vrbo)</h4>
+          <h4>Paste Vayves link (Vayves → Vrbo)</h4>
           <ol>
-            <li>Same area → <strong>Import calendar</strong> → paste Stay URL.</li>
+            <li>Same area → <strong>Import calendar</strong> → paste Vayves URL.</li>
           </ol>
           <p class="tip">Vrbo UI varies by region; search help for “import export calendar” if menus differ.</p>
         </div>
 
         <h3>Channel managers (Cloudbeds, Lodgify, SiteMinder, etc.)</h3>
         <ul>
-          <li><strong>Import Stay URL:</strong> CM → External calendars / iCal import / blocked dates → paste Stay export URL.</li>
-          <li><strong>Export to Stay:</strong> CM → per-room iCal export URL → paste in Stay <strong>Add feed</strong> (source Other).</li>
+          <li><strong>Import Vayves URL:</strong> CM → External calendars / iCal import / blocked dates → paste Vayves export URL.</li>
+          <li><strong>Export to Vayves:</strong> CM → per-room iCal export URL → paste in Vayves <strong>Add feed</strong> (source Other).</li>
         </ul>
 
         <h3>Verify sync</h3>
         <ul>
-          <li>Stay: <strong>Test Feed</strong> → “Feed OK” · inbound <strong>Last sync</strong> · <strong>Sync now</strong>.</li>
+          <li>Vayves: <strong>Test Feed</strong> → “Feed OK” · inbound <strong>Last sync</strong> · <strong>Sync now</strong>.</li>
           <li><strong>Admin → Availability</strong> — external blocks shown per room.</li>
           <li>Website search — OTA-booked dates should not appear as available.</li>
         </ul>
@@ -679,11 +679,11 @@
               <td>User needs tenant membership; role must be admin/manager/front desk.</td>
             </tr>
             <tr>
-              <td>OTA still shows available after Stay booking</td>
+              <td>OTA still shows available after Vayves booking</td>
               <td>OTA polls slowly (hours). Booking must be CONFIRMED, not PENDING.</td>
             </tr>
             <tr>
-              <td>Stay shows available after OTA booking</td>
+              <td>Vayves shows available after OTA booking</td>
               <td>Add inbound iCal feed; click Sync now; check lastError on feed.</td>
             </tr>
             <tr>
@@ -724,16 +724,16 @@
         n.textContent = sub;
       });
 
-      var stayBase = 'https://' + sub + '.stay.amaldives.com';
-      var exportUrl = 'https://stay.amaldives.com/api/public/' + sub + '/calendar.ics';
+      var siteBase = 'https://' + sub + '.vayves.com';
+      var exportUrl = 'https://vayves.com/api/public/' + sub + '/calendar.ics';
       var exportCustom = domain
         ? 'https://' + domain + '/api/public/' + sub + '/calendar.ics'
         : 'https://your-domain.com/api/public/' + sub + '/calendar.ics';
 
       if (el('ical-export-url')) el('ical-export-url').textContent = exportUrl;
       if (el('ical-export-custom')) el('ical-export-custom').textContent = exportCustom;
-      if (el('sample-stay-url')) el('sample-stay-url').innerHTML =
-        '<a href="' + stayBase + '" target="_blank" rel="noopener">' + stayBase + '</a>';
+      if (el('sample-site-url')) el('sample-site-url').innerHTML =
+        '<a href="' + siteBase + '" target="_blank" rel="noopener">' + siteBase + '</a>';
       if (domain && el('sample-domain')) el('sample-domain').textContent = domain;
 
       document.querySelectorAll('.btn-copy').forEach(function (btn) {

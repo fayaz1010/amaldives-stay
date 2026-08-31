@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { createPublicBooking } from '@/lib/public-booking';
 import { getStripe, isStripeConfigured } from '@/lib/stripe';
-import { getPaymentsConfig, getDepositConfig, staySubdomainUrl } from '@/lib/tenant-settings';
+import { getPaymentsConfig, getDepositConfig } from '@/lib/tenant-settings';
+import { tenantUrl } from '@/lib/domain';
 import { calculateDepositAmount } from '@/lib/stripe-booking';
 import { sendBookingConfirmationEmail } from '@/lib/send-booking-confirmation';
 
@@ -169,7 +170,7 @@ export async function POST(
         return NextResponse.json({ error: 'Card payments are not configured' }, { status: 503 });
       }
 
-      const origin = request.headers.get('origin') ?? staySubdomainUrl(subdomain);
+      const origin = request.headers.get('origin') ?? tenantUrl(subdomain);
 
       const stripeLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
         {

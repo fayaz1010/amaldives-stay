@@ -1,6 +1,6 @@
 # Instant Check-In / Check-Out UX Research
 
-**Project:** amaldives STAY  
+**Project:** Vayves  
 **Scope:** Maldives guesthouse PMS (1–20 rooms), guest mobile portal, QR, Stripe, FPOS/BML POS, flight arrivals  
 **Date:** June 2026  
 **Purpose:** Actionable UX + technical plan for instant check-in/check-out, grounded in 2024–2026 industry patterns and the current STAY codebase.
@@ -41,7 +41,7 @@ Two distinct QR use cases (often conflated):
 
 | QR type | Encodes | Guest action | Typical property |
 |---------|---------|--------------|------------------|
-| **Property QR** | Static URL: `https://{subdomain}.stay.amaldives.com/check-in` | Scan → enter confirmation + last name OR scan booking QR from email | Small guesthouse front desk |
+| **Property QR** | Static URL: `https://{subdomain}.vayves.com/check-in` | Scan → enter confirmation + last name OR scan booking QR from email | Small guesthouse front desk |
 | **Booking QR** | Opaque/signed token → `/guest/{token}?mode=checkin` | Scan → lands directly on pre-filled check-in wizard | Pre-arrival email, WhatsApp, confirmation PDF |
 | **Pickup QR** (Ariane-style) | Short-lived code issued when room is **clean + assigned** | Scan at kiosk/tablet → confirm → key dispensed or staff notified | Properties with kiosk hardware |
 
@@ -84,10 +84,10 @@ For 1–2 staff properties, review can be **10-second approve** on the arrivals 
 
 ```
 # Property lobby QR (static, printed)
-https://{subdomain}.stay.amaldives.com/arrive
+https://{subdomain}.vayves.com/arrive
 
 # Booking-specific QR (dynamic, per reservation)
-https://{subdomain}.stay.amaldives.com/guest/{guestToken}/check-in
+https://{subdomain}.vayves.com/guest/{guestToken}/check-in
 
 # Staff desk tablet (same as guest, staff mode via auth)
 /admin/arrivals?highlight={bookingId}
@@ -546,4 +546,4 @@ Maldives connectivity is uneven (boat, island 4G gaps).
 
 ---
 
-*Document owner: amaldives STAY product/engineering. Update after Phase 1 user testing with 2–3 pilot guesthouses.*
+*Document owner: Vayves product/engineering. Update after Phase 1 user testing with 2–3 pilot guesthouses.*

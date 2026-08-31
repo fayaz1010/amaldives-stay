@@ -1,7 +1,7 @@
 /*!
- * amaldives STAY — embeddable assistant loader.
+ * Vayves — embeddable assistant loader.
  * Paste ONE line on your website:
- *   <script src="https://YOURNAME.stay.amaldives.com/maya.js" async></script>
+ *   <script src="https://YOURNAME.vayves.com/maya.js" async></script>
  * It injects a floating, branded chat bubble that talks to your property's
  * assistant. Subdomain + origin are inferred from this script's own URL.
  */

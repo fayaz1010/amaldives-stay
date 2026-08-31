@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time production setup for amaldives STAY (run locally with DATABASE_URL set).
+# One-time production setup for Vayves (run locally with DATABASE_URL set).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,11 +22,11 @@ echo "→ Generating Prisma client…"
 npx prisma generate
 
 echo ""
-echo "Done. Configure these in Vercel (stay.amaldives.com project):"
+echo "Done. Configure these in Vercel (vayves.com project):"
 echo "  STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
 echo "  STRIPE_PRICE_GROWTH, STRIPE_PRICE_BUSINESS, STRIPE_PRICE_CHANNEL"
 echo "  GEMINI_API_KEY (or UTIL_AI_URL + UTIL_AI_TOKEN)"
 echo "  CRON_SECRET"
 echo ""
-echo "Stripe webhook URL: https://stay.amaldives.com/api/webhooks/stripe"
+echo "Stripe webhook URL: https://vayves.com/api/webhooks/stripe"
 echo "Then deploy: vercel --prod  (or push to main if CI deploys)"

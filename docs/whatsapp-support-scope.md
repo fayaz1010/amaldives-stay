@@ -6,7 +6,7 @@ anything out-of-scope. This file is the boundary; the agent reads it every cycle
 
 ## WHO the secretary may auto-reply to (hard gate — check FIRST)
 - ✅ **Unknown / unsaved numbers** (likely customers/leads), and saved contacts
-  whose message is clearly about a **product we offer** (stay.amaldives.com,
+  whose message is clearly about a **product we offer** (vayves.com,
   amaldives, Cluzta, masaajidh).
 - ⛔ **Never auto-reply** to: saved personal contacts, family, friends, lawyers,
   gov/police/military, political/community **groups**, Fayaz's own businesses
@@ -41,7 +41,7 @@ anything out-of-scope. This file is the boundary; the agent reads it every cycle
    use *that* tenant's data only.
 
 ## IN SCOPE — AI answers directly
-- **How-to / product support** for stay.amaldives.com: logging in, where to
+- **How-to / product support** for vayves.com: logging in, where to
   find a setting, how to add rooms/rates, calendar, iCal sync, receipts,
   password-reset guidance (point to the reset flow; never reset for them).
 - **Published, factual info** pulled from the tenant's own config:

@@ -160,18 +160,6 @@ export function extractTenantFromUrl(url: string): string | null {
   }
 }
 
-export function getTenantUrl(subdomain: string, path: string = ''): string {
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const url = new URL(baseUrl);
-  
-  if (subdomain) {
-    url.hostname = `${subdomain}.${url.hostname}`;
-  }
-  
-  url.pathname = path;
-  return url.toString();
-}
-
 // Status utilities
 export function getStatusColor(status: string): string {
   const statusColors: Record<string, string> = {

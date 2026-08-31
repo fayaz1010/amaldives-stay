@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { getCheckInOutConfig } from '@/lib/checkin-out-config';
 import { queueNotification } from '@/lib/notifications';
-import { staySubdomainUrl } from '@/lib/tenant-settings';
+import { tenantUrl } from '@/lib/domain';
 
 const DEFAULT_CHECKOUT_HOUR = 11;
 
@@ -52,7 +52,7 @@ export async function markCheckoutReadyForTenant(tenantId: string) {
     marked += 1;
 
     if (booking.guest.email && booking.checkoutCode) {
-      const guestUrl = staySubdomainUrl(tenant.subdomain, `/guest/${booking.guestToken}`);
+      const guestUrl = tenantUrl(tenant.subdomain, `/guest/${booking.guestToken}`);
       await queueNotification({
         tenantId,
         bookingId: booking.id,

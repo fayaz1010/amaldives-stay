@@ -65,10 +65,40 @@ Branch: `rebrand/vayves` (this repo) + `rebrand/vayves` in `fayaz1010/amaldives`
 **Rollback:** revert the branch; `stay.amaldives.com` is still attached so it serves
 directly again once the middleware redirect is reverted. Low risk.
 
-## Known follow-ups (not done in this pass)
-- ~23 standalone `STAY` references (prose/comments like "pushed straight into STAY",
-  "confirmed instantly in STAY") — a copy pass; the word "STAY" is too generic to sed safely.
-- Both repos had **pre-existing uncommitted WIP** when this branch was cut (e.g. the
-  onboarding-wizard OTA-ingest step) — the rebrand edits are layered on top of it. Split
-  commits accordingly.
+## Second pass — closing out the "STAY" name (done)
+The cutover above is live: `vayves.com` serves tenants, `NEXTAUTH_URL` and
+`NEXT_PUBLIC_ROOT_DOMAIN` are set in prod, and `stay.amaldives.com` 301s correctly.
+This pass removed the remaining places the retired name still reached a customer:
+
+- **Stripe webhook was still pointed at `https://stay.amaldives.com/api/webhooks/stripe`.**
+  Stripe does not follow redirects, so every `checkout.session.completed` and
+  subscription event had been failing since the cutover. The endpoint URL was updated
+  **in place** (`we_1TmVLNA60fgaQbWoIwfWdniM`), which preserves the signing secret, so
+  `STRIPE_WEBHOOK_SECRET` is unchanged. Anything machine-to-machine that posts here must
+  be repointed rather than left to the 301.
+- **Stripe product names** (`STAY Growth` / `amaldives STAY Business` / …) renamed to
+  `Vayves …`. These show on checkout and invoices.
+- **Booking reference prefix** `STAY-` → `VYV-` (`lib/booking-ref.ts`, previously
+  duplicated in two routes). Old references still resolve: every lookup is an exact
+  `confirmationNumber` match and nothing parses the prefix.
+- **`public/embed.js`** defaulted third-party embeds to the old host. It now derives the
+  base from its own script URL, so a rehost cannot strand published embeds; `data-base`
+  still overrides. `window.amaldivesStay` is aliased to `window.vayves` so embeds already
+  on guesthouse sites keep working.
+- **`public/help/stay-backend.html`** → `vayves-backend.html` (+ screenshots), with the
+  ~50 in-page "Stay" product references rebranded. Ordinary English ("Stay completed",
+  "their stay portal") deliberately left alone.
+- URL builders consolidated on `tenantUrl()`: removed `staySubdomainUrl()` and the dead
+  `getTenantUrl()`, and `checkin-out-config.ts` QR payloads no longer hardcode the host.
+- `.env.example` (`NEXTAUTH_URL`, and `NEXT_PUBLIC_ROOT_DOMAIN` documented), setup
+  scripts, OTA worker docs, and the WhatsApp/check-in docs.
+
+## Still open
+- **Retiring `stay.amaldives.com` entirely** is a judgement call. It must stay attached
+  to the Vercel project for the 301s to work; removing it breaks every published link and
+  forfeits the redirect's SEO transfer. Check GSC coverage before detaching.
+- **Cross-subdomain admin sessions.** `components/admin/tenant-switcher.tsx` implies a
+  `.vayves.com` cookie exists, but nothing sets `Domain=.vayves.com` — so switching
+  property by hard navigation can force a re-login. Pre-existing, not caused by the port.
+- **Google Places key referrers** and **GA4 / GSC** properties, per the list above.
 - Email from-domain migration to `@vayves.com` (Resend) is optional polish.

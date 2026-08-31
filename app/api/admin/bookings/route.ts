@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { TenantDb, prisma } from '@/lib/db';
 import { getActivePropertyId } from '@/lib/active-property';
+import { generateConfirmationNumber } from '@/lib/booking-ref';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,10 +92,6 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function generateConfirmationNumber() {
-  return 'STAY-' + Date.now().toString(36).toUpperCase();
 }
 
 function calcNights(checkIn: Date, checkOut: Date) {
@@ -267,8 +264,8 @@ export async function POST(request: NextRequest) {
         });
         if (tenant?.subdomain) {
           const { queueNotification } = await import('@/lib/notifications');
-          const { staySubdomainUrl } = await import('@/lib/tenant-settings');
-          const guestUrl = staySubdomainUrl(tenant.subdomain, `/guest/${guestToken}`);
+          const { tenantUrl } = await import('@/lib/domain');
+          const guestUrl = tenantUrl(tenant.subdomain, `/guest/${guestToken}`);
           const fmt = (d: Date) => new Date(d).toLocaleDateString();
           await queueNotification({
             tenantId,

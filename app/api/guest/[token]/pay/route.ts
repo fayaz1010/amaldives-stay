@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getStripe } from '@/lib/stripe';
 import { getCheckInOutConfig } from '@/lib/checkin-out-config';
-import { getPaymentsConfig, staySubdomainUrl } from '@/lib/tenant-settings';
+import { getPaymentsConfig } from '@/lib/tenant-settings';
+import { tenantUrl } from '@/lib/domain';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ export async function POST(
   }
 
   const currency = (booking.room?.property?.currency ?? payments.currency ?? 'USD').toLowerCase();
-  const origin = request.headers.get('origin') ?? staySubdomainUrl(booking.tenant.subdomain);
+  const origin = request.headers.get('origin') ?? tenantUrl(booking.tenant.subdomain);
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',

@@ -1,6 +1,6 @@
 # OTA Email Ingest — Cloudflare Email Worker
 
-Forwards OTA reservation notification emails into stay.amaldives.com so they
+Forwards OTA reservation notification emails into vayves.com so they
 become Bookings. **It never touches any tenant's mailbox** — each OTA is told to
 send a *copy* of its reservation emails to an address on a Cloudflare zone we
 control; this worker parses it and POSTs to the app webhook.
@@ -43,7 +43,7 @@ email** in each OTA extranet:
 `POST` a sample to the webhook with `dryRun: true` to see parsed output without
 writing a booking:
 ```bash
-curl -s https://stay.amaldives.com/api/webhooks/ota-email \
+curl -s https://vayves.com/api/webhooks/ota-email \
   -H 'content-type: application/json' \
   -H 'x-ota-ingest-secret: <secret>' \
   -d '{"dryRun":true,"to":"ota-rivethi-beach@ingest.amaldives.com","from":"reservations@booking.com","subject":"New reservation 1234567890","text":"Reservation number: 1234567890\nGuest name: John Smith\nCheck-in: 20 June 2026\nCheck-out: 23 June 2026\nRoom: Deluxe Double\n2 adults\nTotal: USD 240.00"}'

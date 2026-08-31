@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot production wiring for amaldives STAY on Vercel.
+# One-shot production wiring for Vayves on Vercel.
 # Uses Stripe keys from amaldives.com env + util-ai admin to mint stay token.
 set -euo pipefail
 
@@ -24,7 +24,7 @@ STRIPE_PK="${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:?publishable key missing}"
 UTIL_AI_URL="${UTIL_AI_URL:-https://util-ai-lake.vercel.app}"
 ADMIN="${ADMIN_BEARER:-${UTIL_AI_ADMIN:-}}"
 
-echo "→ Creating amaldives STAY Stripe products (OZ Systems account)…"
+echo "→ Creating Vayves Stripe products (OZ Systems account)…"
 
 create_product_price() {
   local name="$1" amount="$2" interval="$3"
@@ -32,7 +32,7 @@ create_product_price() {
   product_id=$(curl -s -u "${STRIPE_KEY}:" \
     -d "name=${name}" \
     -d "metadata[app]=amaldives-stay" \
-    -d "metadata[site]=stay.amaldives.com" \
+    -d "metadata[site]=vayves.com" \
     "https://api.stripe.com/v1/products" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
   price_id=$(curl -s -u "${STRIPE_KEY}:" \
     -d "product=${product_id}" \
@@ -49,14 +49,14 @@ GROWTH_PRICE=$(echo "$existing" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
 for p in d.get('data',[]):
-  if p.get('name')=='amaldives STAY Growth':
+  if p.get('name')=='Vayves Growth':
     print(p['id']); break
 ")
 if [[ -n "${GROWTH_PRICE:-}" ]]; then
   echo "  Found existing Growth product, fetching price…"
   GROWTH_PRICE=$(curl -s -u "${STRIPE_KEY}:" "https://api.stripe.com/v1/prices?product=${GROWTH_PRICE}&active=true&limit=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data'][0]['id'] if d.get('data') else '')")
 else
-  GROWTH_PRICE=$(create_product_price "amaldives STAY Growth" 1900 month)
+  GROWTH_PRICE=$(create_product_price "Vayves Growth" 1900 month)
 fi
 
 existing=$(curl -s -u "${STRIPE_KEY}:" "https://api.stripe.com/v1/products?limit=100&active=true")
@@ -64,13 +64,13 @@ BUSINESS_PRICE=$(echo "$existing" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
 for p in d.get('data',[]):
-  if p.get('name')=='amaldives STAY Business':
+  if p.get('name')=='Vayves Business':
     print(p['id']); break
 ")
 if [[ -n "${BUSINESS_PRICE:-}" ]]; then
   BUSINESS_PRICE=$(curl -s -u "${STRIPE_KEY}:" "https://api.stripe.com/v1/prices?product=${BUSINESS_PRICE}&active=true&limit=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data'][0]['id'] if d.get('data') else '')")
 else
-  BUSINESS_PRICE=$(create_product_price "amaldives STAY Business" 4900 month)
+  BUSINESS_PRICE=$(create_product_price "Vayves Business" 4900 month)
 fi
 
 existing=$(curl -s -u "${STRIPE_KEY}:" "https://api.stripe.com/v1/products?limit=100&active=true")
@@ -78,21 +78,21 @@ CHANNEL_PRICE=$(echo "$existing" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
 for p in d.get('data',[]):
-  if p.get('name')=='amaldives STAY Channel Plus':
+  if p.get('name')=='Vayves Channel Plus':
     print(p['id']); break
 ")
 if [[ -n "${CHANNEL_PRICE:-}" ]]; then
   CHANNEL_PRICE=$(curl -s -u "${STRIPE_KEY}:" "https://api.stripe.com/v1/prices?product=${CHANNEL_PRICE}&active=true&limit=1" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data'][0]['id'] if d.get('data') else '')")
 else
-  CHANNEL_PRICE=$(create_product_price "amaldives STAY Channel Plus" 7900 month)
+  CHANNEL_PRICE=$(create_product_price "Vayves Channel Plus" 7900 month)
 fi
 
 echo "  Growth price:  ${GROWTH_PRICE}"
 echo "  Business price: ${BUSINESS_PRICE}"
 echo "  Channel price:  ${CHANNEL_PRICE}"
 
-echo "→ Creating Stripe webhook for stay.amaldives.com…"
-WEBHOOK_URL="https://stay.amaldives.com/api/webhooks/stripe"
+echo "→ Creating Stripe webhook for vayves.com…"
+WEBHOOK_URL="https://vayves.com/api/webhooks/stripe"
 existing_wh=$(curl -s -u "${STRIPE_KEY}:" "https://api.stripe.com/v1/webhook_endpoints?limit=100" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
@@ -126,17 +126,17 @@ if [[ -n "${ADMIN:-}" ]]; then
   MINT=$(curl -s -X POST "${UTIL_AI_URL}/v1/admin/tokens" \
     -H "Authorization: Bearer ${ADMIN}" \
     -H "Content-Type: application/json" \
-    -d '{"site":"amaldives-stay","allow_provider":["gemini"],"allow_names":["gemini"],"note":"stay.amaldives.com production"}')
-  STAY_UTIL_TOKEN=$(echo "$MINT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('token',''))" 2>/dev/null || true)
-  if [[ -z "${STAY_UTIL_TOKEN:-}" ]]; then
+    -d '{"site":"amaldives-stay","allow_provider":["gemini"],"allow_names":["gemini"],"note":"vayves.com production"}')
+  VAYVES_UTIL_TOKEN=$(echo "$MINT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('token',''))" 2>/dev/null || true)
+  if [[ -z "${VAYVES_UTIL_TOKEN:-}" ]]; then
     echo "  Mint returned existing scope — reusing amaldives token"
-    STAY_UTIL_TOKEN="${UTIL_AI_TOKEN:-}"
+    VAYVES_UTIL_TOKEN="${UTIL_AI_TOKEN:-}"
   else
     echo "  Minted new amaldives-stay token"
   fi
 else
   echo "  No ADMIN_BEARER — reusing amaldives UTIL_AI_TOKEN"
-  STAY_UTIL_TOKEN="${UTIL_AI_TOKEN:-}"
+  VAYVES_UTIL_TOKEN="${UTIL_AI_TOKEN:-}"
 fi
 
 CRON_SECRET="${CRON_SECRET:-$(openssl rand -base64 32)}"
@@ -159,7 +159,7 @@ set_env STRIPE_PRICE_BUSINESS "$BUSINESS_PRICE"
 set_env STRIPE_PRICE_CHANNEL "$CHANNEL_PRICE"
 set_env CRON_SECRET "$CRON_SECRET"
 set_env UTIL_AI_URL "$UTIL_AI_URL"
-set_env UTIL_AI_TOKEN "$STAY_UTIL_TOKEN"
+set_env UTIL_AI_TOKEN "$VAYVES_UTIL_TOKEN"
 [[ -n "$RESEND_API_KEY" ]] && set_env RESEND_API_KEY "$RESEND_API_KEY"
 set_env RESEND_FROM_EMAIL "$RESEND_FROM"
 

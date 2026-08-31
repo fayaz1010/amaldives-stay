@@ -5,12 +5,9 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { calculateStayRate } from '@/lib/calculate-stay-rate';
 import { calculatePlatformFee, getPlatformCommissionRate } from '@/lib/commission';
+import { generateConfirmationNumber } from '@/lib/booking-ref';
 
 export const dynamic = 'force-dynamic';
-
-function generateConfirmationNumber() {
-  return 'STAY-' + Date.now().toString(36).toUpperCase();
-}
 
 function calcNights(checkIn: Date, checkOut: Date) {
   return Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
