@@ -33,7 +33,7 @@ export default function MaldivesPage() {
         {
           h2: 'Commission-free demand from amaldives.com',
           paragraphs: [
-            'Vayves is the only Maldives PMS with a built-in demand channel. When you go live, your property can be listed on amaldives.com — a traveller directory of 200+ resorts and 900+ guesthouses — and take direct bookings at a 4% platform fee instead of the 15–18% OTAs charge.',
+            'Vayves is the only Maldives PMS with a built-in demand channel. When you go live, your property can be listed on amaldives.com — a traveller directory of 200+ resorts and 900+ guesthouses — and take direct bookings at a 10% platform fee for marketplace bookings (your own stay page bookings have a 4% fee).',
             'That means the software pays for itself: a single direct booking a month usually covers the subscription, and every booking after that is margin you keep.',
           ],
         },
@@ -58,17 +58,16 @@ export default function MaldivesPage() {
         },
       ]}
       pricing={[
-        { tier: 'Free', price: '$0', blurb: 'Direct-booking page + amaldives.com listing. Pay-at-property.' },
-        { tier: 'Growth', price: '$19/mo', blurb: 'Channel sync (Booking/Agoda/Airbnb) + SMS notifications.' },
-        { tier: 'Business', price: '$49/mo', blurb: 'API access + multi-property + full tax module.' },
-        { tier: 'Channel Plus', price: '$79/mo', blurb: 'Priority sync + Stripe direct payouts.' },
+        { tier: 'Growth', price: '$19/mo', blurb: '30-day free trial. Channel sync + SMS.' },
+        { tier: 'Business', price: '$49/mo', blurb: 'API + multi-property + tax module.' },
+        { tier: 'Channel Plus', price: '$79/mo', blurb: 'Priority sync + Stripe payouts.' },
       ]}
       faqs={[
         { q: 'Is Vayves MIRA-compliant?', a: 'Vayves computes TGST (17%) and Green Tax per guest-night from your live bookings and prepares the figures for your monthly MIRA return. You review and file; the software does the maths per property.' },
         { q: 'Does it connect to Booking.com and Agoda?', a: 'Yes. The channel manager syncs rates and availability across Booking.com, Agoda, Airbnb and other OTAs so the same room is never sold twice.' },
         { q: 'Can guests pay with BML or Maya?', a: 'Yes — Vayves supports BML Connect, Maya, cards via Stripe, and pay-at-property, in USD or MVR.' },
         { q: 'How is this different from Tharazoo, fahiHMS or eZee?', a: 'Vayves is the only Maldives PMS with a built-in demand channel: your property lists on amaldives.com and takes direct, commission-free bookings — so it drives revenue, not just operations.' },
-        { q: 'How much does it cost?', a: 'There is a free plan (direct-booking page + amaldives listing). Paid plans run $19–79/mo depending on channel sync, multi-property and payment features.' },
+        { q: 'How much does it cost?', a: 'Try Growth ($19/mo) free for 30 days. Card required; cancel before trial ends to avoid charges. Business ($49/mo) and Channel Plus ($79/mo) also available with 30-day trials.' },
       ]}
       related={[
         { label: 'MIRA tax — TGST, Green Tax & MIRA 206', href: '/mira-tax' },

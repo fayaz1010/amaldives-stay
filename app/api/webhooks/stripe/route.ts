@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       if (tenantId) {
         await prisma.tenant.update({
           where: { id: tenantId },
-          data: { plan: 'basic', stripeSubscriptionId: null },
+          data: { plan: 'basic', status: 'CANCELLED', stripeSubscriptionId: null },
         });
       }
     }

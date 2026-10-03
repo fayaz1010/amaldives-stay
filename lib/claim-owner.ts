@@ -59,11 +59,14 @@ export async function finalizeTenantClaim(input: {
     await tx.tenant.update({
       where: { id: tenant.id },
       data: {
+        plan: 'growth',
+        status: 'TRIAL',
         settings: {
           ...settings,
           claimable: false,
           claimedAt: new Date().toISOString(),
           claimedByEmail: email,
+          trialStartedAt: new Date().toISOString(),
         } as any,
       },
     });

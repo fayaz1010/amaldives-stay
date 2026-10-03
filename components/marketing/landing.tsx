@@ -32,7 +32,7 @@ export type LandingProps = {
   metaDescription: string;
 };
 
-function Cta({ label = 'Claim your free account' }: { label?: string }) {
+function Cta({ label = 'Start 30-day free trial' }: { label?: string }) {
   return (
     <Link
       href="/claim"
@@ -190,7 +190,7 @@ export function MarketingLanding(props: LandingProps) {
       <section className="mx-auto mt-6 max-w-4xl px-5">
         <div className="rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-12 text-center text-white">
           <h2 className="text-2xl font-bold sm:text-3xl">Ready to run your property on Vayves?</h2>
-          <p className="mx-auto mt-3 max-w-xl text-teal-50">Free to start. Set up in minutes. No card required.</p>
+          <p className="mx-auto mt-3 max-w-xl text-teal-50">30-day free trial. Card required. Cancel anytime.</p>
           <div className="mt-6">
             <Link href="/claim" className="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3 font-semibold text-cyan-700 hover:bg-cyan-50">
               {ctaLabel || 'Claim your free account'} →

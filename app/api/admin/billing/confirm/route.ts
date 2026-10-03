@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     where: { id: session.user.tenantId },
     data: {
       plan,
+      status: 'ACTIVE',
       stripeSubscriptionId: subId ?? undefined,
       stripeCustomerId:
         typeof cs.customer === 'string' ? cs.customer : (cs.customer as { id?: string } | null)?.id ?? undefined,

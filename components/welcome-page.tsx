@@ -62,33 +62,18 @@ export function WelcomePage() {
 
   const plans = [
     {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      description: 'Perfect for getting started',
-      features: [
-        'Unlimited rooms',
-        'Direct booking engine',
-        'Guest management',
-        'Booking calendar',
-        'Mobile dashboard',
-        'Listed on amaldives.com',
-        '10% platform fee on amaldives.com bookings (4% on your stay page)',
-      ],
-      badge: null,
-    },
-    {
       name: 'Growth',
       price: '$19',
       period: '/month',
       description: 'For growing guesthouses',
       features: [
-        'Everything in Free',
+        'Try free for 30 days',
         'Channel manager sync',
         'SMS notifications',
         'Advanced analytics',
         'Custom domain',
         'Priority support',
+        '10% fee on amaldives.com bookings',
       ],
       badge: 'Most Popular',
     },
@@ -98,12 +83,27 @@ export function WelcomePage() {
       period: '/month',
       description: 'For established operators',
       features: [
+        'Try free for 30 days',
         'Everything in Growth',
         'Multi-property',
         'White-label',
         'Revenue reports',
         'API access',
         '24/7 phone support',
+      ],
+      badge: null,
+    },
+    {
+      name: 'Channel Plus',
+      price: '$79',
+      period: '/month',
+      description: 'Maximum automation',
+      features: [
+        'Try free for 30 days',
+        'Everything in Business',
+        'Priority channel sync',
+        'Stripe direct payouts',
+        'Dedicated support',
       ],
       badge: null,
     },
@@ -155,11 +155,6 @@ export function WelcomePage() {
                   Sign In
                 </Button>
               </Link>
-              <Link href="/super-admin">
-                <Button className="bg-cyan-600 hover:bg-cyan-700">
-                  Super Admin
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -184,7 +179,7 @@ export function WelcomePage() {
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Link href="/claim">
                 <Button size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-white px-8 py-3">
-                  Claim Your Free Account
+                  Start 30-day free trial
                 </Button>
               </Link>
               <Link href="#pricing">
@@ -306,7 +301,7 @@ export function WelcomePage() {
               Choose the Perfect Plan
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Free forever for Maldives guesthouses. Upgrade when you're ready for more.
+              Try free for 30 days. Start with Growth plan ($19/mo), upgrade or cancel anytime.
             </p>
           </motion.div>
 
@@ -344,7 +339,7 @@ export function WelcomePage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href={plan.name === 'Free' ? '/claim' : '/claim'} className="block">
+                    <Link href={plan.name === 'Growth' ? '/claim' : '/claim'} className="block">
                       <Button
                         className={`w-full mt-6 ${
                           plan.badge
@@ -352,7 +347,7 @@ export function WelcomePage() {
                             : 'bg-gray-900 hover:bg-gray-800'
                         }`}
                       >
-                        {plan.name === 'Free' ? 'Claim free account' : 'Start free, upgrade later'}
+                        Start 30-day free trial
                       </Button>
                     </Link>
                   </CardContent>
@@ -430,8 +425,9 @@ export function WelcomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <div className="text-4xl font-bold text-white mb-2">Free</div>
-              <div className="text-cyan-100">Forever</div>
+              <div className="text-4xl font-bold text-white mb-2">30 days</div>
+              <div className="text-cyan-100">Free trial</div>
+              <div className="text-cyan-200/80 text-xs mt-1">card required, cancel anytime</div>
             </motion.div>
           </div>
         </div>

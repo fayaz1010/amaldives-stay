@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     },
     subscription_data: {
       metadata: { tenantId: tenant.id, planTier },
+      trial_period_days: 30,
     },
     // session_id lets the billing page confirm + activate the plan on return,
     // so activation doesn't depend on a webhook being registered.
