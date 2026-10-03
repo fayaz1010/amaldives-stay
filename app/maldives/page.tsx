@@ -4,7 +4,7 @@ import { MarketingLanding } from '@/components/marketing/landing';
 export const metadata: Metadata = {
   title: 'Hotel & Guesthouse Management Software for the Maldives | Vayves',
   description:
-    'Vayves is hotel management software built for Maldives properties: reservations, channel manager, MIRA-ready TGST & Green Tax, BML/Maya payments and commission-free bookings from amaldives.com. From $19/mo.',
+    'Vayves is hotel management software built for Maldives properties: reservations, channel manager, MIRA-ready TGST & Green Tax, BML/Maya payments and direct bookings from amaldives.com at 10% (vs 15-18% OTA rates). From $19/mo.',
   alternates: { canonical: 'https://vayves.com/maldives' },
 };
 
@@ -16,8 +16,8 @@ export default function MaldivesPage() {
       metaDescription={metadata.description as string}
       badge="Built for the Maldives"
       h1="Hotel & guesthouse management software built for the Maldives"
-      wedge="Run your island property end-to-end — reservations, channel sync, MIRA-ready tax and local payments — and get commission-free bookings from amaldives.com. Not just software: real demand."
-      intro="Most property management systems are foreign platforms adapted for the Maldives. Vayves is built around how island properties actually operate — MIRA tax filing, TGST and Green Tax per guest-night, BML Connect and Maya payments, speedboat and seaplane transfers — and it plugs straight into amaldives.com so travellers can book you direct, commission-free."
+      wedge="Run your island property end-to-end — reservations, channel sync, MIRA-ready tax and local payments — and get direct bookings from amaldives.com at 10% (vs 15-18% OTA commission). Not just software: real demand."
+      intro="Most property management systems are foreign platforms adapted for the Maldives. Vayves is built around how island properties actually operate — MIRA tax filing, TGST and Green Tax per guest-night, BML Connect and Maya payments, speedboat and seaplane transfers — and it plugs straight into amaldives.com so travellers can book you direct at a 10% platform fee (4% on your own stay page)."
       sections={[
         {
           h2: 'Everything a Maldives property needs, in one place',
@@ -31,7 +31,7 @@ export default function MaldivesPage() {
           ],
         },
         {
-          h2: 'Commission-free demand from amaldives.com',
+          h2: 'Demand from amaldives.com at lower rates than OTAs',
           paragraphs: [
             'Vayves is the only Maldives PMS with a built-in demand channel. When you go live, your property can be listed on amaldives.com — a traveller directory of 200+ resorts and 900+ guesthouses — and take direct bookings at a 10% platform fee for marketplace bookings (your own stay page bookings have a 4% fee).',
             'That means the software pays for itself: a single direct booking a month usually covers the subscription, and every booking after that is margin you keep.',
@@ -66,7 +66,7 @@ export default function MaldivesPage() {
         { q: 'Is Vayves MIRA-compliant?', a: 'Vayves computes TGST (17%) and Green Tax per guest-night from your live bookings and prepares the figures for your monthly MIRA return. You review and file; the software does the maths per property.' },
         { q: 'Does it connect to Booking.com and Agoda?', a: 'Yes. The channel manager syncs rates and availability across Booking.com, Agoda, Airbnb and other OTAs so the same room is never sold twice.' },
         { q: 'Can guests pay with BML or Maya?', a: 'Yes — Vayves supports BML Connect, Maya, cards via Stripe, and pay-at-property, in USD or MVR.' },
-        { q: 'How is this different from Tharazoo, fahiHMS or eZee?', a: 'Vayves is the only Maldives PMS with a built-in demand channel: your property lists on amaldives.com and takes direct, commission-free bookings — so it drives revenue, not just operations.' },
+        { q: 'How is this different from Tharazoo, fahiHMS or eZee?', a: 'Vayves is the only Maldives PMS with a built-in demand channel: your property lists on amaldives.com and takes direct bookings at 10% (vs 15-18% OTA rates) — so it drives revenue, not just operations.' },
         { q: 'How much does it cost?', a: 'Try Growth ($19/mo) free for 30 days. Card required; cancel before trial ends to avoid charges. Business ($49/mo) and Channel Plus ($79/mo) also available with 30-day trials.' },
       ]}
       related={[

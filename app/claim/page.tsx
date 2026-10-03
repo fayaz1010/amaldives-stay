@@ -264,10 +264,10 @@ function ClaimForm() {
             {guesthouseParam ? (
               <>
                 Can&apos;t use the email on file? Leave your details and our team verifies ownership of{' '}
-                <strong>{guesthouseName || guesthouseParam}</strong> by phone — free, no obligation.
+                <strong>{guesthouseName || guesthouseParam}</strong> by phone. After verification, you&apos;ll start a 30-day free trial (card required, $19/month after trial).
               </>
             ) : (
-              <>Leave your details and our team verifies ownership by phone — free, no obligation.</>
+              <>Leave your details and our team verifies ownership by phone. After verification, you&apos;ll start a 30-day free trial (card required, $19/month after trial).</>
             )}
           </CardDescription>
         </CardHeader>

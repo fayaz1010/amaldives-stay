@@ -4,7 +4,7 @@ import { MarketingLanding } from '@/components/marketing/landing';
 export const metadata: Metadata = {
   title: 'Resort & Island Property Management Software — Maldives | Vayves',
   description:
-    'Vayves runs resorts and island properties: reservations, channel manager, transfers, F&B and minibar, MIRA-ready TGST & Green Tax and local payments — with commission-free demand from amaldives.com.',
+    'Vayves runs resorts and island properties: reservations, channel manager, transfers, F&B and minibar, MIRA-ready TGST & Green Tax and local payments — with demand from amaldives.com at 10% (vs 15-18% OTA rates).',
   alternates: { canonical: 'https://vayves.com/resorts' },
 };
 
@@ -15,7 +15,7 @@ export default function ResortsPage() {
       metaDescription={metadata.description as string}
       badge="For resorts & island properties"
       h1="Resort & island property management software"
-      wedge="From a boutique island retreat to a multi-property group, Vayves handles the full operation — reservations, transfers, F&B, staff and MIRA-ready tax — with commission-free demand from amaldives.com."
+      wedge="From a boutique island retreat to a multi-property group, Vayves handles the full operation — reservations, transfers, F&B, staff and MIRA-ready tax — with demand from amaldives.com at 10% (vs 15-18% OTA rates)."
       intro="Resorts and island properties have moving parts a generic PMS ignores: seaplane and speedboat transfers, F&B outlets and minibars, island logistics and supply, per-property tax at the higher Green Tax tier. Vayves is built for that reality, and scales from one property to a group under one login."
       sections={[
         {

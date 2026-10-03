@@ -4,7 +4,7 @@ import { MarketingLanding } from '@/components/marketing/landing';
 export const metadata: Metadata = {
   title: 'The Little Hotelier Alternative for Small Hotels & Guesthouses | Vayves',
   description:
-    'Looking for a Little Hotelier or eviivo alternative? Vayves gives small hotels and guesthouses the same PMS + channel manager + booking site — plus commission-free demand and a Maldives tax engine. From $19/mo.',
+    'Looking for a Little Hotelier or eviivo alternative? Vayves gives small hotels and guesthouses the same PMS + channel manager + booking site — plus demand from amaldives.com at 10% (vs 15-18% OTA rates) and a Maldives tax engine. From $19/mo.',
   alternates: { canonical: 'https://vayves.com/little-hotelier-alternative' },
 };
 
@@ -15,7 +15,7 @@ export default function LittleHotelierAlternativePage() {
       metaDescription={metadata.description as string}
       badge="Comparison"
       h1="The Little Hotelier alternative for small hotels & guesthouses"
-      wedge="Everything Little Hotelier and eviivo do for properties under 50 rooms — PMS, channel manager, direct-booking site — plus commission-free demand from amaldives.com and a built-in Maldives tax engine. From $19/mo."
+      wedge="Everything Little Hotelier and eviivo do for properties under 50 rooms — PMS, channel manager, direct-booking site — plus demand from amaldives.com at 10% (vs 15-18% OTA rates) and a built-in Maldives tax engine. From $19/mo."
       ctaLabel="Start 30-day free trial"
       intro="Little Hotelier and eviivo are solid all-in-one systems for small properties. But if you run a guesthouse or boutique hotel — especially in the Maldives — Vayves covers the same ground and adds two things neither offers: a demand channel that sends you direct bookings, and automatic TGST/Green Tax/MIRA handling. Here is an honest, side-by-side look."
       sections={[
@@ -45,7 +45,7 @@ export default function LittleHotelierAlternativePage() {
       faqs={[
         { q: 'Is Vayves cheaper than Little Hotelier?', a: 'Vayves starts at $19/mo with a 30-day free trial, so most small properties pay less — and the amaldives.com channel can cover the cost with a single direct booking.' },
         { q: 'Can I migrate from Little Hotelier or eviivo?', a: 'Yes. You can set up your rooms, rates and channel connections in Vayves and switch over. Reach out and the team will help you move your inventory.' },
-        { q: 'When should I pick Vayves over Little Hotelier?', a: 'If you want commission-free demand as well as software, or you operate in the Maldives and need TGST/Green Tax/MIRA handled automatically, Vayves is the stronger fit. For a generic small hotel outside the Maldives, both work — Vayves adds the trial and the direct-booking channel.' },
+        { q: 'When should I pick Vayves over Little Hotelier?', a: 'If you want lower-cost demand as well as software (10% vs 15-18% OTA commission), or you operate in the Maldives and need TGST/Green Tax/MIRA handled automatically, Vayves is the stronger fit. For a generic small hotel outside the Maldives, both work — Vayves adds the trial and the direct-booking channel.' },
         { q: 'Does Vayves have a channel manager like Little Hotelier?', a: 'Yes — it syncs rates and availability across Booking.com, Agoda, Airbnb and other OTAs so you never double-book.' },
       ]}
       related={[

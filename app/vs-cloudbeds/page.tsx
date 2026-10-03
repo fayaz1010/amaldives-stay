@@ -4,7 +4,7 @@ import { MarketingLanding } from '@/components/marketing/landing';
 export const metadata: Metadata = {
   title: 'Cloudbeds Alternative for Small Hotels & Guesthouses | Vayves',
   description:
-    'A simpler, cheaper Cloudbeds alternative for small and independent properties: PMS + channel manager + direct booking, from $19/mo with a free plan — plus commission-free demand and Maldives tax handling.',
+    'A simpler, cheaper Cloudbeds alternative for small and independent properties: PMS + channel manager + direct booking, from $19/mo with a 30-day trial — plus demand from amaldives.com at 10% (vs 15-18% OTA rates) and Maldives tax handling.',
   alternates: { canonical: 'https://vayves.com/vs-cloudbeds' },
 };
 
@@ -15,7 +15,7 @@ export default function VsCloudbedsPage() {
       metaDescription={metadata.description as string}
       badge="Comparison"
       h1="A Cloudbeds alternative built for small properties"
-      wedge="Cloudbeds is powerful — and priced and built for bigger properties. If you run a guesthouse or boutique hotel, Vayves gives you the essentials — PMS, channel manager, direct booking — for a fraction of the cost, plus commission-free demand and a Maldives tax engine."
+      wedge="Cloudbeds is powerful — and priced and built for bigger properties. If you run a guesthouse or boutique hotel, Vayves gives you the essentials — PMS, channel manager, direct booking — for a fraction of the cost, plus demand from amaldives.com at 10% (vs 15-18% OTA rates) and a Maldives tax engine."
       ctaLabel="Start 30-day free trial"
       intro="Cloudbeds is a capable all-in-one hospitality platform. But small and independent operators often find it more than they need and more than they want to pay. Vayves focuses on exactly what a property under ~50 rooms uses every day, keeps it simple, and adds a demand channel Cloudbeds does not have."
       sections={[
