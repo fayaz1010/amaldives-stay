@@ -258,29 +258,29 @@ export function GuestHomePage({
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-3">
               {tenant.logo && (
-                <Image src={tenant.logo} alt={tenant.name} width={40} height={40} className="rounded-lg" />
+                <Image src={tenant.logo} alt={tenant.name} width={40} height={40} className="rounded-xl object-cover" />
               )}
-              <h1 className="text-2xl font-bold text-gray-900">{tenant.name}</h1>
+              <h1 className="text-xl md:text-2xl font-medium text-gray-900">{tenant.name}</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
-              <a href="#rooms" className="text-gray-600 transition-colors hover:opacity-80">Rooms</a>
-              <a href="#why" className="text-gray-600 transition-colors hover:opacity-80">Why us</a>
-              <a href="#gallery" className="text-gray-600 transition-colors hover:opacity-80">Gallery</a>
-              <a href="#amenities" className="text-gray-600 transition-colors hover:opacity-80">Amenities</a>
+              <a href="#rooms" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Rooms</a>
+              <a href="#why" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Why us</a>
+              <a href="#gallery" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Gallery</a>
+              <a href="#amenities" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Amenities</a>
               {guestExtras.length > 0 && (
-                <a href="#extras" className="text-gray-600 transition-colors hover:opacity-80">Extras</a>
+                <a href="#extras" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Extras</a>
               )}
-              <a href="#contact" className="text-gray-600 transition-colors hover:opacity-80">Contact</a>
+              <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Contact</a>
             </nav>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">Sign In</Button>
+              <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900 font-medium hidden md:inline-flex">Sign In</Button>
               <a href="#rooms">
-                <Button size="sm" style={{ backgroundColor: primary, color: 'white' }}>Book Now</Button>
+                <Button size="sm" style={{ backgroundColor: primary, color: 'white' }} className="font-medium">Book Now</Button>
               </a>
             </div>
           </div>
@@ -288,22 +288,22 @@ export function GuestHomePage({
       </header>
 
       {/* Hero — rotating slider with beachfront messaging + booking engine */}
-      <section className="relative h-[640px] md:h-[680px]">
+      <section className="relative h-[640px] md:h-[700px]">
         <HeroSlider
           images={heroSlides}
           focal={heroFocal}
           gradient={`linear-gradient(to right, ${primary}, ${accent})`}
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-          <div className="text-center text-white max-w-3xl mx-auto">
+          <div className="text-center text-white max-w-4xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
               {island && (
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-4 py-1.5 text-sm font-medium mb-5 border border-white/25">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-5 py-2 text-sm font-medium mb-6 border border-white/20">
                   <Waves className="h-4 w-4" /> Beachfront · {island}, Maldives
                 </span>
               )}
-              <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-sm">{tenant.name}</h1>
-              <p className="text-lg md:text-2xl mb-8 text-gray-50 drop-shadow-sm">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-light mb-6 drop-shadow-sm tracking-tight">{tenant.name}</h1>
+              <p className="text-lg md:text-2xl mb-10 text-white/95 drop-shadow-sm font-light leading-relaxed">
                 {tagline || 'Experience comfortable and memorable stays with us'}
               </p>
 
@@ -323,13 +323,13 @@ export function GuestHomePage({
 
       {/* Stats / trust bar */}
       {stats.length > 0 && (
-        <section className="border-b bg-white">
+        <section className="border-b border-gray-100 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
               {stats.map((s, i) => (
-                <div key={i} className="py-6 text-center px-2">
-                  <div className="text-2xl md:text-3xl font-bold" style={{ color: primary }}>{s.value}</div>
-                  <div className="text-xs md:text-sm text-gray-500 mt-1">{s.label}</div>
+                <div key={i} className="py-8 text-center px-2">
+                  <div className="text-3xl md:text-4xl font-light" style={{ color: primary }}>{s.value}</div>
+                  <div className="text-xs md:text-sm text-gray-500 mt-2 uppercase tracking-wide">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -339,18 +339,18 @@ export function GuestHomePage({
 
       {/* Why stay with us — beachfront-led differentiators */}
       {(highlights.length > 0 || propertyDescription) && (
-        <section id="why" className="py-20 px-4 sm:px-6 lg:px-8">
+        <section id="why" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
-              className="text-center mb-14"
+              className="text-center mb-16"
             >
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why stay at {tenant.name}?</h2>
+              <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">Why stay at {tenant.name}?</h2>
               {propertyDescription && (
-                <div className="text-lg text-gray-600 max-w-3xl mx-auto space-y-4 text-left md:text-center">
+                <div className="text-lg text-gray-600 max-w-3xl mx-auto space-y-4 text-left md:text-center font-light leading-relaxed">
                   {propertyDescription.split('\n\n').map((p: string, i: number) => (
                     <p key={i}>{p}</p>
                   ))}
@@ -359,7 +359,7 @@ export function GuestHomePage({
             </motion.div>
 
             {highlights.length > 0 && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {highlights.map((h, i) => {
                   const Icon = iconFor(h);
                   const featured = i === 0;
@@ -370,18 +370,17 @@ export function GuestHomePage({
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: Math.min(i * 0.06, 0.4) }}
-                      className={`rounded-2xl p-6 border flex items-start gap-4 ${
-                        featured ? 'sm:col-span-2 lg:col-span-1 text-white border-transparent' : 'bg-white border-gray-100 shadow-sm'
+                      className={`rounded-2xl p-7 border flex items-start gap-4 ${
+                        featured ? 'sm:col-span-2 lg:col-span-1 text-white border-transparent bg-gray-900' : 'bg-white border-gray-100 shadow-sm hover:shadow-md transition-shadow'
                       }`}
-                      style={featured ? { background: `linear-gradient(135deg, ${primary}, ${accent})` } : undefined}
                     >
                       <div
-                        className="shrink-0 h-11 w-11 rounded-xl flex items-center justify-center"
-                        style={featured ? { backgroundColor: 'rgba(255,255,255,0.18)' } : { backgroundColor: `${primary}14` }}
+                        className="shrink-0 h-12 w-12 rounded-xl flex items-center justify-center"
+                        style={featured ? { backgroundColor: 'rgba(255,255,255,0.15)' } : { backgroundColor: `${primary}10` }}
                       >
                         <Icon className="h-6 w-6" style={featured ? { color: 'white' } : { color: primary }} />
                       </div>
-                      <p className={`text-[15px] leading-snug font-medium ${featured ? 'text-white' : 'text-gray-700'}`}>{h}</p>
+                      <p className={`text-[15px] leading-relaxed font-normal ${featured ? 'text-white' : 'text-gray-700'}`}>{h}</p>
                     </motion.div>
                   );
                 })}
@@ -392,7 +391,7 @@ export function GuestHomePage({
       )}
 
       {/* Rooms */}
-      <section id="rooms" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="rooms" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -401,8 +400,8 @@ export function GuestHomePage({
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Rooms</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">Our Rooms</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
               Bright, beachfront rooms — many with private balconies and sea views
             </p>
           </motion.div>
@@ -416,55 +415,55 @@ export function GuestHomePage({
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <Card className="h-full hover:shadow-xl transition-shadow overflow-hidden bg-white">
-                  <Link href={`/rooms/${room.id}`} className="block aspect-video bg-gray-200 relative group">
+                <Card className="h-full hover:shadow-xl transition-all duration-300 overflow-hidden bg-white border-gray-100 rounded-2xl">
+                  <Link href={`/rooms/${room.id}`} className="block aspect-[4/3] bg-gray-200 relative group">
                     {room.images?.[0] ? (
                       <Image
                         src={room.images[0]}
                         alt={room.name}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full bg-gray-100">
-                        <BedDouble className="h-10 w-10 text-gray-300" />
+                        <BedDouble className="h-12 w-12 text-gray-300" />
                       </div>
                     )}
                     <div className="absolute top-4 right-4 flex gap-2">
-                      <Badge variant="secondary" className="bg-white/90">{room.type}</Badge>
+                      <Badge variant="secondary" className="bg-white/95 backdrop-blur-sm font-medium">{room.type}</Badge>
                     </div>
                     {count > 1 && (
                       <div className="absolute bottom-4 left-4">
-                        <Badge className="bg-black/65 text-white border-0">{count} rooms available</Badge>
+                        <Badge className="bg-gray-900/90 text-white border-0 backdrop-blur-sm">{count} rooms available</Badge>
                       </div>
                     )}
                   </Link>
-                  <CardHeader>
-                    <CardTitle className="text-xl">
-                      <Link href={`/rooms/${room.id}`} className="hover:opacity-80 transition-opacity">{room.name}</Link>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl font-medium">
+                      <Link href={`/rooms/${room.id}`} className="hover:opacity-70 transition-opacity">{room.name}</Link>
                     </CardTitle>
-                    <CardDescription className="line-clamp-3">{room.description}</CardDescription>
+                    <CardDescription className="line-clamp-2 text-gray-600">{room.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3 text-sm text-gray-600">
                         <span className="flex items-center gap-1.5"><Users className="h-4 w-4 text-gray-400" /> {room.capacity}</span>
                         {room.bedType && <span className="flex items-center gap-1.5"><BedDouble className="h-4 w-4 text-gray-400" /> {room.bedType}</span>}
                       </div>
                       <div className="text-right">
-                        <span className="text-2xl font-bold" style={{ color: primary }}>{formatCurrency(room.basePrice)}</span>
-                        <span className="text-sm text-gray-500">/night</span>
+                        <span className="text-2xl font-light" style={{ color: primary }}>{formatCurrency(room.basePrice)}</span>
+                        <span className="text-sm text-gray-500 font-light">/night</span>
                       </div>
                     </div>
 
                     {room.amenities && room.amenities.length > 0 && (
-                      <div className="mb-4">
+                      <div className="mb-5">
                         <div className="flex flex-wrap gap-2">
                           {room.amenities.slice(0, 3).map((amenity: string) => (
-                            <Badge key={amenity} variant="outline" className="text-xs">{amenity}</Badge>
+                            <Badge key={amenity} variant="outline" className="text-xs border-gray-200">{amenity}</Badge>
                           ))}
                           {room.amenities.length > 3 && (
-                            <Badge variant="outline" className="text-xs">+{room.amenities.length - 3} more</Badge>
+                            <Badge variant="outline" className="text-xs border-gray-200">+{room.amenities.length - 3} more</Badge>
                           )}
                         </div>
                       </div>
@@ -472,7 +471,7 @@ export function GuestHomePage({
 
                     <Link
                       href={`/rooms/${room.id}`}
-                      className="block w-full text-center rounded-md py-2 font-medium text-white transition-opacity hover:opacity-90"
+                      className="block w-full text-center rounded-xl py-3 font-medium text-white transition-opacity hover:opacity-90"
                       style={{ backgroundColor: primary }}
                     >
                       View Room &amp; Book
@@ -522,7 +521,7 @@ export function GuestHomePage({
       )}
 
       {/* Amenities */}
-      <section id="amenities" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="amenities" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -531,8 +530,8 @@ export function GuestHomePage({
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Amenities</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">Everything you need for an easy island stay</p>
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">Amenities</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">Everything you need for an easy island stay</p>
           </motion.div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -545,9 +544,9 @@ export function GuestHomePage({
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: Math.min(index * 0.04, 0.4) }}
-                  className="flex items-center gap-3 rounded-xl bg-white border border-gray-100 px-4 py-3.5 shadow-sm"
+                  className="flex items-center gap-3 rounded-2xl bg-white border border-gray-100 px-5 py-4 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primary}14` }}>
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${primary}10` }}>
                     <Icon className="h-5 w-5" style={{ color: primary }} />
                   </div>
                   <span className="text-sm font-medium text-gray-800">{name}</span>
