@@ -24,7 +24,7 @@ export default function ChannelManagerPage() {
             'Connect your OTAs — Booking.com, Agoda, Airbnb and other channels via iCal and channel-manager sync.',
             'One source of truth — set rates and availability once in Vayves; every channel updates.',
             'No double-bookings — when a room sells anywhere, it closes everywhere, automatically.',
-            'Direct channel included — your own booking website plus an amaldives.com listing that books direct at 10% for marketplace bookings (4% on your property's stay page).',
+            'Direct channel included — your own booking website plus an amaldives.com listing that books direct at 10% for marketplace bookings (4% on your property\'s stay page).',
           ],
         },
         {

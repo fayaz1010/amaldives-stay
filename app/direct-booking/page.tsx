@@ -16,14 +16,14 @@ export default function DirectBookingPage() {
       badge="Direct booking"
       h1="A zero-commission direct-booking engine for your property"
       wedge="Stop giving 15–18% to OTAs on every stay. Vayves gives you a fast direct-booking website with no commission on your own bookings — and demand from amaldives.com at 10% for marketplace bookings — so more of every booking stays with you."
-      intro="OTAs are great for discovery and terrible for margin. Every booking they send costs you 15–18% forever. A direct-booking engine lets guests book on your own site — and you keep the commission. Vayves makes that direct channel real, and adds a demand source so 'direct' does not have to mean 'empty'."
+      intro="OTAs are great for discovery and terrible for margin. Every booking they send costs you 15–18% forever. A direct-booking engine lets guests book on your own site — and you keep the commission. Vayves makes that direct channel real, and adds a demand source so \'direct\' does not have to mean \'empty\'."
       sections={[
         {
           h2: 'How Vayves grows your direct bookings',
           bullets: [
             'Your own booking website — real-time availability and rates on a {name}.vayves.com address or your own domain.',
             'One-line embed — add a "Book direct" button to your Facebook page, Instagram bio or existing site.',
-            'Commission-free — you pay nothing on bookings that come through your own page (4% on your property's stay page bookings).',
+            'Commission-free — you pay nothing on bookings that come through your own page (4% on your property\'s stay page bookings).',
             'amaldives.com demand — list your property and take direct bookings at a 10% platform fee for marketplace bookings instead of OTA rates.',
             'Own the guest — you get the email, the relationship and the repeat booking, not the OTA.',
           ],
