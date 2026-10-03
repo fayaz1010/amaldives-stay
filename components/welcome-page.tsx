@@ -62,33 +62,18 @@ export function WelcomePage() {
 
   const plans = [
     {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      description: 'Perfect for getting started',
-      features: [
-        'Unlimited rooms',
-        'Direct booking engine',
-        'Guest management',
-        'Booking calendar',
-        'Mobile dashboard',
-        'Listed on amaldives.com',
-        '10% platform fee on amaldives.com bookings (4% on your stay page)',
-      ],
-      badge: null,
-    },
-    {
       name: 'Growth',
       price: '$19',
       period: '/month',
       description: 'For growing guesthouses',
       features: [
-        'Everything in Free',
+        'Try free for 30 days',
         'Channel manager sync',
         'SMS notifications',
         'Advanced analytics',
         'Custom domain',
         'Priority support',
+        '10% fee on amaldives.com bookings',
       ],
       badge: 'Most Popular',
     },
@@ -98,12 +83,27 @@ export function WelcomePage() {
       period: '/month',
       description: 'For established operators',
       features: [
+        'Try free for 30 days',
         'Everything in Growth',
         'Multi-property',
         'White-label',
         'Revenue reports',
         'API access',
         '24/7 phone support',
+      ],
+      badge: null,
+    },
+    {
+      name: 'Channel Plus',
+      price: '$79',
+      period: '/month',
+      description: 'Maximum automation',
+      features: [
+        'Try free for 30 days',
+        'Everything in Business',
+        'Priority channel sync',
+        'Stripe direct payouts',
+        'Dedicated support',
       ],
       badge: null,
     },
@@ -184,7 +184,7 @@ export function WelcomePage() {
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link href="/claim">
                 <Button size="lg" className="bg-gray-900 hover:bg-gray-800 text-white px-10 py-6 text-base font-medium h-auto rounded-lg">
-                  Claim Your Free Account
+                  Start 30-day free trial
                 </Button>
               </Link>
               <Link href="#pricing">
@@ -305,7 +305,7 @@ export function WelcomePage() {
               Choose the Perfect Plan
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
-              Free forever for Maldives guesthouses. Upgrade when you're ready for more.
+              Try free for 30 days. Start with Growth plan ($19/mo), upgrade or cancel anytime.
             </p>
           </motion.div>
 
@@ -343,7 +343,7 @@ export function WelcomePage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href={plan.name === 'Free' ? '/claim' : '/claim'} className="block">
+                    <Link href={plan.name === 'Growth' ? '/claim' : '/claim'} className="block">
                       <Button
                         className={`w-full ${
                           plan.badge
@@ -351,7 +351,7 @@ export function WelcomePage() {
                             : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200'
                         } py-6 rounded-lg font-medium`}
                       >
-                        {plan.name === 'Free' ? 'Claim free account' : 'Start free, upgrade later'}
+                        Start 30-day free trial
                       </Button>
                     </Link>
                   </CardContent>
@@ -429,8 +429,9 @@ export function WelcomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <div className="text-5xl font-light text-white mb-3">Free</div>
-              <div className="text-gray-400 text-sm uppercase tracking-wide">Forever</div>
+              <div className="text-5xl font-light text-white mb-3">30 days</div>
+              <div className="text-gray-400 text-sm uppercase tracking-wide">Free trial</div>
+              <div className="text-gray-500 text-xs mt-2">card required, cancel anytime</div>
             </motion.div>
           </div>
         </div>

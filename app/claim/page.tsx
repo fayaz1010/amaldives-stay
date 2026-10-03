@@ -210,31 +210,27 @@ function ClaimForm() {
               <CheckCircle2 className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">You&apos;re all set!</CardTitle>
+          <CardTitle className="text-2xl font-bold">Account verified!</CardTitle>
           <CardDescription>
-            Your verified account is linked to amaldives.com and ready for direct bookings.
+            One more step: set up your 30-day free trial to activate your Vayves account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-center">
-            <p className="text-sm text-gray-600 mb-1">Manage bookings at</p>
-            <a href={success.stayUrl} className="text-cyan-700 font-semibold break-all hover:underline">
-              {success.stayUrl}
-            </a>
+          <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-4">
+            <p className="text-sm font-semibold text-gray-900 mb-2">Growth plan — $19/month</p>
+            <ul className="text-xs text-gray-600 space-y-1">
+              <li>✓ Free for 30 days</li>
+              <li>✓ Channel sync to Booking.com, Agoda & Airbnb</li>
+              <li>✓ SMS notifications</li>
+              <li>✓ Cancel anytime before trial ends — no charge</li>
+            </ul>
           </div>
-          {success.amaldivesUrl && (
-            <a
-              href={success.amaldivesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 text-sm text-cyan-700 hover:underline"
-            >
-              View your amaldives.com listing <ExternalLink className="h-4 w-4" />
-            </a>
-          )}
           <Link href="/auth/signin" className="block">
-            <Button className="w-full bg-cyan-600 hover:bg-cyan-700">Sign in to dashboard</Button>
+            <Button className="w-full bg-cyan-600 hover:bg-cyan-700">Continue to billing setup</Button>
           </Link>
+          <p className="text-xs text-gray-500 text-center">
+            Your card will be collected but not charged for 30 days. Cancel anytime from your billing settings.
+          </p>
         </CardContent>
       </Card>
     );
@@ -523,7 +519,7 @@ function ClaimForm() {
         )}
 
         <p className="mt-6 text-center text-xs text-gray-500">
-          By claiming, you agree to keep 96% of every direct booking. We collect a 4% platform fee.
+          By claiming, you start a 30-day free trial. Card will be collected during setup. You'll be charged $19/month after the trial unless you cancel.
         </p>
       </CardContent>
     </Card>

@@ -14,7 +14,24 @@ const PLANS = [
 
 export default function BillingSettingsPage() {
   const [loading, setLoading] = useState<string | null>(null);
-  const [banner, setBanner] = useState<{ kind: 'ok' | 'info'; text: string } | null>(null);
+  const [banner, setBanner] = useState<{ kind: 'ok' | 'info' | 'trial'; text: string } | null>(null);
+  const [tenant, setTenant] = useState<{ status: string; plan: string } | null>(null);
+
+  // Fetch tenant status to show trial banner
+  useEffect(() => {
+    fetch('/api/admin/tenant/status')
+      .then((r) => r.json())
+      .then((data) => {
+        setTenant(data);
+        if (data.status === 'TRIAL') {
+          setBanner({
+            kind: 'trial',
+            text: 'Your 30-day free trial is active. Complete billing setup to avoid service interruption after the trial.',
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // On the Stripe success redirect, confirm + activate the plan (no webhook needed).
   useEffect(() => {
@@ -66,7 +83,7 @@ export default function BillingSettingsPage() {
           Subscription & billing
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          Upgrade securely with Stripe. Cancel anytime from your Stripe customer portal.
+          Choose a plan below or manage your existing subscription through the Stripe customer portal.
         </p>
       </div>
 
@@ -75,6 +92,8 @@ export default function BillingSettingsPage() {
           className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
             banner.kind === 'ok'
               ? 'border-green-200 bg-green-50 text-green-800'
+              : banner.kind === 'trial'
+              ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
               : 'border-cyan-200 bg-cyan-50 text-cyan-800'
           }`}
         >
@@ -99,14 +118,41 @@ export default function BillingSettingsPage() {
               >
                 {loading === p.key ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : tenant?.plan === p.key ? (
+                  'Current plan'
                 ) : (
-                  'Upgrade'
+                  'Subscribe'
                 )}
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {tenant?.stripeCustomerId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage subscription</CardTitle>
+            <CardDescription>
+              Cancel or update your subscription through the Stripe customer portal.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => {
+                fetch('/api/admin/billing/portal', { method: 'POST' })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d.url) window.location.href = d.url;
+                  });
+              }}
+            >
+              Open billing portal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
