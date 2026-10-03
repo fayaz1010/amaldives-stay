@@ -33,7 +33,7 @@ export default function FreePage() {
         {
           h2: 'After the trial',
           paragraphs: [
-            'If you don't cancel, you'll be charged the monthly subscription price for your chosen plan:',
+            'If you don\'t cancel, you\'ll be charged the monthly subscription price for your chosen plan:',
           ],
           bullets: [
             'Growth ($19/mo): channel manager (Booking.com, Agoda, Airbnb) + SMS notifications.',
@@ -54,9 +54,9 @@ export default function FreePage() {
         { tier: 'Channel Plus', price: '$79/mo', blurb: 'Priority sync + Stripe payouts.' },
       ]}
       faqs={[
-        { q: 'Is the trial really free?', a: 'Yes — 30 days at no charge. A card is required at signup, and you'll be charged the monthly subscription price after 30 days unless you cancel.' },
+        { q: 'Is the trial really free?', a: 'Yes — 30 days at no charge. A card is required at signup, and you\'ll be charged the monthly subscription price after 30 days unless you cancel.' },
         { q: 'What happens if I cancel before 30 days?', a: 'No charge. Cancel anytime during the trial through the Stripe customer portal to avoid being billed.' },
-        { q: 'Do I need a credit card to start?', a: 'Yes. A card is collected upfront for the trial, but you won't be charged until the 30 days are up.' },
+        { q: 'Do I need a credit card to start?', a: 'Yes. A card is collected upfront for the trial, but you won\'t be charged until the 30 days are up.' },
         { q: 'Can I take payments during the trial?', a: 'Yes — you can connect Stripe, BML Connect, or Maya during the trial for online guest payments.' },
       ]}
       related={[
