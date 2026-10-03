@@ -129,35 +129,30 @@ export function WelcomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-blue-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center space-x-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/vayves-logo.svg" alt="Vayves" className="h-9 w-auto" />
             </div>
-            <nav className="hidden md:flex space-x-8">
-              <Link href="#features" className="text-gray-600 hover:text-cyan-600 transition-colors">
+            <nav className="hidden md:flex space-x-10">
+              <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
                 Features
               </Link>
-              <Link href="#how-it-works" className="text-gray-600 hover:text-cyan-600 transition-colors">
+              <Link href="#how-it-works" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
                 How it works
               </Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-cyan-600 transition-colors">
+              <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
                 Pricing
               </Link>
             </nav>
             <div className="flex items-center space-x-4">
               <Link href="/auth/signin">
-                <Button variant="ghost" className="text-gray-600">
+                <Button variant="ghost" className="text-gray-700 hover:text-gray-900 font-medium">
                   Sign In
-                </Button>
-              </Link>
-              <Link href="/super-admin">
-                <Button className="bg-cyan-600 hover:bg-cyan-700">
-                  Super Admin
                 </Button>
               </Link>
             </div>
@@ -166,57 +161,61 @@ export function WelcomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Modern Hotel
-              <span className="block text-cyan-600">Management Software</span>
+            <div className="inline-block mb-6">
+              <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium tracking-wide uppercase bg-gray-900 text-white">
+                For Independent Hotels &amp; Guesthouses
+              </span>
+            </div>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-light text-gray-900 mb-8 tracking-tight">
+              Property Management
+              <span className="block mt-2 font-normal">Built for Hospitality</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              All-in-one management software for independent hotels, guesthouses & resorts — reservations, channel manager, payments and your own commission-free direct-booking website.
+            <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto font-light leading-relaxed">
+              Run your hotel, guesthouse, or resort with software that feels as considered as your property. Direct bookings, reservations, operations, and guest experience — unified.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link href="/claim">
-                <Button size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-white px-8 py-3">
+                <Button size="lg" className="bg-gray-900 hover:bg-gray-800 text-white px-10 py-6 text-base font-medium h-auto rounded-lg">
                   Claim Your Free Account
                 </Button>
               </Link>
               <Link href="#pricing">
-                <Button size="lg" variant="outline" className="px-8 py-3">
+                <Button size="lg" variant="outline" className="px-10 py-6 text-base font-medium h-auto rounded-lg border-gray-300 hover:bg-gray-50">
                   View plans
                 </Button>
               </Link>
             </div>
-            <p className="text-sm text-gray-500 mt-6 max-w-xl mx-auto">
+            <p className="text-sm text-gray-500 mt-8 max-w-xl mx-auto leading-relaxed">
               Already on amaldives.com? Use your listing link — we&apos;ll connect your page automatically.
-              Add bookings to Facebook or your website with one copy-paste line. Pay with Stripe, Maya, BML, or at check-in.
+              Add bookings to Facebook or your website with one copy-paste line.
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            className="text-center mb-20"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need to Run Your Property
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
+              Everything You Need
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our platform provides all the tools you need to manage your property efficiently
-              and deliver exceptional guest experiences.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
+              Designed for the way you work. Built for the way your guests book.
             </p>
           </motion.div>
 
@@ -229,15 +228,15 @@ export function WelcomePage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <Card className="h-full hover:shadow-lg transition-shadow">
+                <Card className="h-full hover:shadow-lg transition-all duration-300 border-gray-100 rounded-xl">
                   <CardHeader>
-                    <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                      <feature.icon className="h-6 w-6 text-cyan-600" />
+                    <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center mb-5">
+                      <feature.icon className="h-6 w-6 text-white" />
                     </div>
-                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                    <CardTitle className="text-xl font-medium text-gray-900 mb-3">{feature.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-gray-600 text-base leading-relaxed">
                       {feature.description}
                     </CardDescription>
                   </CardContent>
@@ -249,24 +248,24 @@ export function WelcomePage() {
       </section>
 
       {/* How it works Section */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-cyan-50 to-blue-50">
+      <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            className="text-center mb-20"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
               How it works
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
               From discovery to direct booking, in four simple steps.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map((step, index) => (
               <motion.div
                 key={index}
@@ -275,15 +274,15 @@ export function WelcomePage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <Card className="h-full text-center">
-                  <CardHeader>
-                    <div className="mx-auto w-14 h-14 bg-cyan-600 text-white rounded-full flex items-center justify-center mb-4">
+                <Card className="h-full text-center border-gray-100 rounded-xl hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-6">
+                    <div className="mx-auto w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center mb-5">
                       <step.icon className="h-7 w-7" />
                     </div>
-                    <div className="text-sm font-semibold text-cyan-600 mb-2">
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                       Step {index + 1}
                     </div>
-                    <CardTitle className="text-lg">{step.title}</CardTitle>
+                    <CardTitle className="text-lg font-medium leading-snug">{step.title}</CardTitle>
                   </CardHeader>
                 </Card>
               </motion.div>
@@ -293,24 +292,24 @@ export function WelcomePage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            className="text-center mb-20"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
               Choose the Perfect Plan
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
               Free forever for Maldives guesthouses. Upgrade when you're ready for more.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {plans.map((plan, index) => (
               <motion.div
                 key={index}
@@ -319,38 +318,38 @@ export function WelcomePage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
               >
-                <Card className={`h-full relative ${plan.badge ? 'border-cyan-500 shadow-lg' : ''}`}>
+                <Card className={`h-full relative rounded-xl ${plan.badge ? 'border-gray-900 shadow-xl' : 'border-gray-100'}`}>
                   {plan.badge && (
-                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-cyan-600">
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-1">
                       {plan.badge}
                     </Badge>
                   )}
-                  <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <CardHeader className="text-center pb-8">
+                    <CardTitle className="text-2xl font-medium mb-6">{plan.name}</CardTitle>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                      <span className="text-gray-600">{plan.period}</span>
+                      <span className="text-5xl font-light text-gray-900">{plan.price}</span>
+                      <span className="text-gray-500 text-lg">{plan.period}</span>
                     </div>
-                    <CardDescription className="mt-2">
+                    <CardDescription className="mt-4 text-base">
                       {plan.description}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-3">
+                    <ul className="space-y-4 mb-8">
                       {plan.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-center">
-                          <CheckCircle className="h-5 w-5 text-cyan-600 mr-3" />
-                          <span className="text-gray-600">{feature}</span>
+                        <li key={featureIndex} className="flex items-start">
+                          <CheckCircle className="h-5 w-5 text-gray-900 mr-3 shrink-0 mt-0.5" />
+                          <span className="text-gray-600 text-sm leading-relaxed">{feature}</span>
                         </li>
                       ))}
                     </ul>
                     <Link href={plan.name === 'Free' ? '/claim' : '/claim'} className="block">
                       <Button
-                        className={`w-full mt-6 ${
+                        className={`w-full ${
                           plan.badge
-                            ? 'bg-cyan-600 hover:bg-cyan-700'
-                            : 'bg-gray-900 hover:bg-gray-800'
-                        }`}
+                            ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                            : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200'
+                        } py-6 rounded-lg font-medium`}
                       >
                         {plan.name === 'Free' ? 'Claim free account' : 'Start free, upgrade later'}
                       </Button>
@@ -364,27 +363,27 @@ export function WelcomePage() {
       </section>
 
       {/* Enterprise / integrations */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 border-t border-gray-100">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Built for local owners</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">Built for local owners</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light leading-relaxed">
               No technical team required. Copy a link, paste one line on your website, or share on WhatsApp — guests book direct while OTAs stay in sync.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { title: 'amaldives.com', desc: 'Guests discover you and book direct from your listing.' },
               { title: 'Your stay page', desc: '{name}.vayves.com with full booking & pay.' },
               { title: 'Website embed', desc: 'One script tag — floating Book button on any site.' },
               { title: 'Payments', desc: 'Stripe cards, Maya, BML Connect, or pay at property.' },
             ].map((item) => (
-              <Card key={item.title}>
+              <Card key={item.title} className="border-gray-100 rounded-xl hover:shadow-md transition-shadow">
                 <CardHeader>
-                  <CardTitle className="text-lg">{item.title}</CardTitle>
+                  <CardTitle className="text-lg font-medium">{item.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{item.desc}</p>
+                  <p className="text-gray-600 text-sm leading-relaxed">{item.desc}</p>
                 </CardContent>
               </Card>
             ))}
@@ -393,17 +392,17 @@ export function WelcomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-cyan-600">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
+          <div className="grid md:grid-cols-4 gap-12 text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <div className="text-4xl font-bold text-white mb-2">934</div>
-              <div className="text-cyan-100">Guesthouses</div>
+              <div className="text-5xl font-light text-white mb-3">934</div>
+              <div className="text-gray-400 text-sm uppercase tracking-wide">Guesthouses</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -411,8 +410,8 @@ export function WelcomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.1 }}
             >
-              <div className="text-4xl font-bold text-white mb-2">1.5K+</div>
-              <div className="text-cyan-100">Rooms</div>
+              <div className="text-5xl font-light text-white mb-3">1.5K+</div>
+              <div className="text-gray-400 text-sm uppercase tracking-wide">Rooms</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -420,9 +419,9 @@ export function WelcomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <div className="text-4xl font-bold text-white mb-2">10%</div>
-              <div className="text-cyan-100">amaldives.com fee</div>
-              <div className="text-cyan-200/80 text-xs mt-1">4% direct · OTAs 18%+</div>
+              <div className="text-5xl font-light text-white mb-3">10%</div>
+              <div className="text-gray-400 text-sm uppercase tracking-wide">amaldives.com fee</div>
+              <div className="text-gray-500 text-xs mt-2">4% direct · OTAs 18%+</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -430,36 +429,36 @@ export function WelcomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <div className="text-4xl font-bold text-white mb-2">Free</div>
-              <div className="text-cyan-100">Forever</div>
+              <div className="text-5xl font-light text-white mb-3">Free</div>
+              <div className="text-gray-400 text-sm uppercase tracking-wide">Forever</div>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+      <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-t border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="flex items-center justify-center space-x-2 mb-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/vayves-logo-light.svg" alt="Vayves" className="h-9 w-auto" />
+              <img src="/vayves-logo.svg" alt="Vayves" className="h-9 w-auto" />
             </div>
-            <p className="text-gray-400 mb-6">
-              The modern way to manage your hotel & property operations
+            <p className="text-gray-500 mb-8 text-sm">
+              Property management software for independent hotels
             </p>
-            <div className="flex justify-center space-x-6">
-              <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
+            <div className="flex justify-center space-x-8 text-sm">
+              <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
+              <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
+              <Link href="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">
                 Contact Us
               </Link>
             </div>
-            <div className="mt-8 text-gray-400">
+            <div className="mt-8 text-gray-400 text-sm">
               © 2026 Vayves · by AMaldives
             </div>
           </div>

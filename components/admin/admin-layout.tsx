@@ -245,7 +245,7 @@ function SidebarContent({
       {/* Tenant switcher — renders a plain label when the user belongs to
           one tenant, or a dropdown with all their accounts + "Add another
           business" when they belong to more than one. */}
-      <div className="flex items-center justify-between h-14 px-4 border-b shrink-0">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100 shrink-0 bg-white">
         {memberships && memberships.length > 0 && activeTenantId ? (
           <TenantSwitcher
             activeTenantId={activeTenantId}
@@ -254,25 +254,23 @@ function SidebarContent({
             accentColor={primaryColor ?? undefined}
           />
         ) : (
-          // Fallback for sessions where memberships haven't loaded yet
-          // (first render after a fresh signin, before the JWT hydrates).
           <div className="flex items-center gap-2 min-w-0">
             {tenantLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={tenantLogo}
                 alt={tenantName || 'Property logo'}
-                className="w-7 h-7 rounded-lg object-cover shrink-0"
+                className="w-8 h-8 rounded-xl object-cover shrink-0"
               />
             ) : (
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ backgroundColor: primaryColor || '#0d9488' }}
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: primaryColor || '#1e7a6e' }}
               >
                 <Hotel className="h-4 w-4 text-white" />
               </div>
             )}
-            <span className="font-bold text-gray-900 text-sm truncate">
+            <span className="font-medium text-gray-900 text-sm truncate">
               {tenantName || 'Vayves'}
             </span>
           </div>
@@ -287,43 +285,43 @@ function SidebarContent({
       {/* Property switcher — only renders for multi-property tenants. Picks
           which property within the current business you're operating on. */}
       {properties && properties.length > 1 && (
-        <div className="px-3 py-2 border-b shrink-0 bg-gray-50/60">
+        <div className="px-3 py-3 border-b border-gray-100 shrink-0 bg-gray-50">
           <PropertySwitcher activePropertyId={activePropertyId ?? null} properties={properties} />
         </div>
       )}
 
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto py-2 px-2">
+      <nav className="flex-1 overflow-y-auto py-3 px-3 bg-white">
         {visibleGroups.map((group) => {
           const isOpen = openGroups.has(group.id);
           const isLocked = group.planRequired && tenantPlan === 'basic';
           const GroupIcon = group.icon;
 
           return (
-            <div key={group.id} className="mb-0.5">
+            <div key={group.id} className="mb-1">
               {/* Group header */}
               <button
                 onClick={() => toggleGroup(group.id)}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors',
-                  isOpen ? 'text-teal-700 bg-teal-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
+                  'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors',
+                  isOpen ? 'text-gray-900 bg-gray-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
                 )}
               >
-                <GroupIcon className="h-3.5 w-3.5 shrink-0" />
+                <GroupIcon className="h-4 w-4 shrink-0" />
                 <span className="flex-1 text-left">{group.label}</span>
                 {isLocked && (
-                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">PRO</span>
+                  <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold">PRO</span>
                 )}
                 {isOpen ? (
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-3.5 w-3.5" />
                 ) : (
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 )}
               </button>
 
               {/* Group items */}
               {isOpen && (
-                <div className="mt-0.5 space-y-0.5">
+                <div className="mt-1 space-y-0.5">
                   {group.items.map((item) => {
                     const active = isItemActive(item);
                     const ItemIcon = item.icon;
@@ -333,14 +331,14 @@ function SidebarContent({
                         href={isLocked ? '/admin/web' : item.href}
                         onClick={() => { onNavClick?.(); onClose?.(); }}
                         className={cn(
-                          'flex items-center gap-2.5 py-2 rounded-lg text-sm transition-colors',
-                          item.indent ? 'pl-8 pr-3' : 'pl-5 pr-3',
+                          'flex items-center gap-3 py-2.5 rounded-xl text-sm transition-colors',
+                          item.indent ? 'pl-9 pr-3' : 'pl-6 pr-3',
                           active
-                            ? 'bg-teal-50 text-teal-700 font-medium'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                            ? 'bg-gray-900 text-white font-medium'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
                         )}
                       >
-                        <ItemIcon className={cn('h-4 w-4 shrink-0', active ? 'text-teal-600' : 'text-gray-400')} />
+                        <ItemIcon className={cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-gray-400')} />
                         {item.name}
                       </Link>
                     );
@@ -397,8 +395,8 @@ export function AdminLayout({
         {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 w-60 bg-white shadow-xl">
+          <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-2xl">
             <SidebarContent
               pathname={pathname}
               tenantPlan={tenantPlan}
@@ -417,7 +415,7 @@ export function AdminLayout({
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col border-r border-gray-200 bg-white">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col border-r border-gray-100 bg-white shadow-sm">
         <SidebarContent
           pathname={pathname}
           tenantPlan={tenantPlan}
@@ -433,38 +431,38 @@ export function AdminLayout({
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-56">
+      <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-12 bg-white border-b border-gray-200 items-center px-4 gap-3">
+        <div className="sticky top-0 z-40 flex h-16 bg-white border-b border-gray-100 items-center px-6 gap-4 shadow-sm">
           {/* Navigation progress bar */}
           {navigating && (
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-teal-100 overflow-hidden z-50">
-              <div className="h-full w-1/3 bg-teal-500 animate-progress rounded-full" />
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gray-100 overflow-hidden z-50">
+              <div className="h-full w-1/3 bg-gray-900 animate-progress rounded-full" />
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden h-8 w-8"
+            className="lg:hidden h-9 w-9"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
           </Button>
 
-          <span className="text-sm font-semibold text-gray-800 flex-1">{currentPageName}</span>
+          <span className="text-base font-medium text-gray-900 flex-1">{currentPageName}</span>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-3 text-sm text-gray-600">
               <User className="h-4 w-4 text-gray-400" />
-              {user?.name}
-              <Badge variant="secondary" className="text-xs capitalize">
+              <span className="font-medium text-gray-700">{user?.name}</span>
+              <Badge variant="secondary" className="text-xs capitalize font-medium">
                 {user?.role?.replace('_', ' ').toLowerCase()}
               </Badge>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-gray-500 hover:text-red-600"
+              className="h-9 w-9 text-gray-500 hover:text-gray-900 hover:bg-gray-50"
               onClick={() => signOut({ callbackUrl: '/' })}
               title="Sign out"
             >
@@ -474,11 +472,11 @@ export function AdminLayout({
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-4 pb-20 md:p-6 md:pb-6">{children}</main>
+        <main className="flex-1 p-6 pb-20 md:p-8 md:pb-8">{children}</main>
       </div>
 
       {/* Mobile bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-30 flex md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 flex md:hidden shadow-lg">
         {[
           { name: 'Home', href: '/admin', icon: Home },
           { name: 'Calendar', href: '/admin/availability', icon: Calendar },
@@ -495,8 +493,8 @@ export function AdminLayout({
               key={item.name}
               href={item.href}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
-                active ? 'text-teal-600' : 'text-gray-500 hover:text-gray-700',
+                'flex-1 flex flex-col items-center justify-center gap-1 py-3 text-[11px] font-medium transition-colors',
+                active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700',
               )}
             >
               <ItemIcon className="h-5 w-5" />
