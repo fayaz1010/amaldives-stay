@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { MarketingLanding } from '@/components/marketing/landing';
 
 export const metadata: Metadata = {
-  title: 'Free Hotel & Guesthouse Management Software | Vayves',
+  title: 'Hotel & Guesthouse Management Software — 30-Day Free Trial | Vayves',
   description:
-    'Start free with Vayves: a direct-booking website, an amaldives.com listing and pay-at-property — no card, no commission. Upgrade for channel sync and the tax module when you grow.',
+    'Try Vayves free for 30 days: direct-booking website, amaldives.com listing, channel sync and local payments. Card required. Cancel anytime.',
   alternates: { canonical: 'https://vayves.com/free' },
 };
 
@@ -13,26 +13,27 @@ export default function FreePage() {
     <MarketingLanding
       path="/free"
       metaDescription={metadata.description as string}
-      badge="Free to start"
-      h1="Free hotel & guesthouse management software"
-      wedge="Get a real direct-booking website, an amaldives.com listing and pay-at-property on the free plan — no card, no setup fee, no commission on direct bookings. Upgrade only when you need channel sync."
-      ctaLabel="Start free — no card"
-      intro="Most 'free' hotel software is a stripped trial that stops working after 14 days. Vayves has a genuinely free plan built for small properties getting started: your own booking page, a listing on amaldives.com and manual reservations — enough to take direct bookings today and keep 100% of the room rate."
+      badge="30-day free trial"
+      h1="Hotel & guesthouse management software with a 30-day free trial"
+      wedge="Try Vayves free for 30 days: direct-booking website, amaldives.com listing, channel sync and local payments. Card required. Cancel anytime to avoid charges."
+      ctaLabel="Start 30-day free trial"
+      intro="Most hotel software either charges you upfront or traps you in a short trial. Vayves gives you a full 30 days to test direct bookings, channel sync to Booking.com and Agoda, and local payment options — all before the first charge. Start with Growth ($19/mo) and cancel before the trial ends if it's not the right fit."
       sections={[
         {
-          h2: 'What you get for free',
+          h2: 'What you get in the 30-day trial',
           bullets: [
             'Your own direct-booking website on a {name}.vayves.com address.',
-            'A listing on amaldives.com — real traveller demand, direct bookings at a 4% platform fee.',
+            'A listing on amaldives.com — real traveller demand, direct bookings at a 10% platform fee for marketplace bookings (4% on your own stay page).',
+            'Channel sync to Booking.com, Agoda, and Airbnb.',
             'Reservations, availability calendar and a guest portal.',
-            'Pay-at-property, or connect Stripe/BML/Maya when you are ready.',
-            'No card required, no time limit, no commission on your own direct bookings.',
+            'Connect Stripe, BML Connect, or Maya for online payments.',
+            'Card required at signup; no charge for 30 days. Cancel before trial ends to avoid the monthly subscription.',
           ],
         },
         {
-          h2: 'When to upgrade',
+          h2: 'After the trial',
           paragraphs: [
-            'The free plan is perfect for a single small property taking direct bookings. You upgrade when you want to automate more:',
+            'If you don\'t cancel, you\'ll be charged the monthly subscription price for your chosen plan:',
           ],
           bullets: [
             'Growth ($19/mo): channel manager (Booking.com, Agoda, Airbnb) + SMS notifications.',
@@ -41,23 +42,22 @@ export default function FreePage() {
           ],
         },
         {
-          h2: 'Why free actually works here',
+          h2: 'Why the trial model works',
           paragraphs: [
-            'Vayves can offer a real free plan because the business is aligned with yours: when amaldives.com sends you a booking, the platform earns a small 4% fee — far below the 15–18% OTAs take. You get the software free and keep the OTA margin; the platform grows only when you take bookings. No trap, no bait-and-switch.',
+            'Vayves can offer a generous 30-day trial because the platform is aligned with your success: when amaldives.com sends you a booking, the platform earns a 10% fee for marketplace bookings — still below the 15–18% OTAs take. You get the full software trial and keep most of the margin; the platform grows when you take bookings.',
           ],
         },
       ]}
       pricing={[
-        { tier: 'Free', price: '$0', blurb: 'Booking website + amaldives listing + pay-at-property. Forever.' },
-        { tier: 'Growth', price: '$19/mo', blurb: 'Channel sync + SMS.' },
+        { tier: 'Growth', price: '$19/mo', blurb: '30-day free trial. Channel sync + SMS.' },
         { tier: 'Business', price: '$49/mo', blurb: 'API + multi-property + tax module.' },
         { tier: 'Channel Plus', price: '$79/mo', blurb: 'Priority sync + Stripe payouts.' },
       ]}
       faqs={[
-        { q: 'Is the free plan really free?', a: 'Yes — no card, no time limit. You get a booking website, an amaldives.com listing and reservations. There is no commission on your own direct bookings; amaldives.com-sourced bookings carry a 4% platform fee.' },
-        { q: 'What is the catch?', a: 'There is none on the free plan. You upgrade only if you want channel sync to OTAs, multi-property, the tax module or automated payouts.' },
-        { q: 'Do I need a credit card to start?', a: 'No. You can claim your account and take bookings without entering any payment details.' },
-        { q: 'Can I take payments on the free plan?', a: 'Yes — pay-at-property is included, and you can connect Stripe, BML Connect or Maya whenever you want online payments.' },
+        { q: 'Is the trial really free?', a: 'Yes — 30 days at no charge. A card is required at signup, and you\'ll be charged the monthly subscription price after 30 days unless you cancel.' },
+        { q: 'What happens if I cancel before 30 days?', a: 'No charge. Cancel anytime during the trial through the Stripe customer portal to avoid being billed.' },
+        { q: 'Do I need a credit card to start?', a: 'Yes. A card is collected upfront for the trial, but you won\'t be charged until the 30 days are up.' },
+        { q: 'Can I take payments during the trial?', a: 'Yes — you can connect Stripe, BML Connect, or Maya during the trial for online guest payments.' },
       ]}
       related={[
         { label: 'Maldives hotel management software', href: '/maldives' },
