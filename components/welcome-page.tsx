@@ -449,14 +449,14 @@ export function WelcomePage() {
               Property management software for independent hotels
             </p>
             <div className="flex justify-center space-x-8 text-sm">
-              <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Privacy Policy
+              <Link href="/maldives" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Maldives Hotels
               </Link>
-              <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Terms of Service
+              <Link href="/for-guesthouses" className="text-gray-600 hover:text-gray-900 transition-colors">
+                For Guesthouses
               </Link>
-              <Link href="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Contact Us
+              <Link href="/channel-manager" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Channel Manager
               </Link>
             </div>
             <div className="mt-8 text-gray-400 text-sm">

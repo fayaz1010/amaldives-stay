@@ -15,7 +15,7 @@ export default function ChannelManagerPage() {
       metaDescription={metadata.description as string}
       badge="Channel manager"
       h1="Channel manager for Maldives hotels & guesthouses"
-      wedge="One calendar for every OTA. Vayves syncs your rates and availability across Booking.com, Agoda, Airbnb and more — so the same room is never sold twice — and adds a commission-free direct channel through amaldives.com."
+      wedge="One calendar for every OTA. Vayves syncs your rates and availability across Booking.com, Agoda, Airbnb and more — so the same room is never sold twice — and adds a direct channel through amaldives.com at 10% (vs 15-18% OTA rates)."
       intro="If you sell rooms on more than one OTA, you have felt the pain: a guest books on Booking.com, you forget to close the room on Agoda, and now you are overbooked on a fully-booked island. A channel manager keeps every calendar in sync automatically. Vayves does that, and pairs it with a direct-booking website and amaldives.com demand so you are not paying commission on every stay."
       sections={[
         {
@@ -24,13 +24,13 @@ export default function ChannelManagerPage() {
             'Connect your OTAs — Booking.com, Agoda, Airbnb and other channels via iCal and channel-manager sync.',
             'One source of truth — set rates and availability once in Vayves; every channel updates.',
             'No double-bookings — when a room sells anywhere, it closes everywhere, automatically.',
-            'Direct channel included — your own booking website plus an amaldives.com listing that books direct at 4%.',
+            'Direct channel included — your own booking website plus an amaldives.com listing that books direct at 10% for marketplace bookings (4% on your property\'s stay page).',
           ],
         },
         {
           h2: 'Why pair a channel manager with a direct channel',
           paragraphs: [
-            'OTAs bring volume but take 15–18% commission. A channel manager stops the overbooking risk, but it does not lower your commission bill. Vayves does both: it keeps your OTAs in sync and gives you a commission-free way to take direct bookings — from your own site and from amaldives.com — so more of every booking stays with you.',
+            'OTAs bring volume but take 15–18% commission. A channel manager stops the overbooking risk, but it does not lower your commission bill. Vayves does both: it keeps your OTAs in sync and gives you a lower-cost way to take direct bookings — from your own site (no commission) and from amaldives.com (10% vs 15-18% OTA rates) — so more of every booking stays with you.',
           ],
         },
         {
