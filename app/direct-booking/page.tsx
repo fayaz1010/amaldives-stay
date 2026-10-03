@@ -42,9 +42,9 @@ export default function DirectBookingPage() {
         },
       ]}
       faqs={[
-        { q: 'What does "zero-commission" mean exactly?', a: 'Bookings made through your own Vayves booking website carry no platform commission. Bookings sourced from the amaldives.com marketplace carry a 4% fee — still far below the 15–18% OTAs charge.' },
-        { q: 'Can I add a booking button to my existing website or social?', a: 'Yes — Vayves gives you a one-line embed and a shareable booking link you can put on Facebook, Instagram or any website.' },
-        { q: 'How do I actually get direct bookings, not just a booking page?', a: 'Vayves pairs the booking engine with demand: your property lists on amaldives.com, which sends real traveller bookings straight to your calendar at 4%.' },
+        { q: 'What does "zero-commission" mean exactly?', a: 'Bookings made through your own Vayves booking website carry a 4% platform fee. Bookings sourced from the amaldives.com marketplace carry a 10% fee — still far below the 15–18% OTAs charge.' },
+        { q: 'Can I add a booking button to my existing website or social?', a: 'Yes — Vayves gives you a one-line embed and a shareable booking link you can put on Facebook, Instagram or any website. Those bookings are charged 4%.' },
+        { q: 'How do I actually get direct bookings, not just a booking page?', a: 'Vayves pairs the booking engine with demand: your property lists on amaldives.com, which sends real traveller bookings straight to your calendar at 10% (marketplace rate).' },
         { q: 'What payment methods are supported?', a: 'Cards via Stripe, BML Connect, Maya and pay-at-property, in USD or MVR.' },
       ]}
       related={[

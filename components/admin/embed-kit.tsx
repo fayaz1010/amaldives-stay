@@ -36,7 +36,7 @@ export function EmbedKit({ subdomain, primaryColor = '#0d9488', amaldivesSlug }:
   const bookUrl = `${stayUrl}/book`;
   const amaldivesUrl = amaldivesSlug
     ? `https://www.amaldives.com/guesthouses/${amaldivesSlug}`
-    : `https://www.amaldives.com`;
+    : null;
 
   const embedScript = `<script src="https://vayves.com/embed.js" data-subdomain="${subdomain}" data-color="${primaryColor}" data-label="Book direct" async></script>`;
 
@@ -50,27 +50,39 @@ export function EmbedKit({ subdomain, primaryColor = '#0d9488', amaldivesSlug }:
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5 text-cyan-600" />
-            Share your booking link
+            Your booking channels
           </CardTitle>
           <CardDescription>
-            Copy these links into Facebook, Instagram bio, WhatsApp, or your website — no technical skills needed.
+            Direct bookings at 4% platform fee. amaldives.com marketplace bookings at 10% (still better than 15-18% OTA rates).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>Direct booking page</Label>
+            <Label>Direct booking page (4% platform fee)</Label>
             <div className="flex gap-2 mt-1">
               <Input readOnly value={bookUrl} className="font-mono text-sm" />
               <CopyButton text={bookUrl} />
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Share this link on Facebook, Instagram, WhatsApp, or anywhere. Bookings from your own links are charged 4%.
+            </p>
           </div>
-          {amaldivesSlug && (
+          {amaldivesUrl && (
             <div>
-              <Label>Your amaldives.com listing</Label>
+              <Label>Your amaldives.com listing (10% marketplace fee)</Label>
               <div className="flex gap-2 mt-1">
                 <Input readOnly value={amaldivesUrl} className="font-mono text-sm" />
                 <CopyButton text={amaldivesUrl} />
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Travelers find you on amaldives.com and book direct. These marketplace bookings are charged 10% (vs 15-18% on OTAs).
+              </p>
+            </div>
+          )}
+          {!amaldivesUrl && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+              <p className="font-medium text-gray-900 mb-1">Want more bookings?</p>
+              <p>List on amaldives.com to get found by travelers. Contact support to connect your listing.</p>
             </div>
           )}
           <a
@@ -88,10 +100,10 @@ export function EmbedKit({ subdomain, primaryColor = '#0d9488', amaldivesSlug }:
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Code2 className="h-5 w-5 text-cyan-600" />
-            One-line website embed
+            One-line website embed (4% platform fee)
           </CardTitle>
           <CardDescription>
-            Paste this single line into your website (or ask anyone who built your site). A &quot;Book direct&quot; button will appear automatically.
+            Paste this single line into your website (or ask anyone who built your site). A &quot;Book direct&quot; button will appear automatically. Bookings from your website are charged 4%.
           </CardDescription>
         </CardHeader>
         <CardContent>

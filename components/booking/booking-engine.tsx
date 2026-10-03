@@ -234,7 +234,7 @@ export function BookingEngine({
             <img src={logoUrl} alt={tenantName} className="h-10 w-auto object-contain mb-1" />
           )}
           <CardTitle className="text-lg">Book {tenantName}</CardTitle>
-          <CardDescription>Commission-free direct booking</CardDescription>
+          <CardDescription>Direct booking at 4% platform fee</CardDescription>
         </CardHeader>
       )}
       <CardContent className="space-y-4">
