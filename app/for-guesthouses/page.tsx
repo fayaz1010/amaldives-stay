@@ -45,14 +45,94 @@ function Section({
 
 export default function ForGuesthousesPage() {
   const features = [
-    ['🛎️', 'Front desk & reservations', 'Rooms, availability, group bookings — all in one calendar.'],
-    ['🚤', 'Transfers & arrivals', 'Speedboat, ferry & seaplane scheduling, jetty/airport, transfer confirmations.'],
-    ['🧹', 'Housekeeping & maintenance', 'Room status, tasks, issues — assign and track on the phone.'],
-    ['👥', 'Staff, tasks & payroll', 'Clock-in, SOPs, service charge distribution, payroll.'],
-    ['🍽️', 'F&B & minibar', 'Outlets, menus, bills, minibar usage tied to the room.'],
-    ['📦', 'Logistics & stock', 'Order and track supplies shipped from Malé to your island.'],
-    ['🧾', 'MIRA tax, done for you', 'Auto TGST (17%) returns + Green Tax (per guest-night) + GST-ready reports.'],
-    ['💳', 'Local payments', 'BML Connect, Maya, cards & cash — in MVR or USD.'],
+    {
+      icon: '🛎️',
+      title: 'Front desk & reservations',
+      description: 'Complete calendar view showing all bookings, room availability, and guest stays. Create walk-in bookings, manage group reservations, and handle check-in/check-out with a mobile-friendly interface.',
+      details: [
+        'Visual calendar with drag-and-drop booking management',
+        'Room availability at a glance across all room types',
+        'Quick-add walk-in guests and group bookings',
+        'Mobile-optimized for front desk staff on the go'
+      ]
+    },
+    {
+      icon: '🚤',
+      title: 'Local transport & airport pickup',
+      description: 'Pre-configure your speedboats, ferries, and seaplane options. Assign transfers to arrivals, track jetty pickups, and send arrival confirmations to guests with pickup details and timings.',
+      details: [
+        'Save speedboat, ferry, and seaplane transport options',
+        'Set capacity, contact info, and schedules for each option',
+        'Assign transport to guest arrivals with pickup times',
+        'Send automated arrival confirmations with transfer details'
+      ]
+    },
+    {
+      icon: '🧹',
+      title: 'Housekeeping & maintenance',
+      description: 'Track room status (clean, dirty, maintenance), assign housekeeping tasks to staff, schedule cleaning rounds, and log maintenance issues — all accessible from your phone.',
+      details: [
+        'Visual board showing all room statuses in real-time',
+        'Assign cleaning tasks to specific housekeeping staff',
+        'Log and track maintenance issues by room',
+        'Generate daily housekeeping schedules automatically'
+      ]
+    },
+    {
+      icon: '👥',
+      title: 'Staff management & tasks',
+      description: 'Staff clock-in/out tracking, assign daily tasks, manage standard operating procedures (SOPs), calculate service charge distribution, and generate payroll reports.',
+      details: [
+        'Digital clock-in/out with shift tracking',
+        'Create and assign tasks with due dates and priorities',
+        'Store SOPs and checklists for consistent service',
+        'Auto-calculate service charge split and payroll'
+      ]
+    },
+    {
+      icon: '🍽️',
+      title: 'F&B outlets & minibar',
+      description: 'Manage restaurant menus, track minibar usage by room, create F&B bills, and tie all charges to guest folios for easy checkout.',
+      details: [
+        'Set up outlet menus with items, prices, and availability',
+        'Track minibar consumption by room with refill alerts',
+        'Create itemized F&B bills tied to room numbers',
+        'All charges flow to guest folio for unified billing'
+      ]
+    },
+    {
+      icon: '📦',
+      title: 'Logistics & inventory',
+      description: 'Track supplies, place orders from Malé, manage stock levels, and log deliveries. Keep inventory organized across housekeeping, F&B, and maintenance departments.',
+      details: [
+        'Track stock levels across all departments',
+        'Create and manage supply orders from Malé',
+        'Receive and log shipment deliveries',
+        'Low-stock alerts for critical items'
+      ]
+    },
+    {
+      icon: '🧾',
+      title: 'MIRA tax reporting',
+      description: 'Automatically calculate TGST (17% on all sales), track Green Tax (per guest-night), and generate GST-ready transaction reports for your MIRA submissions — no spreadsheets needed.',
+      details: [
+        'Auto-calculate 17% TGST on all taxable sales',
+        'Track Green Tax per guest-night automatically',
+        'Generate GST-ready reports for MIRA filing',
+        'Export formatted reports for tax submissions'
+      ]
+    },
+    {
+      icon: '💳',
+      title: 'Payments & billing',
+      description: 'Accept BML Connect, Maya, credit cards, and cash. Guest bills show itemized charges (room, F&B, minibar, extras), calculate tax automatically, and record payments in MVR or USD.',
+      details: [
+        'Integrated BML Connect and Maya payment options',
+        'Accept credit cards, cash in MVR or USD',
+        'Itemized bills showing all room, F&B, and service charges',
+        'Automatic tax calculation on all transactions'
+      ]
+    },
   ];
 
   return (
@@ -105,12 +185,24 @@ export default function ForGuesthousesPage() {
         <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-gray-500">
           Built for island guesthouses — not adapted from a foreign hotel system.
         </p>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map(([icon, title, desc]) => (
-            <div key={title} className="rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="text-2xl">{icon}</div>
-              <h3 className="mt-2 font-semibold">{title}</h3>
-              <p className="mt-1 text-sm text-gray-600">{desc}</p>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+          {features.map(({ icon, title, description, details }) => (
+            <div key={title} className="rounded-2xl border border-gray-100 p-6 shadow-sm bg-white hover:shadow-md transition-shadow">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="text-3xl">{icon}</div>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">{title}</h3>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">{description}</p>
+              <ul className="space-y-2">
+                {details.map((detail, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-green-600 mt-0.5 shrink-0">✓</span>
+                    <span>{detail}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>

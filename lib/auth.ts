@@ -2,6 +2,7 @@
 import { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { getServerSession } from 'next-auth/next';
 import bcrypt from 'bcryptjs';
 import { prisma } from './db';
@@ -11,6 +12,17 @@ import { UserRole } from '@prisma/client';
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      authorization: {
+        params: {
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+        },
+      },
+    }),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -95,11 +107,64 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        const email = user.email?.toLowerCase();
+        if (!email) return false;
+
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            email: { equals: email, mode: 'insensitive' },
+          },
+          include: {
+            tenant: true,
+          },
+        });
+
+        if (!existingUser) {
+          return false;
+        }
+
+        if (existingUser.role === 'GUEST') {
+          return false;
+        }
+
+        if (existingUser.tenantId) {
+          const tenant = await prisma.tenant.findUnique({
+            where: { id: existingUser.tenantId },
+          });
+          
+          if (!tenant || tenant.status !== 'ACTIVE') {
+            return false;
+          }
+        }
+
+        if (!existingUser.isActive) {
+          return false;
+        }
+
+        return true;
+      }
+      
+      return true;
+    },
+    async jwt({ token, user, trigger, account }) {
       if (user) {
         // On initial signin, capture role + active tenantId.
         token.role = user.role;
         token.tenantId = user.tenantId || undefined;
+      }
+
+      if (account?.provider === 'google' && user?.email) {
+        const dbUser = await prisma.user.findFirst({
+          where: {
+            email: { equals: user.email, mode: 'insensitive' },
+          },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.tenantId = dbUser.tenantId || undefined;
+        }
       }
 
       // Hydrate memberships into the JWT. Re-fetched every 60s and on
