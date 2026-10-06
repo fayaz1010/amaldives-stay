@@ -1,18 +1,22 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Hotel, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Hotel, Eye, EyeOff, AlertCircle, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { TurnstileWidget } from '@/components/turnstile-widget';
 
-export default function SignUpPage() {
+function SignUpForm() {
+  const searchParams = useSearchParams();
+  // Owner sign-up by default; /auth/signup?type=guest is the guest variant.
+  const isGuest = searchParams?.get('type') === 'guest';
+  const [sentTo, setSentTo] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,7 +28,6 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [challengeReset, setChallengeReset] = useState(0);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +56,12 @@ export default function SignUpPage() {
           email: formData.email,
           password: formData.password,
           turnstileToken,
+          accountType: isGuest ? 'guest' : 'owner',
         }),
       });
 
       if (response.ok) {
-        router.push('/auth/signin?message=Account created successfully');
+        setSentTo(formData.email.trim());
       } else {
         const data = await response.json();
         setError(data.message || 'An error occurred');
@@ -79,8 +83,35 @@ export default function SignUpPage() {
     });
   };
 
+  if (sentTo) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-teal-600 rounded-full flex items-center justify-center">
+              <Mail className="h-8 w-8 text-white" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold">Check your inbox to confirm your email</CardTitle>
+          <CardDescription>
+            We sent a link to <strong>{sentTo}</strong> (subject: &ldquo;Confirm your email &mdash; Vayves&rdquo;).
+            Open it to activate your account, then sign in
+            {isGuest ? '.' : ' to set up your guesthouse and start your 30-day free trial.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-500 text-center">
+            The link expires in 24 hours. Check your spam folder if it hasn&apos;t arrived in a few minutes.
+          </p>
+          <Link href="/auth/signin" className="block">
+            <Button variant="outline" className="w-full">I&apos;ve confirmed &mdash; sign in</Button>
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -88,9 +119,13 @@ export default function SignUpPage() {
               <Hotel className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {isGuest ? 'Create Account' : 'Start your free 30-day trial'}
+          </CardTitle>
           <CardDescription>
-            Sign up to get started with your guest house
+            {isGuest
+              ? 'Create a guest account to manage your stays'
+              : 'Create your owner account, confirm your email, then set up your guesthouse. Growth plan US$19/month after the trial; your card is saved when you start the trial and you can cancel any time before it ends.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,7 +205,7 @@ export default function SignUpPage() {
             <TurnstileWidget onToken={setTurnstileToken} resetSignal={challengeReset} />
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating account...' : isGuest ? 'Create Account' : 'Create owner account'}
             </Button>
           </form>
           
@@ -182,8 +217,22 @@ export default function SignUpPage() {
               </Link>
             </p>
           </div>
+          <p className="mt-4 text-center text-xs text-gray-500">
+            By creating an account you agree to our{' '}
+            <Link href="/terms" className="underline">Terms of Service</Link> and{' '}
+            <Link href="/privacy" className="underline">Privacy Policy</Link>.
+          </p>
         </CardContent>
       </Card>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
+      <Suspense fallback={<div className="text-gray-500">Loading…</div>}>
+        <SignUpForm />
+      </Suspense>
     </div>
   );
 }

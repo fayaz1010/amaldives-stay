@@ -8,6 +8,10 @@
  *   guesthouseName: string
  *   subdomain: string
  *   makeDefault?: boolean   // if true, mark this membership as default
+ *   onboarding?: boolean    // first property of a self-serve owner sign-up:
+ *                           // tenant starts in TRIAL on the Growth plan and
+ *                           // the owner is sent to billing to start the
+ *                           // 30-day card trial (same state as a claim)
  * }
  *
  * Creates:
@@ -32,7 +36,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { guesthouseName?: unknown; subdomain?: unknown; makeDefault?: unknown };
+  let body: { guesthouseName?: unknown; subdomain?: unknown; makeDefault?: unknown; onboarding?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -41,7 +45,8 @@ export async function POST(request: NextRequest) {
 
   const guesthouseName = typeof body.guesthouseName === 'string' ? body.guesthouseName.trim() : '';
   const rawSubdomain = typeof body.subdomain === 'string' ? body.subdomain.trim() : '';
-  const makeDefault = body.makeDefault === true;
+  const onboarding = body.onboarding === true;
+  const makeDefault = body.makeDefault === true || onboarding;
 
   if (!guesthouseName || !rawSubdomain) {
     return NextResponse.json(
@@ -53,6 +58,14 @@ export async function POST(request: NextRequest) {
   if (!/^[a-z0-9-]+$/.test(subdomain)) {
     return NextResponse.json(
       { error: 'Subdomain may only contain lowercase letters, numbers, and hyphens' },
+      { status: 400 },
+    );
+  }
+
+  const RESERVED = new Set(['www', 'api', 'app', 'admin', 'auth', 'mail', 'email', 'claim', 'stay', 'help', 'support', 'status', 'blog']);
+  if (RESERVED.has(subdomain) || subdomain.length < 3 || subdomain.length > 40) {
+    return NextResponse.json(
+      { error: 'Please choose a different subdomain (3–40 characters, not a reserved word)' },
       { status: 400 },
     );
   }
@@ -69,8 +82,11 @@ export async function POST(request: NextRequest) {
         data: {
           name: guesthouseName,
           subdomain,
-          plan: 'free',
-          status: 'ACTIVE',
+          plan: onboarding ? 'growth' : 'free',
+          status: onboarding ? 'TRIAL' : 'ACTIVE',
+          ...(onboarding
+            ? { settings: { selfServeSignupAt: new Date().toISOString() } }
+            : {}),
           commissionRate: 0.04,
           isVerifiedDirect: true,
         } as any,

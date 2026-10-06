@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LegalLinks } from '@/components/legal-page';
 import { PMS_BASE } from '@/lib/domain';
 
 export type Section = {
@@ -215,6 +216,7 @@ export function MarketingLanding(props: LandingProps) {
           <div className="flex flex-col items-start justify-between gap-4 border-t border-gray-800 pt-6 sm:flex-row sm:items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/vayves-logo-light.svg" alt="Vayves" className="h-8 w-auto" />
+            <LegalLinks className="text-gray-300" />
             <p className="text-xs text-gray-500">© 2026 Vayves · Hotel management software · by AMaldives</p>
           </div>
         </div>

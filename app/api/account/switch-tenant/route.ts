@@ -14,7 +14,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions, isUsableTenantStatus } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     where: { userId_tenantId: { userId: session.user.id, tenantId: targetTenantId } },
     include: { tenant: { select: { id: true, subdomain: true, status: true } } },
   });
-  if (!membership || membership.tenant.status !== 'ACTIVE') {
+  if (!membership || !isUsableTenantStatus(membership.tenant.status)) {
     return NextResponse.json({ error: 'No active membership for that tenant' }, { status: 403 });
   }
 

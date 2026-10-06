@@ -1,6 +1,7 @@
 
 'use client';
 
+import { LegalLinks } from '@/components/legal-page';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -459,6 +460,7 @@ export function WelcomePage() {
                 Channel Manager
               </Link>
             </div>
+            <LegalLinks className="mt-6 justify-center text-gray-500" />
             <div className="mt-8 text-gray-400 text-sm">
               © 2026 Vayves · by AMaldives
             </div>

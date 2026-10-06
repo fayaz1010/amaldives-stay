@@ -20,6 +20,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Funnel
     { path: '/for-guesthouses', priority: 0.7, freq: 'weekly' },
     { path: '/claim', priority: 0.6, freq: 'monthly' },
+    // Legal + contact
+    { path: '/contact', priority: 0.4, freq: 'monthly' },
+    { path: '/privacy', priority: 0.3, freq: 'monthly' },
+    { path: '/terms', priority: 0.3, freq: 'monthly' },
   ];
   return routes.map((r) => ({
     url: `${PMS_BASE}${r.path}`,

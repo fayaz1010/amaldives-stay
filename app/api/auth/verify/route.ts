@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const user = await prisma.user
       .findFirst({
         where: { email: { equals: email, mode: 'insensitive' } },
-        select: { name: true },
+        select: { name: true, role: true },
       })
       .catch(() => null);
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       intent: 'signup',
       name: user?.name ?? email.split('@')[0],
       email,
-      metadata: { entry_point: 'auth_signup', role: 'GUEST', email_verified: true },
+      metadata: { entry_point: 'auth_signup', role: user?.role ?? 'GUEST', email_verified: true },
     });
   }
 

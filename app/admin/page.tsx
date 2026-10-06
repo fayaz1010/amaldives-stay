@@ -6,6 +6,7 @@ import { TenantDb } from '@/lib/db';
 import { getActiveProperty } from '@/lib/active-property';
 import { DashboardOverview } from '@/components/admin/dashboard-overview';
 import { isStripeConfigured } from '@/lib/stripe';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,9 @@ export default async function AdminDashboard() {
   const session = await getServerSession(authOptions);
 
   if (!session) redirect('/auth/signin');
-  if (!session.user?.tenantId) redirect('/unauthorized');
+  if (!session.user?.tenantId) {
+    redirect(session.user?.role === 'TENANT_ADMIN' ? '/onboarding' : '/unauthorized');
+  }
 
   const tenantId = session.user.tenantId;
   // Active property scopes the whole dashboard for multi-property operators.
@@ -34,7 +37,7 @@ export default async function AdminDashboard() {
       take: 5,
     }),
     prisma.room.count({ where: { tenantId, ...(activePropertyId ? { propertyId: activePropertyId } : {}) } }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { subdomain: true, settings: true } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { subdomain: true, settings: true, status: true, stripeSubscriptionId: true } }),
   ]);
 
   const settings = (tenant?.settings as any) ?? null;
@@ -47,7 +50,25 @@ export default async function AdminDashboard() {
   const showQuickSetup = roomCount === 0 && !onboardingComplete && !settings?.seededFromHotellook;
   const showOnboarding = roomCount === 0 && !onboardingComplete;
 
+  // TRIAL without a subscription = the owner hasn't saved a card yet.
+  const needsTrialSetup = tenant?.status === 'TRIAL' && !tenant?.stripeSubscriptionId;
+
   return (
+    <>
+    {needsTrialSetup && (
+      <div className="mb-4 flex flex-col gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-900 sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          Start your 30-day free trial of the Growth plan (US$19/month after the trial). Your card is
+          saved with Stripe and not charged during the trial.
+        </span>
+        <Link
+          href="/admin/settings/billing"
+          className="inline-flex shrink-0 items-center justify-center rounded-md bg-cyan-600 px-3 py-1.5 font-medium text-white hover:bg-cyan-700"
+        >
+          Start free trial
+        </Link>
+      </div>
+    )}
     <DashboardOverview
       stats={stats}
       recentBookings={recentBookings}
@@ -64,5 +85,6 @@ export default async function AdminDashboard() {
       tenantSettings={tenant?.settings}
       otaIngestDomain={process.env.OTA_INGEST_DOMAIN ?? null}
     />
+    </>
   );
 }

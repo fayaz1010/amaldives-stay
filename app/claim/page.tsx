@@ -11,6 +11,27 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TurnstileWidget } from '@/components/turnstile-widget';
+import { LegalLinks } from '@/components/legal-page';
+
+// Primary self-serve path: a new owner account, then property setup and the
+// card trial. Claiming an existing amaldives.com listing is the secondary path.
+function TrialCta({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`rounded-lg border border-cyan-200 bg-cyan-50 ${compact ? 'p-3' : 'p-4'} text-center`}>
+      {!compact && (
+        <p className="text-sm text-gray-700 mb-3">
+          New to Vayves? Create your owner account and set up your guesthouse yourself in a few minutes.
+        </p>
+      )}
+      <Link href="/auth/signup" className="block">
+        <Button className="w-full bg-cyan-600 hover:bg-cyan-700">Start your free 30-day trial</Button>
+      </Link>
+      <p className="mt-2 text-xs text-gray-500">
+        Growth plan US$19/month after the trial. Card saved at setup, not charged for 30 days. Cancel any time.
+      </p>
+    </div>
+  );
+}
 
 type Step = 'email' | 'sent' | 'password' | 'success' | 'blocked' | 'assist' | 'assistSent';
 
@@ -259,7 +280,9 @@ function ClaimForm() {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Verify another way</CardTitle>
+          <CardTitle className={guesthouseParam ? 'text-2xl font-bold' : 'text-lg font-semibold'}>
+            {guesthouseParam ? 'Verify another way' : 'Claim your existing listing'}
+          </CardTitle>
           <CardDescription>
             {guesthouseParam ? (
               <>
@@ -528,10 +551,23 @@ function ClaimForm() {
 
 export default function ClaimPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-teal-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-teal-50 flex flex-col items-center justify-center gap-6 p-4">
+      <div className="w-full max-w-md">
+        <h1 className="text-center text-2xl font-bold text-gray-900">Get your guesthouse on Vayves</h1>
+        <p className="mt-1 mb-4 text-center text-sm text-gray-600">
+          Bookings, front desk and channel sync for Maldivian guesthouses.
+        </p>
+        <TrialCta />
+        <div className="mt-6 flex items-center gap-3 text-xs text-gray-500">
+          <span className="h-px flex-1 bg-gray-300" />
+          Already listed on amaldives.com? Claim your listing
+          <span className="h-px flex-1 bg-gray-300" />
+        </div>
+      </div>
       <Suspense fallback={<div className="text-gray-500">Loading…</div>}>
         <ClaimForm />
       </Suspense>
+      <LegalLinks className="justify-center text-gray-500" />
     </div>
   );
 }

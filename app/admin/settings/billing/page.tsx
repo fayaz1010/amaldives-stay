@@ -15,7 +15,12 @@ const PLANS = [
 export default function BillingSettingsPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ kind: 'ok' | 'info' | 'trial'; text: string } | null>(null);
-  const [tenant, setTenant] = useState<{ status: string; plan: string } | null>(null);
+  const [tenant, setTenant] = useState<{
+    status: string;
+    plan: string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+  } | null>(null);
 
   // Fetch tenant status to show trial banner
   useEffect(() => {
@@ -23,10 +28,13 @@ export default function BillingSettingsPage() {
       .then((r) => r.json())
       .then((data) => {
         setTenant(data);
-        if (data.status === 'TRIAL') {
+        const welcome = new URL(window.location.href).searchParams.get('welcome') === '1';
+        if (data.status === 'TRIAL' && !data.stripeSubscriptionId) {
           setBanner({
             kind: 'trial',
-            text: 'Your 30-day free trial is active. Complete billing setup to avoid service interruption after the trial.',
+            text: welcome
+              ? 'Your property is created. Step 2 of 2: start your 30-day free trial of the Growth plan below. Your card is saved with Stripe and not charged until the trial ends; cancel any time before then.'
+              : 'Start your 30-day free trial: choose a plan below. Your card is saved with Stripe and not charged until the trial ends.',
           });
         }
       })
@@ -118,8 +126,10 @@ export default function BillingSettingsPage() {
               >
                 {loading === p.key ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : tenant?.plan === p.key ? (
+                ) : tenant?.plan === p.key && tenant?.stripeSubscriptionId ? (
                   'Current plan'
+                ) : !tenant?.stripeSubscriptionId ? (
+                  'Start 30-day free trial'
                 ) : (
                   'Subscribe'
                 )}

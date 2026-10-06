@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import { getStripe } from '@/lib/stripe';
 import type { DepositConfig } from '@/lib/tenant-settings';
 
@@ -69,7 +70,8 @@ export async function markPaymentRefunded(paymentId: string, tenantId: string) {
       notes: stripeRefundId ? `Stripe refund ${stripeRefundId}` : existing.notes,
       gatewayResponse: stripeRefundId
         ? { ...(existing.gatewayResponse as object), stripeRefundId }
-        : existing.gatewayResponse,
+        : // Unchanged; null is left alone rather than written back as JSON null.
+          (existing.gatewayResponse ?? undefined) as Prisma.InputJsonValue | undefined,
     },
   });
 

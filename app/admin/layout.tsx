@@ -20,6 +20,11 @@ export default async function AdminLayoutWrapper({
     redirect('/unauthorized');
   }
 
+  // Owner who signed up but has not created a property yet.
+  if (session.user.role === 'TENANT_ADMIN' && !session.user.tenantId) {
+    redirect('/onboarding');
+  }
+
   // Fetch tenant plan + branding for feature gating and sidebar display.
   const tenant = session.user.tenantId
     ? await prisma.tenant.findUnique({

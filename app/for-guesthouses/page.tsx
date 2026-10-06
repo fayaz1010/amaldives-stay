@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { LegalLinks } from '@/components/legal-page';
 
 export const metadata: Metadata = {
   title: 'Run your guesthouse & fill more rooms — stay by aMaldives',
@@ -72,6 +73,12 @@ export default function ForGuesthousesPage() {
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Cta msg={HERO_MSG}>Message us on WhatsApp</Cta>
+            <a
+              href="/auth/signup"
+              className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-base font-semibold text-cyan-700 shadow-lg hover:bg-cyan-50"
+            >
+              Start your free 30-day trial
+            </a>
             <a href="#how" className="text-sm font-medium text-cyan-50 underline underline-offset-4">
               See how it works ↓
             </a>
@@ -189,12 +196,25 @@ export default function ForGuesthousesPage() {
             Message us on WhatsApp — we&apos;ll set up a demo with your property and answer any questions, in Dhivehi or
             English.
           </p>
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Cta msg={HERO_MSG}>Message us on WhatsApp</Cta>
+            <a
+              href="/auth/signup"
+              className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-base font-semibold text-cyan-700 shadow-lg hover:bg-cyan-50"
+            >
+              Start your free 30-day trial
+            </a>
           </div>
           <p className="mt-6 text-xs text-cyan-100">Made in the Maldives · ATT licensed travel agency · BML / Maya / MVR</p>
         </Section>
       </div>
+
+      <footer className="border-t border-gray-200 bg-white py-8">
+        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-5 text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+          <LegalLinks />
+          <p className="text-xs text-gray-400">© 2026 Vayves · by AMaldives</p>
+        </div>
+      </footer>
 
       {/* Floating WhatsApp */}
       <a

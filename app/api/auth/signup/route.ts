@@ -17,7 +17,11 @@ export async function POST(request: NextRequest) {
     const rl = await rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000);
     if (!rl.ok) return tooManyRequests();
 
-    const { name, email: rawEmail, password, turnstileToken } = await request.json();
+    const { name, email: rawEmail, password, turnstileToken, accountType } = await request.json();
+    // /auth/signup is the owner sign-up (every link to it comes from the
+    // owner side of the site), so owner is the default. Guests opt in
+    // explicitly with accountType 'guest'.
+    const isOwner = accountType !== 'guest';
 
     const challenge = await verifyTurnstile(turnstileToken, ip);
     if (!challenge.ok) {
@@ -77,18 +81,21 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        role: 'GUEST', // Default role
+        // Owners start as TENANT_ADMIN with no tenant; /onboarding creates
+        // their property (and tenant) after they confirm their email.
+        role: isOwner ? 'TENANT_ADMIN' : 'GUEST',
       },
     });
 
-    // Create guest profile
-    await prisma.guestProfile.create({
-      data: {
-        userId: user.id,
-        firstName: name.split(' ')[0] || name,
-        lastName: name.split(' ').slice(1).join(' ') || '',
-      },
-    });
+    if (!isOwner) {
+      await prisma.guestProfile.create({
+        data: {
+          userId: user.id,
+          firstName: name.split(' ')[0] || name,
+          lastName: name.split(' ').slice(1).join(' ') || '',
+        },
+      });
+    }
 
     // Email verification (fire-safe — account exists either way; sign-in is
     // gated on emailVerified for new GUEST accounts in lib/auth.ts)

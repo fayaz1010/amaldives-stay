@@ -8,6 +8,11 @@ import { prisma } from './db';
 import { canonicalEmail } from './email-canonical';
 import { UserRole } from '@prisma/client';
 
+/** Tenant statuses whose staff may sign in and use the admin. */
+export function isUsableTenantStatus(status: string | null | undefined): boolean {
+  return status === 'ACTIVE' || status === 'TRIAL';
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -47,21 +52,22 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Email verification gate — new GUEST self-signups only. The cutoff
-        // keeps every pre-existing account (tenant admins, staff, legacy
-        // guests) signing in unchanged; claim/invite flows verify elsewhere.
-        const VERIFY_CUTOFF = new Date('2026-08-13T00:00:00Z');
-        if (
-          user.role === 'GUEST' &&
-          !user.emailVerified &&
-          user.createdAt >= VERIFY_CUTOFF
-        ) {
-          throw new Error('email_unverified');
-        }
-
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
           return null;
+        }
+
+        // Email verification gate — self-signups only: guests, and owners who
+        // signed up at /auth/signup and have not created a property yet (no
+        // tenant). Checked after the password so the "please confirm" reply
+        // never reveals whether an address is registered. The cutoff keeps
+        // every pre-existing account signing in unchanged; claim/invite flows
+        // verify the address elsewhere and always carry a tenant.
+        const VERIFY_CUTOFF = new Date('2026-08-13T00:00:00Z');
+        const isSelfSignup =
+          user.role === 'GUEST' || (user.role === 'TENANT_ADMIN' && !user.tenantId);
+        if (isSelfSignup && !user.emailVerified && user.createdAt >= VERIFY_CUTOFF) {
+          throw new Error('email_unverified');
         }
 
         // Check if user is active
@@ -75,7 +81,9 @@ export const authOptions: NextAuthOptions = {
             where: { id: user.tenantId },
           });
           
-          if (!tenant || tenant.status !== 'ACTIVE') {
+          // TRIAL is a live account too: claimed and self-serve owners sit in
+          // TRIAL until billing is set up and must be able to sign in to do it.
+          if (!tenant || !isUsableTenantStatus(tenant.status)) {
             return null;
           }
         }
@@ -114,7 +122,14 @@ export const authOptions: NextAuthOptions = {
             where: { userId },
             include: { tenant: { select: { id: true, name: true, subdomain: true, status: true } } },
           });
-          const activeRows = rows.filter((r) => r.tenant.status === 'ACTIVE');
+          const activeRows = rows.filter((r) => isUsableTenantStatus(r.tenant.status));
+          // Role can change after sign-in (an owner creating their first
+          // property becomes TENANT_ADMIN), so keep the token's copy fresh.
+          const fresh = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true },
+          });
+          if (fresh) token.role = fresh.role;
           token.memberships = activeRows.map((r) => ({
             tenantId: r.tenantId,
             tenantName: r.tenant.name,
