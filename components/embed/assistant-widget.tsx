@@ -13,9 +13,6 @@ interface Props {
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 
-const SIZE_CLOSED = { w: 96, h: 96 };
-const SIZE_OPEN = { w: 384, h: 600 };
-
 // Linkify bare/markdown URLs so booking links are clickable.
 function renderText(text: string, accent: string) {
   const parts: React.ReactNode[] = [];
@@ -47,9 +44,12 @@ export function AssistantWidget({ subdomain, propertyName, name, avatarUrl, gree
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const postSize = useCallback((o: boolean) => {
-    const s = o ? SIZE_OPEN : SIZE_CLOSED;
-    window.parent?.postMessage({ type: 'maya:size', ...s }, '*');
+  // Tell the loader which state we're in; the loader (which knows the host
+  // page's real viewport) owns all iframe geometry — tiny when closed so host
+  // taps pass through everywhere else, full-screen on mobile / floating card on
+  // desktop when open. We never dictate pixel sizes from inside the iframe.
+  const postState = useCallback((o: boolean) => {
+    window.parent?.postMessage({ type: 'maya:state', open: o }, '*');
   }, []);
 
   // The iframe body must be transparent so only the bubble/panel shows over
@@ -59,8 +59,8 @@ export function AssistantWidget({ subdomain, propertyName, name, avatarUrl, gree
     html.style.background = 'transparent'; body.style.background = 'transparent'; body.style.margin = '0';
   }, []);
 
-  useEffect(() => { postSize(false); }, [postSize]);
-  useEffect(() => { postSize(open); }, [open, postSize]);
+  useEffect(() => { postState(false); }, [postState]);
+  useEffect(() => { postState(open); }, [open, postState]);
   useEffect(() => { scrollRef.current?.scrollTo({ top: 9e9, behavior: 'smooth' }); }, [messages, busy]);
 
   const initials = name.trim().slice(0, 1).toUpperCase() || 'M';
@@ -107,7 +107,7 @@ export function AssistantWidget({ subdomain, propertyName, name, avatarUrl, gree
         </button>
       )}
       {open && (
-        <div style={{ position: 'absolute', right: 12, bottom: 12, width: 360, maxWidth: 'calc(100% - 24px)', height: 576, maxHeight: 'calc(100% - 24px)', background: '#fff', borderRadius: 16, boxShadow: '0 12px 40px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ background: accentColor, color: '#fff', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <Avatar size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
