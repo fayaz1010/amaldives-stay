@@ -1577,15 +1577,18 @@ model RateLimitHit {
 // domain/exact-email claim policy (65% of guesthouse contacts are free-email).
 // Staff verify by phone, then provision via scripts/create-tenant-admin.ts.
 model ClaimAssistRequest {
-  id           String   @id @default(cuid())
-  slug         String
-  propertyName String?
-  contactName  String?
-  email        String
-  phone        String?
-  message      String?
-  status       String   @default("new") // new | verified | rejected
-  createdAt    DateTime @default(now())
+  id              String    @id @default(cuid())
+  slug            String
+  propertyName    String?
+  contactName     String?
+  email           String
+  phone           String?
+  message         String?
+  status          String    @default("new") // new | verified | rejected
+  rejectedReason  String?
+  verifiedAt      DateTime?
+  rejectedAt      DateTime?
+  createdAt       DateTime  @default(now())
 
   @@index([slug, createdAt])
   @@index([status])
