@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { generateSetPasswordToken } from '@/lib/set-password-token';
 import { getResend } from '@/lib/email';
 import { vayvesFrom, VAYVES_REPLY_TO } from '@/lib/email-from';
 
@@ -72,29 +71,30 @@ export async function POST(request: NextRequest) {
   const email = claim.email.trim().toLowerCase();
   const ownerName = claim.contactName || 'Hotel Admin';
 
-  // Generate a strong one-time password
-  const oneTimePassword = randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 16);
-  const hashedPassword = await bcrypt.hash(oneTimePassword, 12);
+  // Generate a secure single-use set-password token
+  const { token, hashedToken, expiresAt } = generateSetPasswordToken();
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Create or update the user
+      // Create or update the user (no password yet - they'll set it via the link)
       const user = await tx.user.upsert({
         where: { email },
         update: {
-          password: hashedPassword,
           role: 'TENANT_ADMIN',
           tenantId: tenant.id,
           isActive: true,
           name: ownerName,
+          setPasswordToken: hashedToken,
+          setPasswordTokenExpiresAt: expiresAt,
         },
         create: {
           email,
-          password: hashedPassword,
           role: 'TENANT_ADMIN',
           tenantId: tenant.id,
           isActive: true,
           name: ownerName,
+          setPasswordToken: hashedToken,
+          setPasswordTokenExpiresAt: expiresAt,
         },
       });
 
@@ -135,22 +135,23 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // Send the one-time password email
+    // Send the set-password link email
     const resend = getResend();
     if (resend) {
-      const loginUrl = `https://${tenant.subdomain}.vayves.com/auth/signin`;
+      const origin = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'https://vayves.com';
+      const setPasswordUrl = `${origin}/auth/set-password?token=${encodeURIComponent(token)}`;
       
       await resend.emails.send({
         from: vayvesFrom('Vayves Support'),
         replyTo: VAYVES_REPLY_TO,
         to: email,
-        subject: `Your ${tenant.name} admin account is ready`,
-        html: generateLoginEmail({
+        subject: `Set your password for ${tenant.name}`,
+        html: generateSetPasswordEmail({
           ownerName,
           propertyName: tenant.name,
-          loginUrl,
-          email,
-          oneTimePassword,
+          setPasswordUrl,
+          subdomain: tenant.subdomain,
+          expiresInHours: 24,
         }),
       });
     }
@@ -173,14 +174,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateLoginEmail(params: {
+function generateSetPasswordEmail(params: {
   ownerName: string;
   propertyName: string;
-  loginUrl: string;
-  email: string;
-  oneTimePassword: string;
+  setPasswordUrl: string;
+  subdomain: string;
+  expiresInHours: number;
 }): string {
-  const { ownerName, propertyName, loginUrl, email, oneTimePassword } = params;
+  const { ownerName, propertyName, setPasswordUrl, subdomain, expiresInHours } = params;
   const TEAL = '#14B8A6';
   const TEAL_DARK = '#0F766E';
   const BORDER = '#E5E7EB';
@@ -193,7 +194,7 @@ function generateLoginEmail(params: {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Your admin account is ready</title>
+<title>Set your password</title>
 </head>
 <body style="margin:0;padding:0;background:${BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${TEXT};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BG};padding:24px 0;">
@@ -211,43 +212,36 @@ function generateLoginEmail(params: {
               <p style="margin:0 0 8px;font-size:16px;color:${TEXT};">Hi ${ownerName},</p>
               <p style="margin:0 0 24px;font-size:14px;color:${MUTED};line-height:1.5;">
                 Your ownership claim for <strong style="color:${TEXT};">${propertyName}</strong> has been verified.
-                Your admin dashboard is now active.
+                Click the button below to set your password and activate your admin dashboard.
               </p>
 
-              <div style="background:${BG};border:1px solid ${BORDER};border-radius:6px;padding:20px;margin-bottom:24px;">
-                <p style="margin:0 0 12px;font-size:13px;color:${MUTED};font-weight:600;text-transform:uppercase;">Login Credentials</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td style="padding:6px 0;color:${MUTED};font-size:14px;">Email</td>
-                    <td style="padding:6px 0;color:${TEXT};font-size:14px;text-align:right;font-family:Menlo,monospace;">${email}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 0;color:${MUTED};font-size:14px;">Password</td>
-                    <td style="padding:6px 0;color:${TEXT};font-size:14px;text-align:right;font-family:Menlo,monospace;font-weight:600;">${oneTimePassword}</td>
-                  </tr>
-                </table>
-              </div>
-
               <p style="margin:0 0 20px;text-align:center;">
-                <a href="${loginUrl}" style="display:inline-block;background:${TEAL_DARK};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:8px;">
-                  Sign in to your dashboard
+                <a href="${setPasswordUrl}" style="display:inline-block;background:${TEAL_DARK};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:8px;">
+                  Set your password
                 </a>
               </p>
 
               <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:16px;margin-bottom:24px;">
-                <p style="margin:0 0 8px;font-size:13px;color:#92400E;font-weight:600;">⚠️ Important: Change your password</p>
+                <p style="margin:0 0 8px;font-size:13px;color:#92400E;font-weight:600;">⏱ Link expires in ${expiresInHours} hours</p>
                 <p style="margin:0;font-size:13px;color:#92400E;line-height:1.5;">
-                  This is a one-time password. Please sign in and change it immediately from Settings → Profile.
+                  This link can only be used once. After you set your password, you'll be able to sign in at <strong>https://${subdomain}.vayves.com/auth/signin</strong>
                 </p>
               </div>
 
-              <p style="margin:0 0 12px;font-size:14px;color:${TEXT};font-weight:600;">Next steps:</p>
+              <p style="margin:0 0 12px;font-size:14px;color:${TEXT};font-weight:600;">Next steps after setting your password:</p>
               <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:${MUTED};line-height:1.8;">
-                <li>Sign in and change your password</li>
                 <li>Complete your property setup</li>
                 <li>Add rooms and configure rates</li>
+                <li>Set up your booking calendar</li>
                 <li>Invite your team members</li>
               </ul>
+
+              <p style="margin:0 0 8px;font-size:12px;color:${MUTED};line-height:1.5;">
+                If the button doesn't work, copy and paste this link:
+              </p>
+              <p style="margin:0 0 16px;font-size:11px;color:${MUTED};word-break:break-all;font-family:Menlo,monospace;background:${BG};padding:8px 10px;border-radius:6px;border:1px solid ${BORDER};">
+                ${setPasswordUrl}
+              </p>
 
               <p style="margin:0;font-size:13px;color:${MUTED};line-height:1.5;">
                 Questions? Reply to this email — we're here to help.
