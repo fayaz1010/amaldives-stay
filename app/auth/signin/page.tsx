@@ -70,7 +70,12 @@ function SignInForm() {
         if (role === 'SUPER_ADMIN') {
           router.push('/super-admin');
         } else if (role === 'GUEST') {
-          router.push('/guest');
+          // Password accounts with the GUEST role are, in practice, guesthouse
+          // owners who signed up before owner sign-up existed (real guests use
+          // their per-booking /guest/{token} link and have no password). The
+          // /guest portal only shows placeholder stays, so send them to set up
+          // their property instead.
+          router.push('/onboarding');
         } else if (role === 'TENANT_ADMIN' && !session?.user?.tenantId) {
           // Owner who signed up but hasn't created a property yet.
           router.push('/onboarding');
