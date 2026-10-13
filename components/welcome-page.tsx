@@ -149,6 +149,9 @@ export function WelcomePage() {
               <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
                 Pricing
               </Link>
+              <Link href="/blog" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
+                Blog
+              </Link>
             </nav>
             <div className="flex items-center space-x-4">
               <Link href="/auth/signin">
@@ -458,6 +461,9 @@ export function WelcomePage() {
               </Link>
               <Link href="/channel-manager" className="text-gray-600 hover:text-gray-900 transition-colors">
                 Channel Manager
+              </Link>
+              <Link href="/blog" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Blog
               </Link>
             </div>
             <LegalLinks className="mt-6 justify-center text-gray-500" />
