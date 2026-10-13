@@ -18,11 +18,25 @@ import {
 import { signOut } from 'next-auth/react';
 import { formatDate, formatCurrency } from '@/lib/utils';
 
-interface GuestPortalProps {
-  user: any;
+export interface GuestPortalBooking {
+  id: string;
+  confirmationNumber: string;
+  hotelName: string;
+  roomType: string;
+  checkIn: string;
+  checkOut: string;
+  status: string;
+  totalAmount: number;
 }
 
-export function GuestPortal({ user }: GuestPortalProps) {
+interface GuestPortalProps {
+  user: any;
+  bookings: GuestPortalBooking[];
+}
+
+const UPCOMING_STATUSES = ['PENDING', 'CONFIRMED', 'CHECKED_IN'];
+
+export function GuestPortal({ user, bookings }: GuestPortalProps) {
   const [activeTab, setActiveTab] = useState('overview');
 
   const handleSignOut = () => {
@@ -36,28 +50,18 @@ export function GuestPortal({ user }: GuestPortalProps) {
     { id: 'profile', label: 'Profile', icon: Settings },
   ];
 
-  const mockBookings = [
-    {
-      id: '1',
-      confirmationNumber: 'CONF123456',
-      hotelName: 'Serenity Mountain Lodge',
-      roomType: 'Deluxe Room',
-      checkIn: '2025-01-15',
-      checkOut: '2025-01-18',
-      status: 'CONFIRMED',
-      totalAmount: 660,
-    },
-    {
-      id: '2',
-      confirmationNumber: 'CONF789012',
-      hotelName: 'Serenity Mountain Lodge',
-      roomType: 'Standard Room',
-      checkIn: '2024-12-20',
-      checkOut: '2024-12-23',
-      status: 'CHECKED_OUT',
-      totalAmount: 450,
-    },
-  ];
+  const upcoming = bookings
+    .filter((b) => UPCOMING_STATUSES.includes(b.status))
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+  const past = bookings.filter((b) => b.status === 'CHECKED_OUT');
+  const totalSpent = past.reduce((sum, b) => sum + b.totalAmount, 0);
+  const nextStay = upcoming[0];
+
+  const emptyState = (message: string) => (
+    <Card>
+      <CardContent className="p-6 text-center text-gray-500">{message}</CardContent>
+    </Card>
+  );
 
   const renderContent = () => {
     switch (activeTab) {
@@ -71,7 +75,7 @@ export function GuestPortal({ user }: GuestPortalProps) {
                     <Calendar className="h-5 w-5 text-teal-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-600">Upcoming Bookings</p>
-                      <p className="text-2xl font-bold">1</p>
+                      <p className="text-2xl font-bold">{upcoming.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -83,7 +87,7 @@ export function GuestPortal({ user }: GuestPortalProps) {
                     <History className="h-5 w-5 text-teal-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-600">Total Stays</p>
-                      <p className="text-2xl font-bold">2</p>
+                      <p className="text-2xl font-bold">{past.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -95,7 +99,7 @@ export function GuestPortal({ user }: GuestPortalProps) {
                     <CreditCard className="h-5 w-5 text-teal-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                      <p className="text-2xl font-bold">{formatCurrency(1110)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalSpent)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -107,23 +111,29 @@ export function GuestPortal({ user }: GuestPortalProps) {
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <Calendar className="h-5 w-5 text-teal-600" />
-                    <div>
-                      <p className="font-medium">Upcoming stay at Serenity Mountain Lodge</p>
-                      <p className="text-sm text-gray-500">January 15-18, 2025</p>
+                {nextStay ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <Calendar className="h-5 w-5 text-teal-600" />
+                      <div>
+                        <p className="font-medium">Upcoming stay at {nextStay.hotelName}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(nextStay.checkIn)} - {formatDate(nextStay.checkOut)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <MessageCircle className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium">Booking {nextStay.status.toLowerCase().replace('_', ' ')}</p>
+                        <p className="text-sm text-gray-500">Confirmation #{nextStay.confirmationNumber}</p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <MessageCircle className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-medium">Booking confirmed</p>
-                      <p className="text-sm text-gray-500">Confirmation #CONF123456</p>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No bookings yet.</p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -140,7 +150,8 @@ export function GuestPortal({ user }: GuestPortalProps) {
             </div>
             
             <div className="space-y-4">
-              {mockBookings.filter(booking => booking.status === 'CONFIRMED').map((booking) => (
+              {upcoming.length === 0 && emptyState('You have no upcoming bookings.')}
+              {upcoming.map((booking) => (
                 <Card key={booking.id} className="hover:shadow-lg transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -187,7 +198,8 @@ export function GuestPortal({ user }: GuestPortalProps) {
             <h2 className="text-2xl font-bold">Booking History</h2>
             
             <div className="space-y-4">
-              {mockBookings.filter(booking => booking.status === 'CHECKED_OUT').map((booking) => (
+              {past.length === 0 && emptyState('No past stays yet.')}
+              {past.map((booking) => (
                 <Card key={booking.id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
