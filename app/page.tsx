@@ -9,6 +9,21 @@ import {
   getGuestExtrasForProperty,
   parsePropertyPolicies,
 } from '@/lib/guest-extras';
+import type { Metadata } from 'next';
+
+const MARKETING_TITLE = 'Vayves — Maldives Guesthouse Software & Direct Bookings';
+
+// Marketing home (vayves.com) gets its own title + canonical; tenant sites keep
+// the layout defaults so a guesthouse page never canonicalises to vayves.com.
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = headers();
+  if (headersList.get('X-Tenant-Subdomain') || headersList.get('X-Tenant-Domain')) return {};
+  return {
+    title: MARKETING_TITLE,
+    alternates: { canonical: 'https://vayves.com/' },
+    openGraph: { title: MARKETING_TITLE, url: 'https://vayves.com/', siteName: 'Vayves', type: 'website' },
+  };
+}
 
 export default async function HomePage() {
   const headersList = headers();
