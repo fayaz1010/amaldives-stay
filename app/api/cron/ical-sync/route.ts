@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Cron entrypoint — invoked by Vercel Cron Jobs every 15 minutes (see
+ * Cron entrypoint — invoked by Vercel Cron Jobs every 30 minutes (see
  * vercel.json). Iterates every active ExternalCalendarFeed across all
  * tenants and reconciles the iCal contents against ExternalCalendarBlock.
  *
