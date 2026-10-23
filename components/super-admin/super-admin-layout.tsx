@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  FileCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +35,7 @@ export function SuperAdminLayout({ children, user }: SuperAdminLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/super-admin', icon: LayoutDashboard },
     { name: 'Tenants', href: '/super-admin/tenants', icon: Building },
+    { name: 'Claims', href: '/super-admin/claims', icon: FileCheck },
     { name: 'Users', href: '/super-admin/users', icon: Users },
     { name: 'Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { name: 'Security', href: '/super-admin/security', icon: Shield },
