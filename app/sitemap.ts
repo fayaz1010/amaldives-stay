@@ -12,6 +12,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: '/free', priority: 0.8, freq: 'weekly' },
     { path: '/little-hotelier-alternative', priority: 0.8, freq: 'weekly' },
     { path: '/channel-manager', priority: 0.8, freq: 'weekly' },
+    { path: '/solutions/maldives-guesthouses', priority: 0.9, freq: 'weekly' },
+    { path: '/features/channel-manager', priority: 0.8, freq: 'weekly' },
     // Tier 2 landing pages
     { path: '/small-hotels', priority: 0.7, freq: 'weekly' },
     { path: '/direct-booking', priority: 0.7, freq: 'weekly' },

@@ -26,6 +26,7 @@ export type LandingProps = {
   pricing?: Array<{ tier: string; price: string; blurb: string }>;
   faqs?: FaqItem[];
   ctaLabel?: string;
+  secondaryCta?: { label: string; href: string };
   related: Array<{ label: string; href: string }>;
   // schema
   path: string; // e.g. /maldives
@@ -46,19 +47,21 @@ function Cta({ label = 'Start 30-day free trial' }: { label?: string }) {
 
 export function MarketingLanding(props: LandingProps) {
   const {
-    badge, h1, wedge, intro, sections, table, pricing, faqs, ctaLabel, related, path, metaDescription,
+    badge, h1, wedge, intro, sections, table, pricing, faqs, ctaLabel, secondaryCta, related, path, metaDescription,
   } = props;
 
   const url = `${PMS_BASE}${path}`;
   const productLd = {
     '@context': 'https://schema.org',
-    '@type': 'Product',
+    '@type': 'SoftwareApplication',
     name: 'Vayves',
     description: metaDescription,
-    brand: { '@type': 'Brand', name: 'Vayves' },
-    applicationCategory: 'Hotel Management Software',
+    applicationCategory: 'BusinessApplication',
+    applicationSubCategory: 'Hotel Management Software',
+    operatingSystem: 'Web',
     url,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', description: 'Free plan; paid tiers from $19/mo' },
+    brand: { '@type': 'Brand', name: 'Vayves' },
   };
   const faqLd = faqs && faqs.length
     ? {
@@ -101,7 +104,12 @@ export function MarketingLanding(props: LandingProps) {
         <p className="mx-auto mt-5 max-w-2xl text-lg text-gray-600">{wedge}</p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Cta label={ctaLabel} />
-          <Link href="/for-guesthouses" className="text-sm font-semibold text-cyan-700 hover:underline">See how it works →</Link>
+          <Link
+            href={secondaryCta?.href || '/for-guesthouses'}
+            className="text-sm font-semibold text-cyan-700 hover:underline"
+          >
+            {secondaryCta?.label || 'See how it works'} →
+          </Link>
         </div>
         {intro && <p className="mx-auto mt-8 max-w-2xl text-left text-gray-600">{intro}</p>}
       </section>
