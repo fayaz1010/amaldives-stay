@@ -47,6 +47,10 @@ model User {
   role          UserRole  @default(GUEST)
   tenantId      String?   // null for super admin, set for tenant users
   isActive      Boolean   @default(true)
+  // Single-use set-password token (hashed). Generated when super-admin verifies
+  // a claim or staff invite is sent. Owner/staff opens the link, sets password, token is cleared.
+  setPasswordToken String?
+  setPasswordTokenExpiresAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -1577,15 +1581,18 @@ model RateLimitHit {
 // domain/exact-email claim policy (65% of guesthouse contacts are free-email).
 // Staff verify by phone, then provision via scripts/create-tenant-admin.ts.
 model ClaimAssistRequest {
-  id           String   @id @default(cuid())
-  slug         String
-  propertyName String?
-  contactName  String?
-  email        String
-  phone        String?
-  message      String?
-  status       String   @default("new") // new | verified | rejected
-  createdAt    DateTime @default(now())
+  id              String    @id @default(cuid())
+  slug            String
+  propertyName    String?
+  contactName     String?
+  email           String
+  phone           String?
+  message         String?
+  status          String    @default("new") // new | verified | rejected
+  rejectedReason  String?
+  verifiedAt      DateTime?
+  rejectedAt      DateTime?
+  createdAt       DateTime  @default(now())
 
   @@index([slug, createdAt])
   @@index([status])
